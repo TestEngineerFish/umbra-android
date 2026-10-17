@@ -9,6 +9,8 @@
 // 会把整条导航栈底部 inset 卡死（MoneyAddView.swift:394）。Android 没有同一个坑，但两端版式要一样，照搬。
 package com.geek.umbra.feature.money
 
+import com.geek.umbra.designsystem.UmbraWhenTab
+import com.geek.umbra.designsystem.UmbraPickers
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -30,14 +32,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDefaults
-import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TimePicker
-import androidx.compose.material3.TimePickerDefaults
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
@@ -97,8 +94,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.LocalTime
 import java.time.ZoneId
 import java.time.ZoneOffset
 import java.util.Locale
@@ -988,65 +983,14 @@ private fun clockLabel(ms: Long): String {
 }
 
 /**
- * 「什么时候」面板。
- * 暂用 M3 DatePicker/TimePicker；提醒代理在另一分支做 UmbraDateTimePanel，合并后统一替换。
- * （iOS 是 umbraWhenPicker：日期 + 时间是一个瞬间、一个值，同一个面板两段切 —— 批次 007。）
+ * 「什么时候」面板 —— 走共用的 UmbraDateTimePanel 的 when 变体（iOS umbraWhenPicker：日期 + 时间是一个瞬间、
+ * 一个值，同一个面板两段切 —— 批次 007）。弹层由 Router 托管，弹出后立刻放下旗子。
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun WhenPicker(form: MoneyAddForm, tab: String) {
-    val c = UmbraTheme.colors
-    val zone = ZoneId.systemDefault()
-    val local = Instant.ofEpochMilli(form.atMs).atZone(zone).toLocalDateTime()
-    val close = { form.whenTab = null }
-    if (tab == "date") {
-        // DatePicker 的选中值是「那一天的 UTC 零点」，和本地时间互转都要过一次 UTC，不然东八区会差一天。
-        val st = rememberDatePickerState(initialSelectedDateMillis = local.toLocalDate().atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli())
-        val colors = DatePickerDefaults.colors(
-            containerColor = c.card, titleContentColor = c.muted, headlineContentColor = c.text,
-            weekdayContentColor = c.muted, subheadContentColor = c.muted, yearContentColor = c.text,
-            currentYearContentColor = c.orangeText, selectedYearContentColor = Color.White, selectedYearContainerColor = c.orange,
-            dayContentColor = c.text, selectedDayContentColor = Color.White, selectedDayContainerColor = c.orange,
-            todayContentColor = c.orangeText, todayDateBorderColor = c.orange,
-        )
-        DatePickerDialog(
-            onDismissRequest = close,
-            colors = colors,
-            confirmButton = {
-                TextButton({
-                    st.selectedDateMillis?.let { sel ->
-                        val day = Instant.ofEpochMilli(sel).atZone(ZoneOffset.UTC).toLocalDate()
-                        form.atMs = LocalDateTime.of(day, local.toLocalTime()).atZone(zone).toInstant().toEpochMilli()
-                    }
-                    close()
-                }) { Text("好", color = c.orangeText) }
-            },
-            dismissButton = { TextButton(close) { Text("取消", color = c.muted) } },
-        ) { DatePicker(state = st, colors = colors) }
-    } else {
-        val st = rememberTimePickerState(initialHour = local.hour, initialMinute = local.minute, is24Hour = true)
-        AlertDialog(
-            onDismissRequest = close,
-            containerColor = c.card,
-            text = {
-                TimePicker(
-                    state = st,
-                    colors = TimePickerDefaults.colors(
-                        clockDialColor = c.chip, selectorColor = c.orange, containerColor = c.card,
-                        clockDialSelectedContentColor = Color.White, clockDialUnselectedContentColor = c.text,
-                        timeSelectorSelectedContainerColor = c.orangeSoft, timeSelectorUnselectedContainerColor = c.chip,
-                        timeSelectorSelectedContentColor = c.orangeText, timeSelectorUnselectedContentColor = c.text,
-                    ),
-                )
-            },
-            confirmButton = {
-                TextButton({
-                    form.atMs = LocalDateTime.of(local.toLocalDate(), LocalTime.of(st.hour, st.minute)).atZone(zone).toInstant().toEpochMilli()
-                    close()
-                }) { Text("好", color = c.orangeText) }
-            },
-            dismissButton = { TextButton(close) { Text("取消", color = c.muted) } },
-        )
+    LaunchedEffect(tab) {
+        UmbraPickers.presentWhen("时间", form.atMs, if (tab == "date") UmbraWhenTab.Date else UmbraWhenTab.Time) { form.atMs = it }
+        form.whenTab = null
     }
 }
 

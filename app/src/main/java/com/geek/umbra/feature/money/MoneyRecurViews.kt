@@ -8,6 +8,7 @@
 // 服务端只校 direction 本身合法，「分类属于该方向」这道门就由这个选择器挡。
 package com.geek.umbra.feature.money
 
+import com.geek.umbra.designsystem.UmbraPickers
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -30,16 +31,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDefaults
-import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
-import androidx.compose.material3.TimePickerDefaults
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
@@ -60,13 +55,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.geek.umbra.R
 import com.geek.umbra.app.AppGraph
 import com.geek.umbra.designsystem.UmbraBottomBar
 import com.geek.umbra.designsystem.UmbraButton
@@ -94,7 +87,6 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
-import java.time.ZoneOffset
 import java.util.Locale
 
 // MARK: - 展示工具
@@ -828,92 +820,28 @@ private fun Chip(label: String, mono: Boolean = false, onClick: () -> Unit) {
 }
 
 /**
- * 日期选择。暂用 M3 DatePicker/TimePicker；提醒代理在另一分支做 UmbraDateTimePanel，合并后统一替换。
- * M3 的日期以 **UTC 零点毫秒** 表示一天，这里进出都按 UTC 换 LocalDate，不经过本机时区（否则西半球会差一天）。
+ * 日期选择 —— 走共用的 UmbraDateTimePanel（iOS umbraDatePicker）。弹层由 Router 托管，
+ * 所以这里弹出去之后立刻 onDismiss 把「要弹」的旗子放下；取消就是什么都不回。
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun RecurDatePickerDialog(initial: LocalDate, min: LocalDate?, minNote: String?, onDismiss: () -> Unit, onPick: (LocalDate) -> Unit) {
-    val c = UmbraTheme.colors
-    val state = rememberDatePickerState(
-        initialSelectedDateMillis = initial.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli(),
-        selectableDates = object : SelectableDates {
-            override fun isSelectableDate(utcTimeMillis: Long): Boolean =
-                min == null || Instant.ofEpochMilli(utcTimeMillis).atZone(ZoneOffset.UTC).toLocalDate() >= min
-        },
-    )
-    val colors = DatePickerDefaults.colors(
-        containerColor = c.card,
-        titleContentColor = c.muted,
-        headlineContentColor = c.text,
-        weekdayContentColor = c.muted,
-        subheadContentColor = c.muted,
-        navigationContentColor = c.text,
-        yearContentColor = c.text,
-        currentYearContentColor = c.orangeText,
-        selectedYearContentColor = c.onDanger,
-        selectedYearContainerColor = c.orange,
-        dayContentColor = c.text,
-        disabledDayContentColor = c.faint,
-        selectedDayContentColor = c.onDanger,
-        selectedDayContainerColor = c.orange,
-        todayContentColor = c.orangeText,
-        todayDateBorderColor = c.orange,
-        dividerColor = c.borderSoft,
-    )
-    DatePickerDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = {
-            TextButton(onClick = {
-                state.selectedDateMillis?.let { onPick(Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate()) }
-                onDismiss()
-            }) { Text(stringResource(R.string.picker_confirm), color = c.orangeText, fontWeight = FontWeight.SemiBold) }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel), color = c.text) } },
-        colors = colors,
-    ) {
-        DatePicker(state = state, colors = colors, showModeToggle = false)
-        if (minNote != null) {
-            Text(
-                minNote, color = c.muted, style = TextStyle(fontSize = 12.sp, lineHeight = 17.sp),
-                modifier = Modifier.padding(horizontal = 24.dp).padding(bottom = 8.dp),
-            )
-        }
+    LaunchedEffect(Unit) {
+        val zone = ZoneId.systemDefault()
+        UmbraPickers.presentDate(
+            "日期", initial.atStartOfDay(zone).toInstant().toEpochMilli(),
+            minDayMs = min?.atStartOfDay(zone)?.toInstant()?.toEpochMilli(), minNote = minNote,
+        ) { ms -> onPick(Instant.ofEpochMilli(ms).atZone(zone).toLocalDate()) }
+        onDismiss()
     }
 }
 
-/** 时刻选择（24 小时制，线上 time_hhmm 也是 24 小时）。暂用 M3 TimePicker，合并后换 UmbraDateTimePanel。 */
-@OptIn(ExperimentalMaterial3Api::class)
+/** 时刻选择（24 小时制，线上 time_hhmm 也是 24 小时）—— 走共用的 UmbraDateTimePanel 时分滚轮。 */
 @Composable
 private fun RecurTimePickerDialog(initial: LocalTime, onDismiss: () -> Unit, onPick: (LocalTime) -> Unit) {
-    val c = UmbraTheme.colors
-    val state = rememberTimePickerState(initialHour = initial.hour, initialMinute = initial.minute, is24Hour = true)
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        containerColor = c.card,
-        shape = RoundedCornerShape(UmbraDimens.radiusDialog),
-        title = { Text("时间", color = c.text, style = TextStyle(fontSize = 17.sp, fontWeight = FontWeight.SemiBold)) },
-        text = {
-            TimePicker(
-                state = state,
-                colors = TimePickerDefaults.colors(
-                    containerColor = c.card,
-                    clockDialColor = c.chip,
-                    clockDialSelectedContentColor = c.onDanger,
-                    clockDialUnselectedContentColor = c.text,
-                    selectorColor = c.orange,
-                    timeSelectorSelectedContainerColor = c.orangeSoft,
-                    timeSelectorUnselectedContainerColor = c.chip,
-                    timeSelectorSelectedContentColor = c.orangeText,
-                    timeSelectorUnselectedContentColor = c.text,
-                ),
-            )
-        },
-        confirmButton = {
-            TextButton(onClick = { onPick(LocalTime.of(state.hour, state.minute)); onDismiss() }) {
-                Text(stringResource(R.string.picker_confirm), color = c.orangeText, fontWeight = FontWeight.SemiBold)
-            }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel), color = c.text) } },
-    )
+    LaunchedEffect(Unit) {
+        val zone = ZoneId.systemDefault()
+        val ms = LocalDate.now(zone).atTime(initial).atZone(zone).toInstant().toEpochMilli()
+        UmbraPickers.presentTime("时间", ms) { picked -> onPick(Instant.ofEpochMilli(picked).atZone(zone).toLocalTime().withSecond(0).withNano(0)) }
+        onDismiss()
+    }
 }
