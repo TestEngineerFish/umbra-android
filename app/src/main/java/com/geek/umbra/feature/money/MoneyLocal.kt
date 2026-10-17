@@ -516,7 +516,7 @@ object MoneyLocal {
             AccountSwitchPlan.Ask -> {
                 val from = meta.lastSyncUser ?: return
                 // 键连服务端一起拼：换了服务端、id 恰好相同的那次换号也是一次独立的换号。
-                when (MoneyAccountSwitch.choice(
+                when (com.geek.umbra.app.AccountSwitchGate.choice(
                     AccountSwitchRules.identity(from, meta.lastSyncServer ?: server),
                     AccountSwitchRules.identity(user, server),
                 )) {

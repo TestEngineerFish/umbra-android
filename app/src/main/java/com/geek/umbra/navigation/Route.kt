@@ -189,6 +189,8 @@ object DeepLinkRules {
             "reminders" -> Route.RemList
             "reminder" -> seg.firstOrNull()?.takeIf { idRe.matches(it) }?.let { Route.RemDetail(it) } ?: Route.RemList
             "money" -> if (seg.firstOrNull() == "add") Route.MoneyAdd(null) else Route.MoneyHome
+            // Android 独有：桌面快捷方式「记灵感」（iOS 用 App Intent，不走深链）
+            "inspiration" -> if (seg.firstOrNull() == "new") Route.InspEdit(null) else Route.InspList
             else -> null
         }
     }

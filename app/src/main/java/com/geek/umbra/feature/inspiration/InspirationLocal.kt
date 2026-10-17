@@ -222,7 +222,7 @@ object InspirationLocal {
             AccountSwitchPlan.Replace -> rebaseForAccount(false, server, user)
             AccountSwitchPlan.Ask -> {
                 val from = meta.lastSyncUser ?: return
-                when (InspAccountSwitchGate.choice(
+                when (com.geek.umbra.app.AccountSwitchGate.choice(
                     AccountSwitchRules.identity(from, meta.lastSyncServer ?: server),
                     AccountSwitchRules.identity(user, server),
                 )) {
@@ -266,47 +266,3 @@ object InspirationLocal {
     }
 }
 
-/**
- * 换账号那一问的闸（iOS: App/AccountSwitchGate.swift，umbra-ios#89）。**不阻塞同步等答案**：没答之前这一轮到此为止
- * （不推不拉、本机原样），答了再补一轮。答案只记在内存里、只管这一次运行：「以后再说」下次启动会再问。
- *
- * ⚠️ iOS 这一闸是记账、灵感两边共用的一问（文案里两边各列几条）。记账在另一个移植分支里，这里先只数灵感那一边
- * （money 传 0）；合并时应把它挪到 app/ 或 net/ 做成共用的一份（见交回报告）。
- */
-object InspAccountSwitchGate {
-    private data class Ask(val from: String, val to: String)
-    private var ask: Ask? = null
-    private val answers = mutableMapOf<String, AccountSwitchChoice>()
-
-    /** 答过就回答案；没答过就弹一次、回 null（这一轮到此为止）。 */
-    fun choice(from: String, to: String): AccountSwitchChoice? {
-        answers[AccountSwitchRules.key(from, to)]?.let { return it }
-        val next = Ask(from, to)
-        if (ask != next) { ask = next; present(next) }
-        return null
-    }
-
-    private fun answer(c: AccountSwitchChoice) {
-        val a = ask ?: return
-        answers[AccountSwitchRules.key(a.from, a.to)] = c
-        ask = null
-        if (c == AccountSwitchChoice.Later) AppGraph.router.showToast(AccountSwitchRules.LATER_NOTE)
-        else AppGraph.scope.launch { InspirationLocal.sync(); InspirationStore.load() }
-    }
-
-    /** 三个选项，系统弹窗只有两颗钮 —— 用底部弹层。破坏性那颗（丢掉）画红；下拉关掉 = 以后再说。 */
-    private fun present(a: Ask) {
-        AppGraph.scope.launch {
-            AppGraph.router.present(UmbraSheet("account-switch-insp") { dismiss ->
-                val c = UmbraTheme.colors
-                Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(AccountSwitchRules.TITLE, color = c.text, style = TextStyle(fontSize = 17.sp, fontWeight = FontWeight.SemiBold))
-                    Text(AccountSwitchRules.body(0, InspirationLocal.pendingCount), color = c.muted, style = TextStyle(fontSize = 14.sp, lineHeight = 21.sp))
-                    UmbraButton(AccountSwitchRules.CARRY_LABEL, { dismiss(); answer(AccountSwitchChoice.Carry) }, Modifier.fillMaxWidth())
-                    UmbraButton(AccountSwitchRules.DROP_LABEL, { dismiss(); answer(AccountSwitchChoice.Drop) }, Modifier.fillMaxWidth(), kind = UmbraButtonKind.DangerOutline)
-                    UmbraButton(AccountSwitchRules.LATER_LABEL, { dismiss(); answer(AccountSwitchChoice.Later) }, Modifier.fillMaxWidth(), kind = UmbraButtonKind.Secondary)
-                }
-            })
-        }
-    }
-}
