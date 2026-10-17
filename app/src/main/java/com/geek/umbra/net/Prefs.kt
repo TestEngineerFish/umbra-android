@@ -48,6 +48,8 @@ class Prefs(private val context: Context, private val scope: CoroutineScope) {
         val appearance = stringPreferencesKey("umbra.appearance")
         val language = stringPreferencesKey("appLanguage")
         val lastSignedOutByUser = booleanPreferencesKey("umbra.session.userSignedOut")
+        /** 账号页存储条幅「不再提示」（iOS StorageRules.silenceKey，只收 warn 档那条）。 */
+        val storageWarnSilenced = booleanPreferencesKey("storage.warnBannerSilenced")
     }
 
     private val store = context.umbraStore
