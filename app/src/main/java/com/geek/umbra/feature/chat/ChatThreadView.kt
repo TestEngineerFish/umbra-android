@@ -649,8 +649,11 @@ private fun BlockRow(
                 } else if (b.vision?.showsErrorCard == true) {
                     VisionErrorCard(b.vision, conv, b.id)
                 } else {
+                    // 非早报的执勤消息（say 那种）：气泡上方标头、下方卡底反馈钮（iOS ChatThreadView.swift:446/469）
+                    if (duty != null) com.geek.umbra.feature.duty.DutyMessageHeader(duty)
                     if (b.text.isNotEmpty() || b.streaming) AiBubble(b, contentW, flash, if (b.text.isNotEmpty()) botMenu(b.text, b.serverId, "assistant") else emptyList())
                     b.vision?.let { VisionFootnote(it, conv, b.id) }
+                    if (duty != null) com.geek.umbra.feature.duty.DutyCardFooter(duty)
                 }
                 // 停在半截的那条：气泡下一行小字（不在正文里加「（已中断）」）
                 if (b.interrupted && b.text.isNotEmpty()) Row(verticalAlignment = Alignment.CenterVertically) {
@@ -660,7 +663,6 @@ private fun BlockRow(
                 }
                 KeptToolsRow(b.toolsRun)
                 b.resumeTaskId?.let { ResumeAskAction(it) }
-                // 执勤卡底「有用 / 别发这类了 / 为什么现在发」与标头不在执勤模块给聊天的桩里（DutyChatApi 只有早报卡与重置卡），见报告
                 if (b.citations.isNotEmpty() && !b.streaming) KbCitationChips(b.citations)
             }
         }
