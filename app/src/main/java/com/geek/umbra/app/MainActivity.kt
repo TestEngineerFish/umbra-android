@@ -22,8 +22,17 @@ import kotlinx.coroutines.launch
  * 在 Android 12 及以下要靠 AppCompat 落地）。
  */
 class MainActivity : AppCompatActivity() {
+    override fun onDestroy() {
+        if (NotificationPermission.launcher != null && isFinishing) NotificationPermission.launcher = null
+        super.onDestroy()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // 通知权限请求器必须在 STARTED 之前注册；冷启动没问过就问一次（iOS 4bad681）
+        NotificationPermission.launcher = registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) {
+            NotificationPermission.onResult(it)
+        }
         enableEdgeToEdge()
         // 三键导航时系统会在导航栏上加一层半透明遮罩：关掉，让底栏的 card 底一直铺进导航区（设计侧 199 答复第 1 条）
         if (android.os.Build.VERSION.SDK_INT >= 29) window.isNavigationBarContrastEnforced = false
@@ -32,6 +41,12 @@ class MainActivity : AppCompatActivity() {
             val prefs by AppGraph.prefs.snapshot.collectAsState()
             UmbraTheme(Appearance.of(prefs[Prefs.K.appearance])) { AppShell() }
         }
+        NotificationPermission.requestIfNeeded()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        NotificationPermission.refresh()
     }
 
     override fun onNewIntent(intent: Intent) {

@@ -371,7 +371,11 @@ fun goToLogin() {
 fun NotifyScreen() {
     val c = UmbraTheme.colors
     val ctx = AppGraph.context
+    // 订阅权限变化（结果回来 / 回到前台）并读它重算状态
+    val tick by com.geek.umbra.app.NotificationPermission.tick.collectAsState()
+    val status = remember(tick) { com.geek.umbra.app.NotificationPermission.status() }
     var authorized by remember { mutableStateOf(NotificationManagerCompat.from(ctx).areNotificationsEnabled()) }
+    androidx.compose.runtime.LaunchedEffect(tick) { authorized = status == com.geek.umbra.app.NotificationPermission.Status.Granted }
     // 回到前台（从系统设置回来）重读一次 —— iOS onAppear 时 refreshAuthorization。
     val owner = LocalLifecycleOwner.current
     DisposableEffect(owner) {
@@ -385,7 +389,11 @@ fun NotifyScreen() {
         settingSection("perm", "系统权限", listOf(
             // Android 13+ 是 POST_NOTIFICATIONS 运行时权限；12 及以下默认开、用户可在系统设置里关 —— 两种都由 areNotificationsEnabled 说了算。
             UmbraSettingRow("通知权限", value = if (authorized) "已授权" else "未授权"),
-            UmbraSettingRow("去系统设置", tint = c.orangeText, chevron = true, action = { openNotificationSettings() }),
+            // 没问过时写「开启通知」并当场弹授权框；问过了才跳系统设置（iOS 4bad681）
+            UmbraSettingRow(
+                if (status == com.geek.umbra.app.NotificationPermission.Status.NotAsked) "开启通知" else "去系统设置",
+                tint = c.orangeText, chevron = true, action = { com.geek.umbra.app.NotificationPermission.enableTapped() },
+            ),
         ), footer = "推送只是提醒你一下。真正的清单以服务端为准，打开应用时会自动补齐漏掉的。")
         footnoteItem("分类开关（提醒到点 / 任务完成 / 任务失败 / 待确认）要等服务端有推送订阅接口才能做。现在还没有，所以这里不摆一排点了不生效的开关。")
     }

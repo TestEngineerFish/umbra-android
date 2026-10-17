@@ -48,6 +48,8 @@ class Prefs(private val context: Context, private val scope: CoroutineScope) {
         val appearance = stringPreferencesKey("umbra.appearance")
         val language = stringPreferencesKey("appLanguage")
         val lastSignedOutByUser = booleanPreferencesKey("umbra.session.userSignedOut")
+        /** 问过通知权限没有（Android 13+ 系统不告诉 App「从没问过」和「拒过」的区别，只能自己记）。 */
+        val notifyAsked = booleanPreferencesKey("umbra.notify.asked")
         /** 账号页存储条幅「不再提示」（iOS StorageRules.silenceKey，只收 warn 档那条）。 */
         val storageWarnSilenced = booleanPreferencesKey("storage.warnBannerSilenced")
     }

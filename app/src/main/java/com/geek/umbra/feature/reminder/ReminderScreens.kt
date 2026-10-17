@@ -400,37 +400,11 @@ private fun RefusedTombsBanner(refused: Map<String, ReminderPushRejection>) {
  * 返回一个「去开启」动作。
  */
 @Composable
-private fun rememberNotificationPermission(): () -> Unit {
-    val ctx = LocalContext.current
-    fun openSettings() {
-        runCatching {
-            ctx.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, ctx.packageName).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-        }
-    }
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        ReminderStore.onPermissionResult(granted && ReminderNotifier.canPost(ctx))
-        if (!granted) openSettings()
-    }
-    return {
-        if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(ctx, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-            launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
-        } else openSettings()
-    }
-}
+private fun rememberNotificationPermission(): () -> Unit = { com.geek.umbra.app.NotificationPermission.enableTapped() }
 
 /** 第一次建提醒时才要权限（用户正想让它响，最容易被同意）。已经有了就什么都不做。 */
 @Composable
-private fun rememberAskNotificationOnce(): () -> Unit {
-    val ctx = LocalContext.current
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        ReminderStore.onPermissionResult(granted && ReminderNotifier.canPost(ctx))
-    }
-    return {
-        if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(ctx, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-            launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
-        }
-    }
-}
+private fun rememberAskNotificationOnce(): () -> Unit = { com.geek.umbra.app.NotificationPermission.requestIfNeeded() }
 
 // MARK: - 详情（就地编辑）
 
