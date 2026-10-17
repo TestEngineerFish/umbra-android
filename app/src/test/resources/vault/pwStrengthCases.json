@@ -1,0 +1,429 @@
+[
+ {
+  "pw": "",
+  "level": 0,
+  "eff": 0,
+  "classes": 0,
+  "pct": 12
+ },
+ {
+  "pw": "a",
+  "level": 0,
+  "eff": 1,
+  "classes": 1,
+  "pct": 12
+ },
+ {
+  "pw": "Ab1!",
+  "level": 0,
+  "eff": 4,
+  "classes": 4,
+  "pct": 20
+ },
+ {
+  "pw": "1234567",
+  "level": 0,
+  "eff": 1,
+  "classes": 1,
+  "pct": 12
+ },
+ {
+  "pw": "abcdefgh",
+  "level": 0,
+  "eff": 2,
+  "classes": 1,
+  "pct": 12
+ },
+ {
+  "pw": "abcdefghijklmnop",
+  "level": 0,
+  "eff": 2,
+  "classes": 1,
+  "pct": 12
+ },
+ {
+  "pw": "ABCDEFGH",
+  "level": 0,
+  "eff": 2,
+  "classes": 1,
+  "pct": 12
+ },
+ {
+  "pw": "zyxwvuts",
+  "level": 0,
+  "eff": 1,
+  "classes": 1,
+  "pct": 12
+ },
+ {
+  "pw": "98765432",
+  "level": 0,
+  "eff": 1,
+  "classes": 1,
+  "pct": 12
+ },
+ {
+  "pw": "Password123!",
+  "level": 0,
+  "eff": 3,
+  "classes": 4,
+  "pct": 15
+ },
+ {
+  "pw": "password",
+  "level": 0,
+  "eff": 1,
+  "classes": 1,
+  "pct": 12
+ },
+ {
+  "pw": "P@ssw0rd2024",
+  "level": 0,
+  "eff": 2,
+  "classes": 4,
+  "pct": 12
+ },
+ {
+  "pw": "Pa$$w0rd!",
+  "level": 0,
+  "eff": 2,
+  "classes": 4,
+  "pct": 12
+ },
+ {
+  "pw": "qwerty123456",
+  "level": 0,
+  "eff": 2,
+  "classes": 2,
+  "pct": 12
+ },
+ {
+  "pw": "qwertyuiop",
+  "level": 0,
+  "eff": 2,
+  "classes": 1,
+  "pct": 12
+ },
+ {
+  "pw": "1qaz2wsx3edc",
+  "level": 0,
+  "eff": 1,
+  "classes": 2,
+  "pct": 12
+ },
+ {
+  "pw": "asdfghjklzxc",
+  "level": 0,
+  "eff": 4,
+  "classes": 1,
+  "pct": 20
+ },
+ {
+  "pw": "poiuytrewq",
+  "level": 0,
+  "eff": 1,
+  "classes": 1,
+  "pct": 12
+ },
+ {
+  "pw": "aaaaaaaaaaaa",
+  "level": 0,
+  "eff": 1,
+  "classes": 1,
+  "pct": 12
+ },
+ {
+  "pw": "aaa111bbb222",
+  "level": 0,
+  "eff": 4,
+  "classes": 2,
+  "pct": 20
+ },
+ {
+  "pw": "woaini1314",
+  "level": 0,
+  "eff": 5,
+  "classes": 2,
+  "pct": 25
+ },
+ {
+  "pw": "Woaini520!",
+  "level": 0,
+  "eff": 5,
+  "classes": 4,
+  "pct": 25
+ },
+ {
+  "pw": "Zhang19900101!",
+  "level": 0,
+  "eff": 4,
+  "classes": 4,
+  "pct": 20
+ },
+ {
+  "pw": "wang1988",
+  "level": 0,
+  "eff": 2,
+  "classes": 2,
+  "pct": 12
+ },
+ {
+  "pw": "chenxiao2000",
+  "level": 0,
+  "eff": 3,
+  "classes": 2,
+  "pct": 15
+ },
+ {
+  "pw": "19870512Abc!",
+  "level": 0,
+  "eff": 4,
+  "classes": 4,
+  "pct": 20
+ },
+ {
+  "pw": "20240229",
+  "level": 0,
+  "eff": 2,
+  "classes": 1,
+  "pct": 12
+ },
+ {
+  "pw": "13812345678abc",
+  "level": 0,
+  "eff": 3,
+  "classes": 2,
+  "pct": 15
+ },
+ {
+  "pw": "15900001111",
+  "level": 0,
+  "eff": 2,
+  "classes": 1,
+  "pct": 12
+ },
+ {
+  "pw": "k9#Lm2$vQx7!",
+  "level": 2,
+  "eff": 12,
+  "classes": 4,
+  "pct": 60
+ },
+ {
+  "pw": "Tr0ub4dor&3",
+  "level": 1,
+  "eff": 11,
+  "classes": 4,
+  "pct": 55
+ },
+ {
+  "pw": "xY7!pQ2#",
+  "level": 1,
+  "eff": 8,
+  "classes": 4,
+  "pct": 40
+ },
+ {
+  "pw": "Hk82jd91kd",
+  "level": 1,
+  "eff": 10,
+  "classes": 3,
+  "pct": 50
+ },
+ {
+  "pw": "correcthorsebatterystaple",
+  "level": 2,
+  "eff": 25,
+  "classes": 1,
+  "pct": 100
+ },
+ {
+  "pw": "CorrectHorseBattery9",
+  "level": 2,
+  "eff": 20,
+  "classes": 3,
+  "pct": 100
+ },
+ {
+  "pw": "我的密码是一二三四五六",
+  "level": 1,
+  "eff": 11,
+  "classes": 1,
+  "pct": 55
+ },
+ {
+  "pw": "密码密码密码密码",
+  "level": 0,
+  "eff": 2,
+  "classes": 1,
+  "pct": 12
+ },
+ {
+  "pw": "🔑🔑🔑🔑🔑🔑🔑🔑",
+  "level": 0,
+  "eff": 1,
+  "classes": 1,
+  "pct": 12
+ },
+ {
+  "pw": "Gx7#mQ2!vL9@wR4$",
+  "level": 2,
+  "eff": 16,
+  "classes": 4,
+  "pct": 80
+ },
+ {
+  "pw": "iloveyou",
+  "level": 0,
+  "eff": 1,
+  "classes": 1,
+  "pct": 12
+ },
+ {
+  "pw": "ILoveYou2023",
+  "level": 0,
+  "eff": 2,
+  "classes": 3,
+  "pct": 12
+ },
+ {
+  "pw": "letmein!",
+  "level": 0,
+  "eff": 2,
+  "classes": 2,
+  "pct": 12
+ },
+ {
+  "pw": "admin123",
+  "level": 0,
+  "eff": 2,
+  "classes": 2,
+  "pct": 12
+ },
+ {
+  "pw": "root@1234",
+  "level": 0,
+  "eff": 3,
+  "classes": 3,
+  "pct": 15
+ },
+ {
+  "pw": "Summer2024!",
+  "level": 0,
+  "eff": 3,
+  "classes": 4,
+  "pct": 15
+ },
+ {
+  "pw": "mima123456",
+  "level": 0,
+  "eff": 2,
+  "classes": 2,
+  "pct": 12
+ },
+ {
+  "pw": "Shanghai2019",
+  "level": 0,
+  "eff": 2,
+  "classes": 3,
+  "pct": 12
+ },
+ {
+  "pw": "dragon1990",
+  "level": 0,
+  "eff": 2,
+  "classes": 2,
+  "pct": 12
+ },
+ {
+  "pw": "Monkey!!!",
+  "level": 0,
+  "eff": 2,
+  "classes": 3,
+  "pct": 12
+ },
+ {
+  "pw": "qazwsxedc",
+  "level": 0,
+  "eff": 7,
+  "classes": 1,
+  "pct": 35
+ },
+ {
+  "pw": "zaq12wsx",
+  "level": 0,
+  "eff": 2,
+  "classes": 2,
+  "pct": 12
+ },
+ {
+  "pw": "!@#$%^&*",
+  "level": 0,
+  "eff": 1,
+  "classes": 1,
+  "pct": 12
+ },
+ {
+  "pw": "abcABC123!@#",
+  "level": 0,
+  "eff": 6,
+  "classes": 4,
+  "pct": 30
+ },
+ {
+  "pw": "tiantian888",
+  "level": 0,
+  "eff": 2,
+  "classes": 2,
+  "pct": 12
+ },
+ {
+  "pw": "Xk3$Xk3$Xk3$",
+  "level": 0,
+  "eff": 4,
+  "classes": 4,
+  "pct": 20
+ },
+ {
+  "pw": "v8Q!r2#Lp7@z",
+  "level": 2,
+  "eff": 12,
+  "classes": 4,
+  "pct": 60
+ },
+ {
+  "pw": "N0tA-Common_Phrase!",
+  "level": 2,
+  "eff": 19,
+  "classes": 4,
+  "pct": 95
+ },
+ {
+  "pw": "19991231",
+  "level": 0,
+  "eff": 2,
+  "classes": 1,
+  "pct": 12
+ },
+ {
+  "pw": "00000000",
+  "level": 0,
+  "eff": 1,
+  "classes": 1,
+  "pct": 12
+ },
+ {
+  "pw": "12341234",
+  "level": 0,
+  "eff": 2,
+  "classes": 1,
+  "pct": 12
+ },
+ {
+  "pw": "abcd1234",
+  "level": 0,
+  "eff": 3,
+  "classes": 2,
+  "pct": 15
+ }
+]

@@ -1,0 +1,3 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 自动填充服务的元数据（feature/autofill/UmbraAutofillService）。不给 settingsActivity：说明页在 App 里（保险箱设置 › 密码自动填充）。 -->
+<autofill-service xmlns:android="http://schemas.android.com/apk/res/android" />

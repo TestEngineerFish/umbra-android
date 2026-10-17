@@ -1,0 +1,38 @@
+{
+ "saltB64": "AAECAwQFBgcICQoLDA0ODw==",
+ "cases": [
+  {
+   "pw": "correct horse 电池 staple",
+   "sk": "U1-ABCDE-FGHIJ-KLMNO-PQRST-UVWXY-Z",
+   "skDecoded": "a0022190a63a12a5b1ae7c2329d2b6be",
+   "auk": "9af45b849e755f681194629e300d88183b464324b9e3499473bdf515447a6b94",
+   "authHash": "85d95f4ea8209b061d9dd33209aa2f90e2c563e9e68a482dec8902ada7c0e6f9",
+   "verifier": "8fee80f8abfb2aa0211d886bff813c9a940de70aff28e95f4c6af18ed1eec3f0"
+  },
+  {
+   "pw": "hunter2!",
+   "sk": "u1-7q2zk-mn3ab-cd4ef-gh5ij-kl6mn-o",
+   "skDecoded": "a7e1aca98dd80221f08531fa84a97e63",
+   "auk": "635e1d79b74d8fa5336ffa40a3315ee28ba4b04a5d7b693b57c9d8c26f6edac8",
+   "authHash": "c242d9a137d80b75a83ddbc7c48fc6972cc5b63f05f0ad483938f7c251a4fb25",
+   "verifier": "57e6c994b9f19dd3146a759580e570a8fb9516f7315c98144503ff3562afce41"
+  },
+  {
+   "pw": "Café́",
+   "sk": "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567",
+   "skDecoded": "00443214c74254b635cf84653a56d7c6",
+   "auk": "3b0c35680b0a8f967fc5168f86407e848c3b46e5d6b1ff583fdda5f6b8969320",
+   "authHash": "a337694d3c4d8bb8848c278cada5a918fe98e79c1efdfd4ad28aa182e74124dd",
+   "verifier": "4b74a49306d52ca6523551887f3ce41823b9fa8e4a4c192e8ee55469cd2f56c2"
+  }
+ ],
+ "record": "{\"v\":1,\"kdf\":\"pbkdf2\",\"salt\":\"AAECAwQFBgcICQoLDA0ODw==\",\"verifier\":\"8fee80f8abfb2aa0211d886bff813c9a940de70aff28e95f4c6af18ed1eec3f0\",\"enc\":\"v1:DabDqCITNJeJNqBr:Kr8IDY15vMOhqz4OIP6uKA==:Gwb49S4SPPkMhIN4Axl//PfVmTeMx2c8E0O0Ce/VJA2o5IIuUNdxV5kCNVqAFjaDBLF9BI+gMlzn8rBWsBBoCS91ckmRpeb8cJf5mZFiB8VE2ZWzg9Wz9xcMKTogQOcDWQEaz5Zk0RbgDcghUAsMobsclry7AfyKQqwCpzsLplV7aH4djWOT8+PDk8wq3o5vrE8gne14ZDvTkfQfNbWZvKOWZmxsJLaEbNfU9I2WLWQNLoPtjIL30d78oCkvLAMLTRjI37fz1I0+XYg+S2WBlkQ51HO0n5MQJJAD8djwPKhz7OV44YDzK5iRJngK+pdb/4BtC6nDXRC3L15LY/Ha44qhfX7j1JUnOBPdpJO4xvy0r4NfZ7iRagNlbcCw9M8P8xUaM4L1Gbnir5PO4HFOJ5Tv6uZMFL19MAlNk2OjpzvgW6qAoiS2DDRLhLmmA5MsiETVdUSQyOYg+/lo9KRBg5tI5naIDm4YoMnJ7FEN51ImQItzvpfza/yMsreFlTc1b+gg4je4vcAAPNbT/duQpqfxgCBovjubo9bJnuAdkF06VXLgy8RgeJx420/Vy4UfSnD4I3ccBXGuPOvcRbq5IQhnSc6hLG5Zyxa32knrra5Iu3IYyesYxy7xbejHzDtySZ75Eo7d7eX5VBzq8H1k2OJ9qsQMFtP5ojhpcvPmeIvP/6/0Ivf7ycrE/pEWkeIIp6Y3HiSlpWvUswjTx8wRVno+mzQCXaRBDRo8ZO2mvGre1TCu3ygvxwNZSrNyG1oMmKabL0jGBY8=\"}",
+ "snapshotJson": "{\"v\":1,\"vaults\":[{\"id\":\"v1\",\"name\":\"我自己\",\"owner\":\"self\",\"icon\":\"🧑\",\"order\":0,\"keyWrapped\":\"v1:rqS/QbvXCaJLcBSN:FTgmjhiWwXnqqB8QWSCnEw==:zDvnwbNV2rNW34s0h3/t25WCUm2wwiq/OEV5lFtLsFY=\"}],\"data\":{\"v1\":{\"types\":[],\"items\":[{\"id\":\"i1\",\"typeId\":\"\",\"title\":\"GitHub\",\"blocks\":[],\"attachments\":[],\"createdAt\":1700000000000,\"updatedAt\":1700000000001,\"revision\":3,\"fmt\":2,\"nodes\":[{\"id\":\"n1\",\"kind\":\"acct\",\"x\":40,\"y\":40,\"w\":280,\"h\":240,\"title\":\"账号\",\"data\":{\"user\":\"alice\",\"pwd\":\"p@ss\",\"seed\":\"\",\"url\":\"https://github.com\",\"note\":\"\"},\"set\":{},\"zz\":1}],\"edges\":[]}],\"attachments\":{}}}}",
+ "vkHex": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+ "attBlobB64": "NYFhoyA6u3N75aQYWAlSjS3aOAS4F8U7q9bYSaVBosy7ktkzI+Rs1g==",
+ "fixedIv": {
+  "ivHex": "0102030405060708090a0b0c",
+  "plain": "固定 iv 明文",
+  "blob": "v1:AQIDBAUGBwgJCgsM:1LUmscTRsyl/N0340d8kXw==:F3QrOYrD14Y3wL/KkNppmw=="
+ }
+}
