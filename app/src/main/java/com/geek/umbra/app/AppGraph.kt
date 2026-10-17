@@ -48,7 +48,7 @@ object AppGraph {
         auth = AuthService(http, session, prefs, scope)
         socket = ChatSocket(http.client, prefs, session, auth, scope)
         guard = SessionGuard(prefs, auth, router, scope)
-        guard.register("socket", onLock = { socket.stop() }, onUnlock = { socket.start() })
+        guard.register("socket", onLock = { socket.stop(); http.clearOffline() }, onUnlock = { socket.start() })
         FeatureGraph.registerGuards(guard)
         com.geek.umbra.net.ServerSettings.start()
         guard.register("settings", onLock = {}, onUnlock = { scope.launch { com.geek.umbra.net.ServerSettings.load() } })

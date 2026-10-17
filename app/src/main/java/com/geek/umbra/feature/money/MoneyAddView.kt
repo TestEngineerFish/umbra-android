@@ -9,6 +9,8 @@
 // 会把整条导航栈底部 inset 卡死（MoneyAddView.swift:394）。Android 没有同一个坑，但两端版式要一样，照搬。
 package com.geek.umbra.feature.money
 
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import com.geek.umbra.designsystem.UmbraWhenTab
 import com.geek.umbra.designsystem.UmbraPickers
 import androidx.compose.foundation.background
@@ -726,9 +728,13 @@ private fun AmountCard(form: MoneyAddForm, ledger: Ledger, focus: FocusRequester
                 fontSize = 38.sp, fontWeight = UmbraType.weight650, fontFamily = FontFamily.Monospace,
                 color = if (cents != null) c.text else c.faint, textAlign = TextAlign.End,
             )
+            // 用 TextFieldValue 而不是 String 版：芯片、「清空」从外面改 form.expr 时，String 版的 BasicTextField
+            // 会把光标留在原位置 —— 输 32、点＋、再输 18 得到「3218+」（模拟器实测）。外部改动一律把光标放到末尾。
+            var tfv by remember { mutableStateOf(TextFieldValue(form.expr, TextRange(form.expr.length))) }
+            if (tfv.text != form.expr) tfv = TextFieldValue(form.expr, TextRange(form.expr.length))
             BasicTextField(
-                value = form.expr,
-                onValueChange = { form.expr = it },
+                value = tfv,
+                onValueChange = { tfv = it; form.expr = it.text },
                 singleLine = true,
                 textStyle = style,
                 cursorBrush = SolidColor(c.orange),
@@ -789,7 +795,10 @@ private fun RecentRow(form: MoneyAddForm) {
             selected = dirs.indexOfFirst { it.first == form.dir }.coerceAtLeast(0),
             onSelect = { form.switchDir(dirs[it].first) },
         )
-        val recent = MoneyStore.recentCats(form.dir)
+        // 同 CatGrid：订阅分类与流水并读它们，「最近用过」才会跟着晚到的数据重画
+        val cats by MoneyStore.cats.watch()
+        val entries by MoneyStore.entries.watch()
+        val recent = remember(cats, entries, form.dir) { MoneyStore.recentCats(form.dir) }
         if (recent.isNotEmpty()) {
             Text("最近用过", color = c.faint, style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.SemiBold))
             Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
@@ -828,9 +837,12 @@ private fun CatPill(form: MoneyAddForm, slug: String) {
 @Composable
 private fun CatGrid(form: MoneyAddForm) {
     val c = UmbraTheme.colors
+    // 订阅分类并**真的读它**：by 委托不读就不订阅。深链 / 快捷方式直达这一页时分类晚到，
+    // 只读 MoneyStore 快照的话网格永远是空的（模拟器实测，umbra://money/add 冷启动）。
+    val cats by MoneyStore.cats.watch()
     val shape = RoundedCornerShape(14.dp) // iOS MoneyAddView.swift:800 圆角 14
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        MoneyStore.enabledCats(form.dir).chunked(3).forEach { row ->
+        cats.filter { it.direction == form.dir && it.enabled }.chunked(3).forEach { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 row.forEach { cat ->
                     val on = form.cat == cat.slug

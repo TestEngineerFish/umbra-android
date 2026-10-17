@@ -90,6 +90,9 @@ class UmbraHttp(
     /** 最近一次请求是不是没连上服务端。各页的离线条读它。 */
     val offline: StateFlow<Boolean> = _offline
 
+    /** 进入未登录时由守卫调：上一个会话留下的离线状态不该带进单机模式。 */
+    fun clearOffline() { _offline.value = false }
+
     /** 凭证状态：ok / badToken（多半没登录）/ sessionInvalid。「我 › 连接」读它。 */
     enum class AuthVerdict { Ok, BadToken, SessionInvalid }
     private val _authVerdict = MutableStateFlow(AuthVerdict.Ok)
@@ -149,7 +152,9 @@ class UmbraHttp(
                 val resp = try {
                     c.newCall(req).await()
                 } catch (e: IOException) {
-                    _offline.value = true
+                    // 未登录（单机）时不记离线：那时只有探活 / 问门这类匿名请求，它们连不上不代表本机数据旧了 ——
+                    // 记上的话本机账本（提醒、生活账本、灵感）页顶会挂一条误导人的「离线」条。
+                    if (!prefs.signedOut) _offline.value = true
                     return@withContext HttpResult.Offline(e.message ?: e.javaClass.simpleName)
                 }
                 if (resp.code in 300..399 && hops < 3) {

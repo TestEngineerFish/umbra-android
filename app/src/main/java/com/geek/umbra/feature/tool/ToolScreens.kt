@@ -10,7 +10,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -151,9 +153,10 @@ fun ToolHomeScreen() {
                         style = TextStyle(fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.08.em),
                         modifier = Modifier.padding(horizontal = 2.dp),
                     )
-                    Row(horizontalArrangement = Arrangement.spacedBy(11.dp)) {
+                    // IntrinsicSize.Min：同一排两张卡取较高那张的高度，状态行才能都压在卡底（iOS 用 Spacer + minHeight 拉平）
+                    Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(11.dp)) {
                         list.forEach { card ->
-                            CardView(card, dim = card.needsLogin && locked, modifier = Modifier.weight(1f)) { router.go(card.route) }
+                            CardView(card, dim = card.needsLogin && locked, modifier = Modifier.weight(1f).fillMaxHeight()) { router.go(card.route) }
                         }
                     }
                 }
@@ -173,13 +176,14 @@ private fun CardView(card: ToolCard, dim: Boolean, modifier: Modifier, onClick: 
             // 未登录的联网卡只压透明度、照样可点 —— 进去是「要登录」那一块
             .alpha(if (dim) 0.45f else 1f),
     ) {
-        Column(Modifier.padding(13.dp).defaultMinSize(minHeight = 100.dp)) {
+        Column(Modifier.fillMaxHeight().padding(13.dp)) {
             Box(Modifier.size(36.dp).clip(RoundedCornerShape(11.dp)).background(c.chip), contentAlignment = Alignment.Center) {
                 UmbraIcon(card.icon, c.muted, size = 19.dp, strokeWidth = 1.8f)
             }
             Spacer(Modifier.height(9.dp))
             Text(card.label, color = c.text, style = TextStyle(fontSize = 15.5.sp, fontWeight = FontWeight.SemiBold))
-            Spacer(Modifier.weight(1f, fill = false).height(9.dp))
+            Spacer(Modifier.height(9.dp))
+            Spacer(Modifier.weight(1f))
             Text(card.sub, color = c.muted, style = TextStyle(fontSize = 12.5.sp, lineHeight = 18.sp), maxLines = 2)
         }
         if (card.attn > 0) UmbraCountBadge(card.attn, Modifier.align(Alignment.TopEnd).padding(12.dp))

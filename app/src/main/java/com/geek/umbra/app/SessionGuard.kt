@@ -49,7 +49,6 @@ class SessionGuard(
     }
 
     private fun apply(target: SessionLock) {
-        _lock.value = target
         when (SessionGuardRules.step(_locked.value, settled, target)) {
             GuardStep.None -> Unit
             GuardStep.Lock -> {
@@ -67,5 +66,8 @@ class SessionGuard(
                 hooks.forEach { runCatching { it.onUnlock() } }
             }
         }
+        // 最后才发布锁状态：深链在等它（DeepLinks 里 first { != Undecided }），Main.immediate 下会同步恢复并立刻跳转 ——
+        // 先发布的话，上面「单机落提醒 Tab」那一步会把刚跳过去的页面盖掉（冷启动点快捷方式「记一笔」落在提醒，模拟器实测）。
+        _lock.value = target
     }
 }
