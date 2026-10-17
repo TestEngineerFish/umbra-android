@@ -213,9 +213,11 @@ fun AuthScreen(gate: Gate) {
                                 )
                             }
                         }
-                        val ready = email.contains('@') && when (view) {
-                            AuthView.Login -> password.isNotEmpty()
-                            AuthView.Register -> password.length >= MIN_PASSWORD
+                        // 只要该填的格子都有内容就能点 —— 账号格不要求像邮箱、密码不在端上卡长度，对不对一律交给服务端判
+                        // （sam 2026-10-17：「不应在登录时拦截，是否正确由后台校验」；iOS 登录屏同样不做这些拦截）。
+                        // 锁定倒计时那几十秒照旧不让点：那是服务端刚说过的「先别试」。
+                        val ready = email.isNotBlank() && when (view) {
+                            AuthView.Login, AuthView.Register -> password.isNotEmpty()
                             else -> true
                         } && lockLeft == 0
                         UmbraButton(
