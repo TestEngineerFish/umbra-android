@@ -13,6 +13,7 @@ import com.geek.umbra.net.UmbraHttp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 /**
  * 依赖容器 —— 手写，不上 Hilt。
@@ -49,5 +50,7 @@ object AppGraph {
         guard = SessionGuard(prefs, auth, router, scope)
         guard.register("socket", onLock = { socket.stop() }, onUnlock = { socket.start() })
         FeatureGraph.registerGuards(guard)
+        com.geek.umbra.net.ServerSettings.start()
+        guard.register("settings", onLock = {}, onUnlock = { scope.launch { com.geek.umbra.net.ServerSettings.load() } })
     }
 }

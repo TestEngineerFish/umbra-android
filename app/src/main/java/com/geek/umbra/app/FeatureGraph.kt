@@ -1,6 +1,7 @@
 package com.geek.umbra.app
 
 import com.geek.umbra.feature.chat.ChatModule
+import com.geek.umbra.feature.remote.RemoteModule
 import com.geek.umbra.feature.reminder.ReminderModule
 import com.geek.umbra.feature.tool.ToolModule
 import com.geek.umbra.feature.task.TaskModule
@@ -30,5 +31,6 @@ object FeatureGraph {
         KnowledgeModule.register(guard)
         DutyModule.register(guard)
         VaultModule.register(guard)
+        RemoteModule.register(guard)
     }
 }

@@ -99,6 +99,7 @@ fun AppShell() {
         }
         if (stack.isEmpty()) BottomBar(tab) { router.selectTab(it) }
     }
+    com.geek.umbra.feature.remote.RemoteSessionHost()
     Overlays()
 }
 
