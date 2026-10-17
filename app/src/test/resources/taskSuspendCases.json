@@ -1,0 +1,820 @@
+{
+  "about": "任务挂起两档 + 接着跑（设计侧批次 223 / 224）两端共享夹具。PC tests/taskSuspend.test.ts 与 iOS Tools/swiftcheck.py「挂起两档两端夹具」各读一遍，用各自真实的判据 + 字面渲染、逐条比。比的是渲染结果，不是模板（两端占位写法不同）。expect 为 null = 不是挂起、不画原因。ios / pc 两个字段各端只比自己有的：ios.hint = iOS 独有那句；pc.connect / pc.bannerNoCard / pc.bannerReady = PC 独有（接入能力钮与能力页条幅）。detailButtons / chatButtons 只列两端共有的钮。response.status 0 = 没拿到响应（断网）；detail 对应 PC RetryTaskResult.error / iOS TaskRetryResponse.detail。改一个字两端同时红。",
+  "cases": [
+    {
+      "name": "设备离线 · 一台 · 第 3 步",
+      "status": "suspended",
+      "taskName": "给新品落地页出三张头图",
+      "fields": {
+        "suspend_reason": "device_offline",
+        "missing_capabilities": [],
+        "missing_capability_labels": [],
+        "waiting_devices": [
+          {
+            "id": "mac-1",
+            "name": "我的 MacBook Pro"
+          }
+        ],
+        "suspended_step": 3,
+        "resume_ready": false,
+        "ready_reason": null
+      },
+      "expect": {
+        "title": "在等「我的 MacBook Pro」上线",
+        "body": "第 3 步要用这台设备上的能力，它现在不在线。上线后会问你要不要接着跑。",
+        "listRow": "已挂起 · 等「我的 MacBook Pro」上线",
+        "chatLine": "等「我的 MacBook Pro」上线，上线后会问你要不要接着跑",
+        "detailButtons": [
+          "停止",
+          "复制详情"
+        ],
+        "chatButtons": [],
+        "ios": {
+          "hint": null
+        },
+        "pc": {
+          "connect": false
+        }
+      }
+    },
+    {
+      "name": "设备离线 · 多台、第一台没名字（k 数全部）",
+      "status": "suspended",
+      "taskName": "给新品落地页出三张头图",
+      "fields": {
+        "suspend_reason": "device_offline",
+        "missing_capabilities": [],
+        "missing_capability_labels": [],
+        "waiting_devices": [
+          {
+            "id": "a",
+            "name": ""
+          },
+          {
+            "id": "b",
+            "name": "办公室 iMac"
+          },
+          {
+            "id": "c",
+            "name": ""
+          }
+        ],
+        "suspended_step": 2,
+        "resume_ready": false,
+        "ready_reason": null
+      },
+      "expect": {
+        "title": "在等「办公室 iMac 等 3 台设备」上线",
+        "body": "第 2 步要用这台设备上的能力，它现在不在线。上线后会问你要不要接着跑。",
+        "listRow": "已挂起 · 等「办公室 iMac 等 3 台设备」上线",
+        "chatLine": "等「办公室 iMac 等 3 台设备」上线，上线后会问你要不要接着跑",
+        "detailButtons": [
+          "停止",
+          "复制详情"
+        ],
+        "chatButtons": [],
+        "ios": {
+          "hint": null
+        },
+        "pc": {
+          "connect": false
+        }
+      }
+    },
+    {
+      "name": "设备离线 · 无名 · 步号 null（无名不带书名号）",
+      "status": "suspended",
+      "taskName": "给新品落地页出三张头图",
+      "fields": {
+        "suspend_reason": "device_offline",
+        "missing_capabilities": [],
+        "missing_capability_labels": [],
+        "waiting_devices": [],
+        "suspended_step": null,
+        "resume_ready": false,
+        "ready_reason": null
+      },
+      "expect": {
+        "title": "在等能做这一步的设备上线",
+        "body": "这一步要用这台设备上的能力，它现在不在线。上线后会问你要不要接着跑。",
+        "listRow": "已挂起 · 等能做这一步的设备上线",
+        "chatLine": "等能做这一步的设备上线，上线后会问你要不要接着跑",
+        "detailButtons": [
+          "停止",
+          "复制详情"
+        ],
+        "chatButtons": [],
+        "ios": {
+          "hint": null
+        },
+        "pc": {
+          "connect": false
+        }
+      }
+    },
+    {
+      "name": "设备离线 · 名字全是空串",
+      "status": "suspended",
+      "taskName": "给新品落地页出三张头图",
+      "fields": {
+        "suspend_reason": "device_offline",
+        "missing_capabilities": [],
+        "missing_capability_labels": [],
+        "waiting_devices": [
+          {
+            "id": "a",
+            "name": ""
+          },
+          {
+            "id": "b",
+            "name": ""
+          }
+        ],
+        "suspended_step": 1,
+        "resume_ready": false,
+        "ready_reason": null
+      },
+      "expect": {
+        "title": "在等能做这一步的设备上线",
+        "body": "第 1 步要用这台设备上的能力，它现在不在线。上线后会问你要不要接着跑。",
+        "listRow": "已挂起 · 等能做这一步的设备上线",
+        "chatLine": "等能做这一步的设备上线，上线后会问你要不要接着跑",
+        "detailButtons": [
+          "停止",
+          "复制详情"
+        ],
+        "chatButtons": [],
+        "ios": {
+          "hint": null
+        },
+        "pc": {
+          "connect": false
+        }
+      }
+    },
+    {
+      "name": "缺能力 · 1 项",
+      "status": "suspended",
+      "taskName": "给新品落地页出三张头图",
+      "fields": {
+        "suspend_reason": "no_capability",
+        "missing_capabilities": [
+          "image_gen"
+        ],
+        "missing_capability_labels": [
+          "图片生成"
+        ],
+        "waiting_devices": [],
+        "suspended_step": 1,
+        "resume_ready": false,
+        "ready_reason": null
+      },
+      "expect": {
+        "title": "缺能力：图片生成",
+        "body": "哪台设备上都没有这项能力。接上以后会问你要不要接着跑。",
+        "listRow": "已挂起 · 缺能力：图片生成",
+        "chatLine": "缺能力：图片生成，接上后会问你要不要接着跑",
+        "detailButtons": [
+          "停止",
+          "复制详情"
+        ],
+        "chatButtons": [],
+        "ios": {
+          "hint": "在电脑上打开 Umbra 的「能力」页接上。"
+        },
+        "pc": {
+          "connect": true,
+          "bannerNoCard": "「给新品落地页出三张头图」在等「图片生成」，下面哪张卡都没有这一项。新增一个有它的程序，或者全部刷新 MCP / Skill，接上后会问你要不要接着跑。"
+        }
+      }
+    },
+    {
+      "name": "缺能力 · 2 项",
+      "status": "suspended",
+      "taskName": "给新品落地页出三张头图",
+      "fields": {
+        "suspend_reason": "no_capability",
+        "missing_capabilities": [
+          "image_gen",
+          "design"
+        ],
+        "missing_capability_labels": [
+          "图片生成",
+          "设计"
+        ],
+        "waiting_devices": [],
+        "suspended_step": 1,
+        "resume_ready": false,
+        "ready_reason": null
+      },
+      "expect": {
+        "title": "缺能力：图片生成、设计",
+        "body": "哪台设备上都没有这几项能力。接上以后会问你要不要接着跑。",
+        "listRow": "已挂起 · 缺能力：图片生成、设计",
+        "chatLine": "缺能力：图片生成、设计，接上后会问你要不要接着跑",
+        "detailButtons": [
+          "停止",
+          "复制详情"
+        ],
+        "chatButtons": [],
+        "ios": {
+          "hint": "在电脑上打开 Umbra 的「能力」页接上。"
+        },
+        "pc": {
+          "connect": true,
+          "bannerNoCard": "「给新品落地页出三张头图」在等「图片生成」「设计」，下面哪张卡都没有这一项。新增一个有它的程序，或者全部刷新 MCP / Skill，接上后会问你要不要接着跑。"
+        }
+      }
+    },
+    {
+      "name": "缺能力 · 3 项（等前无空格）",
+      "status": "suspended",
+      "taskName": "给新品落地页出三张头图",
+      "fields": {
+        "suspend_reason": "no_capability",
+        "missing_capabilities": [
+          "image_gen",
+          "design",
+          "write_code"
+        ],
+        "missing_capability_labels": [
+          "图片生成",
+          "设计",
+          "写代码"
+        ],
+        "waiting_devices": [],
+        "suspended_step": 2,
+        "resume_ready": false,
+        "ready_reason": null
+      },
+      "expect": {
+        "title": "缺能力：图片生成、设计等 3 项",
+        "body": "哪台设备上都没有这几项能力。接上以后会问你要不要接着跑。",
+        "listRow": "已挂起 · 缺能力：图片生成、设计等 3 项",
+        "chatLine": "缺能力：图片生成、设计等 3 项，接上后会问你要不要接着跑",
+        "detailButtons": [
+          "停止",
+          "复制详情"
+        ],
+        "chatButtons": [],
+        "ios": {
+          "hint": "在电脑上打开 Umbra 的「能力」页接上。"
+        },
+        "pc": {
+          "connect": true,
+          "bannerNoCard": "「给新品落地页出三张头图」在等「图片生成」「设计」「写代码」，下面哪张卡都没有这一项。新增一个有它的程序，或者全部刷新 MCP / Skill，接上后会问你要不要接着跑。"
+        }
+      }
+    },
+    {
+      "name": "缺能力 · labels 整个缺 → 念 id",
+      "status": "suspended",
+      "taskName": "给新品落地页出三张头图",
+      "fields": {
+        "suspend_reason": "no_capability",
+        "missing_capabilities": [
+          "image_gen",
+          "design"
+        ],
+        "missing_capability_labels": [],
+        "waiting_devices": [],
+        "suspended_step": 1,
+        "resume_ready": false,
+        "ready_reason": null
+      },
+      "expect": {
+        "title": "缺能力：image_gen、design",
+        "body": "哪台设备上都没有这几项能力。接上以后会问你要不要接着跑。",
+        "listRow": "已挂起 · 缺能力：image_gen、design",
+        "chatLine": "缺能力：image_gen、design，接上后会问你要不要接着跑",
+        "detailButtons": [
+          "停止",
+          "复制详情"
+        ],
+        "chatButtons": [],
+        "ios": {
+          "hint": "在电脑上打开 Umbra 的「能力」页接上。"
+        },
+        "pc": {
+          "connect": true,
+          "bannerNoCard": "「给新品落地页出三张头图」在等「image_gen」「design」，下面哪张卡都没有这一项。新增一个有它的程序，或者全部刷新 MCP / Skill，接上后会问你要不要接着跑。"
+        }
+      }
+    },
+    {
+      "name": "缺能力 · labels 缺一格 → 那一格念 id",
+      "status": "suspended",
+      "taskName": "给新品落地页出三张头图",
+      "fields": {
+        "suspend_reason": "no_capability",
+        "missing_capabilities": [
+          "image_gen",
+          "design"
+        ],
+        "missing_capability_labels": [
+          "图片生成",
+          ""
+        ],
+        "waiting_devices": [],
+        "suspended_step": 1,
+        "resume_ready": false,
+        "ready_reason": null
+      },
+      "expect": {
+        "title": "缺能力：图片生成、design",
+        "body": "哪台设备上都没有这几项能力。接上以后会问你要不要接着跑。",
+        "listRow": "已挂起 · 缺能力：图片生成、design",
+        "chatLine": "缺能力：图片生成、design，接上后会问你要不要接着跑",
+        "detailButtons": [
+          "停止",
+          "复制详情"
+        ],
+        "chatButtons": [],
+        "ios": {
+          "hint": "在电脑上打开 Umbra 的「能力」页接上。"
+        },
+        "pc": {
+          "connect": true,
+          "bannerNoCard": "「给新品落地页出三张头图」在等「图片生成」「design」，下面哪张卡都没有这一项。新增一个有它的程序，或者全部刷新 MCP / Skill，接上后会问你要不要接着跑。"
+        }
+      }
+    },
+    {
+      "name": "缺能力 · 为空（缺一项程序或 Skill）",
+      "status": "suspended",
+      "taskName": "给新品落地页出三张头图",
+      "fields": {
+        "suspend_reason": "no_capability",
+        "missing_capabilities": [],
+        "missing_capability_labels": [],
+        "waiting_devices": [],
+        "suspended_step": null,
+        "resume_ready": false,
+        "ready_reason": null
+      },
+      "expect": {
+        "title": "缺一项程序或 Skill",
+        "body": "这一步要用的程序或 Skill 哪台设备上都没有。接上以后会问你要不要接着跑。",
+        "listRow": "已挂起 · 缺一项程序或 Skill",
+        "chatLine": "缺一项程序或 Skill，接上后会问你要不要接着跑",
+        "detailButtons": [
+          "停止",
+          "复制详情"
+        ],
+        "chatButtons": [],
+        "ios": {
+          "hint": "在电脑上打开 Umbra 的「能力」页接上。"
+        },
+        "pc": {
+          "connect": true,
+          "bannerNoCard": "「给新品落地页出三张头图」要用的程序或 Skill 哪张卡上都没有。新增一个有它的程序，或者全部刷新 MCP / Skill，接上后会问你要不要接着跑。"
+        }
+      }
+    },
+    {
+      "name": "旧任务 · 原因 null · 未就绪 → 设备档老规矩",
+      "status": "suspended",
+      "taskName": "给新品落地页出三张头图",
+      "fields": {
+        "suspend_reason": null,
+        "missing_capabilities": [],
+        "missing_capability_labels": [],
+        "waiting_devices": [],
+        "suspended_step": null,
+        "resume_ready": false,
+        "ready_reason": null
+      },
+      "expect": {
+        "title": "在等能做这一步的设备上线",
+        "body": "这一步要用这台设备上的能力，它现在不在线。上线后会问你要不要接着跑。",
+        "listRow": "已挂起 · 等能做这一步的设备上线",
+        "chatLine": "等能做这一步的设备上线，上线后会问你要不要接着跑",
+        "detailButtons": [
+          "停止",
+          "复制详情"
+        ],
+        "chatButtons": [],
+        "ios": {
+          "hint": null
+        },
+        "pc": {
+          "connect": false
+        }
+      }
+    },
+    {
+      "name": "可以接着跑了 · 设备档",
+      "status": "suspended",
+      "taskName": "给新品落地页出三张头图",
+      "fields": {
+        "suspend_reason": "device_offline",
+        "missing_capabilities": [],
+        "missing_capability_labels": [],
+        "waiting_devices": [
+          {
+            "id": "mac-1",
+            "name": "我的 MacBook Pro"
+          }
+        ],
+        "suspended_step": 3,
+        "resume_ready": true,
+        "ready_reason": "device_online"
+      },
+      "expect": {
+        "title": "「我的 MacBook Pro」上线了，要接着跑吗？",
+        "body": "按「接着跑」从第 3 步继续，已完成的里程碑不重做。不想要了就按「停止」。",
+        "listRow": "已挂起 · 可以接着跑了",
+        "chatLine": "「我的 MacBook Pro」上线了，可以接着跑了",
+        "detailButtons": [
+          "接着跑",
+          "停止",
+          "复制详情"
+        ],
+        "chatButtons": [
+          "接着跑"
+        ],
+        "ios": {
+          "hint": null
+        },
+        "pc": {
+          "connect": false
+        }
+      }
+    },
+    {
+      "name": "可以接着跑了 · 设备档多台",
+      "status": "suspended",
+      "taskName": "给新品落地页出三张头图",
+      "fields": {
+        "suspend_reason": "device_offline",
+        "missing_capabilities": [],
+        "missing_capability_labels": [],
+        "waiting_devices": [
+          {
+            "id": "mac-1",
+            "name": "我的 MacBook Pro"
+          },
+          {
+            "id": "win-2",
+            "name": "家里的 PC"
+          }
+        ],
+        "suspended_step": 2,
+        "resume_ready": true,
+        "ready_reason": "device_online"
+      },
+      "expect": {
+        "title": "「我的 MacBook Pro 等 2 台设备」上线了，要接着跑吗？",
+        "body": "按「接着跑」从第 2 步继续，已完成的里程碑不重做。不想要了就按「停止」。",
+        "listRow": "已挂起 · 可以接着跑了",
+        "chatLine": "「我的 MacBook Pro 等 2 台设备」上线了，可以接着跑了",
+        "detailButtons": [
+          "接着跑",
+          "停止",
+          "复制详情"
+        ],
+        "chatButtons": [
+          "接着跑"
+        ],
+        "ios": {
+          "hint": null
+        },
+        "pc": {
+          "connect": false
+        }
+      }
+    },
+    {
+      "name": "可以接着跑了 · 能力档 · 步号 null",
+      "status": "suspended",
+      "taskName": "给新品落地页出三张头图",
+      "fields": {
+        "suspend_reason": "no_capability",
+        "missing_capabilities": [
+          "image_gen"
+        ],
+        "missing_capability_labels": [
+          "图片生成"
+        ],
+        "waiting_devices": [],
+        "suspended_step": null,
+        "resume_ready": true,
+        "ready_reason": "capability_added"
+      },
+      "expect": {
+        "title": "需要的能力接上了，要接着跑吗？",
+        "body": "按「接着跑」从这一步继续，已完成的里程碑不重做。不想要了就按「停止」。",
+        "listRow": "已挂起 · 可以接着跑了",
+        "chatLine": "需要的能力接上了，可以接着跑了",
+        "detailButtons": [
+          "接着跑",
+          "停止",
+          "复制详情"
+        ],
+        "chatButtons": [
+          "接着跑"
+        ],
+        "ios": {
+          "hint": null
+        },
+        "pc": {
+          "connect": false,
+          "bannerReady": "需要的能力已接入，「给新品落地页出三张头图」可以接着跑了。"
+        }
+      }
+    },
+    {
+      "name": "可以接着跑了 · 旧任务无名",
+      "status": "suspended",
+      "taskName": "给新品落地页出三张头图",
+      "fields": {
+        "suspend_reason": null,
+        "missing_capabilities": [],
+        "missing_capability_labels": [],
+        "waiting_devices": [],
+        "suspended_step": null,
+        "resume_ready": true,
+        "ready_reason": "device_online"
+      },
+      "expect": {
+        "title": "能做这一步的设备上线了，要接着跑吗？",
+        "body": "按「接着跑」从这一步继续，已完成的里程碑不重做。不想要了就按「停止」。",
+        "listRow": "已挂起 · 可以接着跑了",
+        "chatLine": "能做这一步的设备上线了，可以接着跑了",
+        "detailButtons": [
+          "接着跑",
+          "停止",
+          "复制详情"
+        ],
+        "chatButtons": [
+          "接着跑"
+        ],
+        "ios": {
+          "hint": null
+        },
+        "pc": {
+          "connect": false
+        }
+      }
+    },
+    {
+      "name": "不是挂起（字段残留也不画）",
+      "status": "running",
+      "taskName": "给新品落地页出三张头图",
+      "fields": {
+        "suspend_reason": "device_offline",
+        "missing_capabilities": [],
+        "missing_capability_labels": [],
+        "waiting_devices": [
+          {
+            "id": "mac-1",
+            "name": "我的 MacBook Pro"
+          }
+        ],
+        "suspended_step": 3,
+        "resume_ready": true,
+        "ready_reason": "device_online"
+      },
+      "expect": null
+    }
+  ],
+  "resumeCases": [
+    {
+      "name": "成功",
+      "fields": {
+        "suspend_reason": "device_offline",
+        "missing_capabilities": [],
+        "missing_capability_labels": [],
+        "waiting_devices": [
+          {
+            "id": "mac-1",
+            "name": "我的 MacBook Pro"
+          }
+        ],
+        "suspended_step": 3,
+        "resume_ready": true,
+        "ready_reason": "device_online"
+      },
+      "response": {
+        "status": 200,
+        "code": null,
+        "state": null,
+        "detail": ""
+      },
+      "expect": {
+        "failLine": null,
+        "keepButton": false
+      }
+    },
+    {
+      "name": "not_ready · 设备档",
+      "fields": {
+        "suspend_reason": "device_offline",
+        "missing_capabilities": [],
+        "missing_capability_labels": [],
+        "waiting_devices": [
+          {
+            "id": "mac-1",
+            "name": "我的 MacBook Pro"
+          }
+        ],
+        "suspended_step": 3,
+        "resume_ready": true,
+        "ready_reason": "device_online"
+      },
+      "response": {
+        "status": 409,
+        "code": "state_conflict",
+        "state": "not_ready",
+        "detail": "现在还不能接着跑：需要的设备仍不在线"
+      },
+      "expect": {
+        "failLine": "「我的 MacBook Pro」刚才又离线了，任务还挂着。",
+        "keepButton": false
+      }
+    },
+    {
+      "name": "not_ready · 设备档无名",
+      "fields": {
+        "suspend_reason": null,
+        "missing_capabilities": [],
+        "missing_capability_labels": [],
+        "waiting_devices": [],
+        "suspended_step": null,
+        "resume_ready": true,
+        "ready_reason": "device_online"
+      },
+      "response": {
+        "status": 409,
+        "code": "state_conflict",
+        "state": "not_ready",
+        "detail": "现在还不能接着跑：需要的设备仍不在线"
+      },
+      "expect": {
+        "failLine": "能做这一步的设备刚才又离线了，任务还挂着。",
+        "keepButton": false
+      }
+    },
+    {
+      "name": "not_ready · 能力档",
+      "fields": {
+        "suspend_reason": "no_capability",
+        "missing_capabilities": [
+          "image_gen"
+        ],
+        "missing_capability_labels": [
+          "图片生成"
+        ],
+        "waiting_devices": [],
+        "suspended_step": null,
+        "resume_ready": true,
+        "ready_reason": "capability_added"
+      },
+      "response": {
+        "status": 409,
+        "code": "state_conflict",
+        "state": "not_ready",
+        "detail": "现在还不能接着跑：需要的能力仍缺"
+      },
+      "expect": {
+        "failLine": "需要的能力刚才又不可用了，任务还挂着。",
+        "keepButton": false
+      }
+    },
+    {
+      "name": "wrong_status",
+      "fields": {
+        "suspend_reason": "device_offline",
+        "missing_capabilities": [],
+        "missing_capability_labels": [],
+        "waiting_devices": [
+          {
+            "id": "mac-1",
+            "name": "我的 MacBook Pro"
+          }
+        ],
+        "suspended_step": 3,
+        "resume_ready": true,
+        "ready_reason": "device_online"
+      },
+      "response": {
+        "status": 409,
+        "code": "state_conflict",
+        "state": "wrong_status",
+        "detail": "任务不是挂起状态"
+      },
+      "expect": {
+        "failLine": "这个任务的状态刚变过，现在不能接着跑。详情已经刷新。",
+        "keepButton": false
+      }
+    },
+    {
+      "name": "404（同 222 missing）",
+      "fields": {
+        "suspend_reason": "device_offline",
+        "missing_capabilities": [],
+        "missing_capability_labels": [],
+        "waiting_devices": [
+          {
+            "id": "mac-1",
+            "name": "我的 MacBook Pro"
+          }
+        ],
+        "suspended_step": 3,
+        "resume_ready": true,
+        "ready_reason": "device_online"
+      },
+      "response": {
+        "status": 404,
+        "code": "not_found",
+        "state": null,
+        "detail": "not found"
+      },
+      "expect": {
+        "failLine": "这个任务已经不在了，可能在另一台设备上删掉了。",
+        "keepButton": false
+      }
+    },
+    {
+      "name": "断网（没拿到响应）",
+      "fields": {
+        "suspend_reason": "device_offline",
+        "missing_capabilities": [],
+        "missing_capability_labels": [],
+        "waiting_devices": [
+          {
+            "id": "mac-1",
+            "name": "我的 MacBook Pro"
+          }
+        ],
+        "suspended_step": 3,
+        "resume_ready": true,
+        "ready_reason": "device_online"
+      },
+      "response": {
+        "status": 0,
+        "code": null,
+        "state": null,
+        "detail": "The Internet connection appears to be offline."
+      },
+      "expect": {
+        "failLine": "连不上服务器，没接上。联网后再按一次。",
+        "keepButton": true
+      }
+    },
+    {
+      "name": "5xx",
+      "fields": {
+        "suspend_reason": "device_offline",
+        "missing_capabilities": [],
+        "missing_capability_labels": [],
+        "waiting_devices": [
+          {
+            "id": "mac-1",
+            "name": "我的 MacBook Pro"
+          }
+        ],
+        "suspended_step": 3,
+        "resume_ready": true,
+        "ready_reason": "device_online"
+      },
+      "response": {
+        "status": 502,
+        "code": null,
+        "state": null,
+        "detail": "HTTP 502"
+      },
+      "expect": {
+        "failLine": "服务端这次没有响应（HTTP 502），过一会儿再按一次。",
+        "keepButton": true
+      }
+    },
+    {
+      "name": "未知 state → 服务端 detail 原样",
+      "fields": {
+        "suspend_reason": "device_offline",
+        "missing_capabilities": [],
+        "missing_capability_labels": [],
+        "waiting_devices": [
+          {
+            "id": "mac-1",
+            "name": "我的 MacBook Pro"
+          }
+        ],
+        "suspended_step": 3,
+        "resume_ready": true,
+        "ready_reason": "device_online"
+      },
+      "response": {
+        "status": 409,
+        "code": "state_conflict",
+        "state": "brand_new_state",
+        "detail": "服务端新说的一句"
+      },
+      "expect": {
+        "failLine": "服务端新说的一句",
+        "keepButton": true
+      }
+    }
+  ]
+}

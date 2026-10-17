@@ -1,21 +1,21 @@
-// 灵感模块的页面入口。路由分发表（navigation/RouteScreens.kt）只调这里的函数；
-// 移植时替换占位实现，函数签名不要改（改了要同步改分发表）。
+// 灵感模块的页面入口。路由分发表（navigation/RouteScreens.kt）只调这里的函数；函数签名不要改。
 package com.geek.umbra.feature.inspiration
 
 import androidx.compose.runtime.Composable
-import com.geek.umbra.designsystem.PlaceholderScreen
 
+/** 灵感列表（工具页「灵感」卡推入）。本机优先：未登录也能用。实现在 InspirationViews.kt。 */
 @Composable
 fun InspListScreen() {
-    PlaceholderScreen("灵感")
+    InspListView()
 }
 
 @Composable
 fun InspDetailScreen(id: String) {
-    PlaceholderScreen("灵感")
+    InspDetailView(id)
 }
 
+/** id == null 新建；带 id 进来也能编（兼容旧入口）。 */
 @Composable
 fun InspEditScreen(id: String?) {
-    PlaceholderScreen("记灵感")
+    InspEditView(id)
 }
