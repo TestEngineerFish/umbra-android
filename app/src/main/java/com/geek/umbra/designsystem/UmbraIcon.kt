@@ -110,6 +110,8 @@ fun UmbraIconBlock(
  * 等 iOS 也用上时挪进 UmbraIconPath.swift 再重新生成。
  */
 object UmbraExtraIcons {
+    /** Lucide arrow-left。设计侧 199 答复第 3 条：Android 推入页返回用它（22、stroke 2、热区 48），不用 iOS 的 chevron。 */
+    const val arrowLeft = "M19,12L5,12M12,19L5,12L12,5"
     /** Lucide more-horizontal：三个半径 1 的圆点（用两段贝塞尔近似整圆）。 */
     const val more = "M5,12C5,11.45 5.45,11 6,11C6.55,11 7,11.45 7,12C7,12.55 6.55,13 6,13C5.45,13 5,12.55 5,12Z" +
         "M11,12C11,11.45 11.45,11 12,11C12.55,11 13,11.45 13,12C13,12.55 12.55,13 12,13C11.45,13 11,12.55 11,12Z" +

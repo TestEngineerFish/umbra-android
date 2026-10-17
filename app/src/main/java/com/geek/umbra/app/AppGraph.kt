@@ -24,7 +24,30 @@ import kotlinx.coroutines.launch
  */
 @SuppressLint("StaticFieldLeak") // 持有的是 applicationContext，不会泄漏 Activity
 object AppGraph {
-    lateinit var context: Context; private set
+    private lateinit var base: Context
+    private var localized: Context? = null
+    private var localizedTags: String? = null
+
+    /**
+     * 应用级 Context，**按当前 App 内语言配置过**。
+     * App 内切语言（AppCompatDelegate.setApplicationLocales）只作用到 Activity 的 Context；直接拿 applicationContext
+     * 取文案会一直按系统语言 —— 模拟器实测：切成简体中文后「我」页的「商城 / 知识库 / 执勤」仍是英文。
+     * 这里按当前语言标签缓存一份 createConfigurationContext，语言一换就重建。文件、系统服务、启动 Activity 照常可用。
+     */
+    val context: Context
+        get() {
+            // Android 13+ 的 App 语言存在系统 LocaleManager 里（设置 › 应用 › 语言 也改的是它）；AppCompat 的读法在这里会回空
+            val tags = if (android.os.Build.VERSION.SDK_INT >= 33) {
+                base.getSystemService(android.app.LocaleManager::class.java)?.applicationLocales?.toLanguageTags().orEmpty()
+            } else androidx.appcompat.app.AppCompatDelegate.getApplicationLocales().toLanguageTags()
+            if (tags != localizedTags || localized == null) {
+                localized = if (tags.isEmpty()) base else base.createConfigurationContext(
+                    android.content.res.Configuration(base.resources.configuration).apply { setLocales(android.os.LocaleList.forLanguageTags(tags)) },
+                )
+                localizedTags = tags
+            }
+            return localized!!
+        }
 
     /** 进程级协程作用域：同步、长连接、防抖推送都挂在这里，不随页面销毁。 */
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -39,8 +62,8 @@ object AppGraph {
     val router = Router()
 
     fun init(app: Context) {
-        if (::context.isInitialized) return
-        context = app.applicationContext
+        if (::base.isInitialized) return
+        base = app.applicationContext
         prefs = Prefs(context, scope)
         secure = SecureStore(context)
         session = SessionStore(secure)

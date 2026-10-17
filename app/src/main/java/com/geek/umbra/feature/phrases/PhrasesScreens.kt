@@ -249,7 +249,7 @@ private fun PhraseRow(p: Phrase) {
             }
             // 44×44 复制钮：成功后换勾 +「已复制」两秒复位。内容是明文，不做 60 秒清剪贴板（那条只管保险箱）。
             Column(
-                Modifier.size(44.dp).clickable(role = Role.Button) {
+                Modifier.size(UmbraDimens.tapMin).clickable(role = Role.Button) {
                     val clip = PhraseHandout.copy(ctx, p)
                     copied = true
                     router.showToast(when (clip) {

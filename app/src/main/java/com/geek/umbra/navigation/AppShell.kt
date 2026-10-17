@@ -32,6 +32,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -152,7 +153,11 @@ private fun BottomBar(current: Tab, onSelect: (Tab) -> Unit) {
                 val on = t == current
                 val tint = if (on) c.orange else c.muted
                 Column(
-                    Modifier.weight(1f).height(58.dp).clickable(role = Role.Tab) { onSelect(t) },
+                    // 不要水波纹、不要 M3 选中胶囊（设计侧 199 答复第 1 条）：选中只靠橙色图标 + 加粗描边 + 橙色标签，同 iOS 无按压形变
+                    Modifier.weight(1f).height(58.dp).clickable(
+                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                        indication = null, role = Role.Tab,
+                    ) { onSelect(t) },
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
                 ) {
@@ -197,6 +202,10 @@ fun Overlays() {
                 sheetState = state,
                 containerColor = c.bg,
                 shape = RoundedCornerShape(topStart = UmbraDimens.radiusSheet, topEnd = UmbraDimens.radiusSheet),
+                // 把手 36×4、圆角 999、border 色（设计侧 199 答复第 6 条）
+                dragHandle = {
+                    Box(Modifier.padding(top = 10.dp, bottom = 6.dp).size(36.dp, 4.dp).clip(RoundedCornerShape(50)).background(c.border))
+                },
             ) {
                 sheet.content { router.sheets.remove(sheet) }
             }
@@ -211,8 +220,18 @@ fun Overlays() {
             title = { Text(a.title, style = TextStyle(fontSize = 17.sp, fontWeight = FontWeight.SemiBold), color = c.text) },
             text = a.message?.let { { Text(it, style = TextStyle(fontSize = 14.sp, lineHeight = 20.sp), color = c.muted) } },
             confirmButton = {
-                TextButton(onClick = { router.alert = null; a.onConfirm() }) {
-                    Text(a.confirmLabel, color = if (a.destructive) c.dangerText else c.orangeText, fontWeight = FontWeight.SemiBold)
+                if (a.destructive) {
+                    // 破坏性的最终动作用实心红胶囊（danger 底、高 40）—— 设计侧 199 答复第 7 条：规范里实心红就是留给这一处的。
+                    // 字色用 onDanger：浅色下就是白字；深色下 danger 提亮了，白字压不住，换深墨（token 本来就为这一处准备）。
+                    Box(
+                        Modifier.height(40.dp).clip(RoundedCornerShape(50)).background(c.danger)
+                            .clickable(role = Role.Button) { router.alert = null; a.onConfirm() }.padding(horizontal = 18.dp),
+                        contentAlignment = Alignment.Center,
+                    ) { Text(a.confirmLabel, color = c.onDanger, fontWeight = FontWeight.SemiBold, style = TextStyle(fontSize = 15.sp)) }
+                } else {
+                    TextButton(onClick = { router.alert = null; a.onConfirm() }) {
+                        Text(a.confirmLabel, color = c.orangeText, fontWeight = FontWeight.SemiBold)
+                    }
                 }
             },
             dismissButton = {

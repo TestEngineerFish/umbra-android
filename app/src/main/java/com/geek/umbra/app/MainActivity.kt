@@ -25,6 +25,8 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // 三键导航时系统会在导航栏上加一层半透明遮罩：关掉，让底栏的 card 底一直铺进导航区（设计侧 199 答复第 1 条）
+        if (android.os.Build.VERSION.SDK_INT >= 29) window.isNavigationBarContrastEnforced = false
         handle(intent)
         setContent {
             val prefs by AppGraph.prefs.snapshot.collectAsState()

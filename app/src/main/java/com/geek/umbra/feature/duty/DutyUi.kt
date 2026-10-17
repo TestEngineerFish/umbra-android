@@ -31,17 +31,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TimePicker
-import androidx.compose.material3.TimePickerDefaults
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
@@ -92,7 +84,6 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
-import java.time.ZoneOffset
 import java.util.Locale
 import java.util.TimeZone
 
@@ -367,89 +358,30 @@ internal fun parseHHMM(raw: String, fallback: LocalTime): LocalTime {
 internal fun LocalTime.hhmm(): String = String.format(Locale.ROOT, "%02d:%02d", hour, minute)
 
 /**
- * 时分选择（iOS `.umbraTimePicker`）。
- * 暂用 M3 TimePicker 套 Umbra 颜色；提醒代理在另一分支做 UmbraDateTimePanel（时分滚轮），合并后统一替换。
+ * 时分选择（iOS `.umbraTimePicker`）—— 走共用的 UmbraDateTimePanel 时分滚轮（设计侧 199 答复第 8 条：Android 也用它，
+ * 不用 M3 原生选择器）。弹层由 Router 托管，弹出去之后立刻 onDismiss 放下「要弹」的旗子；取消就是什么都不回。
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun DutyTimePickerDialog(title: String, initial: LocalTime, onDismiss: () -> Unit, onPick: (LocalTime) -> Unit) {
-    val c = UmbraTheme.colors
-    val state = rememberTimePickerState(initialHour = initial.hour, initialMinute = initial.minute, is24Hour = true)
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        containerColor = c.card,
-        shape = RoundedCornerShape(UmbraDimens.radiusDialog),
-        title = { Text(title, color = c.text, style = TextStyle(fontSize = 17.sp, fontWeight = FontWeight.SemiBold)) },
-        text = { TimePicker(state = state, colors = dutyTimeColors()) },
-        confirmButton = {
-            TextButton(onClick = { onPick(LocalTime.of(state.hour, state.minute)); onDismiss() }) {
-                Text(stringResource(R.string.picker_confirm), color = c.orangeText, fontWeight = FontWeight.SemiBold)
-            }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.duty_cancel), color = c.text) } },
-    )
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun dutyTimeColors() = UmbraTheme.colors.let { c ->
-    TimePickerDefaults.colors(
-        containerColor = c.card,
-        clockDialColor = c.chip,
-        clockDialSelectedContentColor = Color.White,
-        clockDialUnselectedContentColor = c.text,
-        selectorColor = c.orange,
-        timeSelectorSelectedContainerColor = c.orangeSoft,
-        timeSelectorUnselectedContainerColor = c.chip,
-        timeSelectorSelectedContentColor = c.orangeText,
-        timeSelectorUnselectedContentColor = c.text,
-    )
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        val zone = java.time.ZoneId.systemDefault()
+        val ms = java.time.LocalDate.now(zone).atTime(initial).atZone(zone).toInstant().toEpochMilli()
+        com.geek.umbra.designsystem.UmbraPickers.presentTime(title, ms) { picked ->
+            onPick(java.time.Instant.ofEpochMilli(picked).atZone(zone).toLocalTime().withSecond(0).withNano(0))
+        }
+        onDismiss()
+    }
 }
 
 /**
- * 日期 + 时刻（iOS `.umbraWhenPicker`，一次性触发「哪个时刻」）：先选日子、再选时分。
- * 按本机时区选（iOS 那个面板也是 Calendar.current）；显示仍按上海（DutyRules.monthDayTime）。
- * 暂用 M3 DatePicker / TimePicker，合并后换 UmbraDateTimePanel。
+ * 日期 + 时刻（iOS `.umbraWhenPicker`，一次性触发「哪个时刻」）—— 走共用的 UmbraDateTimePanel when 变体：
+ * 一个瞬间一个值、同一个面板两段切（同提醒 / 记账）。按本机时区选；显示仍按上海（DutyRules.monthDayTime）。
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun DutyWhenPickerDialog(title: String, initialMs: Long, onDismiss: () -> Unit, onPick: (Long) -> Unit) {
-    val c = UmbraTheme.colors
-    val zone = ZoneId.systemDefault()
-    val start = Instant.ofEpochMilli(initialMs).atZone(zone)
-    var pickedDay by remember { mutableStateOf<LocalDate?>(null) }
-    val day = pickedDay
-    if (day == null) {
-        // M3 DatePicker 的毫秒是「那天 UTC 零点」
-        val dp = rememberDatePickerState(initialSelectedDateMillis = start.toLocalDate().atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli())
-        androidx.compose.material3.DatePickerDialog(
-            onDismissRequest = onDismiss,
-            confirmButton = {
-                TextButton(onClick = {
-                    val ms = dp.selectedDateMillis
-                    if (ms != null) pickedDay = Instant.ofEpochMilli(ms).atZone(ZoneOffset.UTC).toLocalDate()
-                }) { Text(stringResource(R.string.picker_confirm), color = c.orangeText, fontWeight = FontWeight.SemiBold) }
-            },
-            dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.duty_cancel), color = c.text) } },
-            colors = DatePickerDefaults.colors(containerColor = c.card),
-        ) {
-            DatePicker(
-                state = dp,
-                title = { Text(title, color = c.text, modifier = Modifier.padding(start = 24.dp, top = 16.dp)) },
-                colors = DatePickerDefaults.colors(
-                    containerColor = c.card,
-                    selectedDayContainerColor = c.orange,
-                    selectedDayContentColor = Color.White,
-                    todayDateBorderColor = c.border,
-                    todayContentColor = c.text,
-                    dayContentColor = c.text,
-                ),
-            )
-        }
-    } else {
-        DutyTimePickerDialog(title, start.toLocalTime().withSecond(0).withNano(0), onDismiss) { t ->
-            onPick(day.atTime(t).atZone(zone).toInstant().toEpochMilli())
-        }
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        com.geek.umbra.designsystem.UmbraPickers.presentWhen(title, initialMs, com.geek.umbra.designsystem.UmbraWhenTab.Date, onPick)
+        onDismiss()
     }
 }
 

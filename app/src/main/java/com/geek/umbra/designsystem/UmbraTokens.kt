@@ -86,13 +86,12 @@ object UmbraFixedColors {
 
 val LocalUmbraColors = staticCompositionLocalOf { UmbraLight }
 
-/**
- * 字号与字重。只用四档字重 400 / 560 / 600 / 650（iOS 同）。
- * 560、650 不是标准档：Android 12+ 的系统字体是可变字重，会按数值插值；老系统就近取 500 / 700。
- */
+/** 字号与字重。设计稿的四档字重 400 / 560 / 600 / 650 在 Android 上映射成 Normal / Medium / SemiBold / SemiBold。 */
 object UmbraType {
-    private val W560 = FontWeight(560)
-    private val W650 = FontWeight(650)
+    // 设计侧 199 答复「全局规则」：字体走系统默认，字重映射 400→Normal、560→Medium(500)、600 / 650→SemiBold(600)。
+    // （原来写的是可变字重 560 / 650 —— 系统字体在多数国产机上不是可变字重，会就近落成 400 / 700，反而更乱。）
+    private val W560 = FontWeight.Medium
+    private val W650 = FontWeight.SemiBold
     val pageTitle = TextStyle(fontSize = 27.sp, fontWeight = W650, lineHeight = 34.sp)
     val sectionTitle = TextStyle(fontSize = 17.sp, fontWeight = FontWeight.SemiBold, lineHeight = 22.sp)
     val detailTitle = TextStyle(fontSize = 20.sp, fontWeight = W650, lineHeight = 26.sp)
@@ -127,8 +126,8 @@ object UmbraDimens {
     val pagePadX = 16.dp
     val cardPad = 13.dp
     val groupGap = 11.dp
-    /** 热区下限。iOS 是 44pt；Android 系统建议 48dp，这里守 iOS 的 44 以和设计稿对齐，不低于它。 */
-    val tapMin = 44.dp
+    /** 热区下限 48dp（设计侧 199 答复「全局规则」：iOS 44pt、Android 48dp）。视觉尺寸不变，用透明外框撑。 */
+    val tapMin = 48.dp
     val rowMinH = 48.dp
     val rowMinHSub = 60.dp
 

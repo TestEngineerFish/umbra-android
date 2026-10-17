@@ -7,6 +7,7 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.ui.unit.dp
 
 /** 外观设置：与 iOS `umbra.appearance` 同取值。 */
 enum class Appearance(val wire: String) {
@@ -56,6 +57,11 @@ fun UmbraTheme(appearance: Appearance = Appearance.System, content: @Composable 
         )
     }
     CompositionLocalProvider(LocalUmbraColors provides c) {
-        MaterialTheme(colorScheme = m3, content = content)
+        // 菜单（DropdownMenu）取 shapes.extraSmall：圆角 12（设计侧 199 答复第 5 条），各模块自己调的 M3 菜单一次到位
+        MaterialTheme(
+            colorScheme = m3,
+            shapes = androidx.compose.material3.Shapes(extraSmall = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)),
+            content = content,
+        )
     }
 }

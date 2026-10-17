@@ -147,7 +147,7 @@ object VaultSession {
             is VaultBiometricStore.DecryptInit.Ready -> r.cipher
         }
         set { it.copy(faceState = FaceState.Scanning, faceFailure = null) }
-        VaultBiometricPrompt.authenticate(activity, "解锁保险箱", cipher) { res ->
+        VaultBiometricPrompt.authenticate(activity, "解锁密码保险箱", cipher) { res ->
             res.onSuccess { c ->
                 val pw = c?.let { VaultBiometricStore.open(it) }
                 if (pw == null) { fail(VaultBiometricStore.Failure.Invalidated); return@onSuccess }
@@ -162,7 +162,7 @@ object VaultSession {
         if (s.faceState == FaceState.Scanning) return
         if (!biometryAvailable) { fail(VaultBiometricStore.Failure.Unavailable); return }
         set { it.copy(faceState = FaceState.Scanning, faceFailure = null) }
-        VaultBiometricPrompt.authenticate(activity, "解锁保险箱", null) { res ->
+        VaultBiometricPrompt.authenticate(activity, "解锁密码保险箱", null) { res ->
             res.onSuccess { set { it.copy(faceState = FaceState.Idle, softLocked = false) }; touch() }
                 .onFailure { e -> fail((e as? VaultBiometricPrompt.FailureException)?.failure ?: VaultBiometricStore.Failure.Failed) }
         }

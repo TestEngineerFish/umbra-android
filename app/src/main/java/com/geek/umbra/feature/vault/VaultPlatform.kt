@@ -133,12 +133,20 @@ object VaultBiometricStore {
          * 文案照 iOS `Failure.message`，把「Face ID / iPhone」换成这台设备上的说法（[VaultBiometricStore.name]）——
          * 在安卓手机上说「Face ID 被系统锁定、去解锁一次 iPhone」是在指错路。
          */
+        /** 错误卡标题（设计侧 199 答复第 13 条）。 */
+        fun title(name: String): String = when (this) {
+            Lockout -> "${name}暂时停用"
+            Unavailable -> "${name}用不了"
+            else -> "${name}没通过"
+        }
+
         fun message(name: String): String = when (this) {
             Cancelled -> "已取消。点一下识别图标再试一次，或者输入主密码。"
-            Lockout -> "$name 被系统锁定了，需要先用设备密码解锁一次手机。现在可以用主密码打开保险箱。"
+            // 以下几句是设计侧 199 答复第 13 条定稿
+            Lockout -> "失败次数过多，系统暂停了识别。用主密码解锁。"
             Invalidated -> "设备的${name}数据变了，需要重新输入一次主密码来重新授权$name。"
-            Unavailable -> "这台设备没有可用的生物识别。"
-            Failed -> "系统没能识别，可能是被遮挡或超过了等待时间。点一下识别图标再试一次，或者直接输入主密码。"
+            Unavailable -> "这台手机还没录入指纹或面部"
+            Failed -> "系统没能识别，可能是没对准或超过了等待时间。点一下识别图标再试一次，或者输入主密码。"
         }
     }
 
@@ -150,19 +158,11 @@ object VaultBiometricStore {
         BiometricManager.from(ctx).canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG) == BiometricManager.BIOMETRIC_SUCCESS
 
     /**
-     * 界面上怎么称呼它。iOS 区分 Face ID / Touch ID；Android 只能看设备有哪种硬件：只有指纹叫「指纹」、
-     * 只有面容叫「面容」，都有或说不清叫「生物识别」。
+     * 界面上怎么称呼它：一律「生物识别」（设计侧 199 答复第 13 条）。不按硬件分「指纹 / 面容」——
+     * 同一台手机两样都有、系统框里用哪个由用户在系统设置里定，App 猜错就是在指错路。
      */
-    fun name(ctx: Context = AppGraph.context): String {
-        val pm = ctx.packageManager
-        val finger = pm.hasSystemFeature(PackageManager.FEATURE_FINGERPRINT)
-        val face = Build.VERSION.SDK_INT >= 29 && pm.hasSystemFeature(PackageManager.FEATURE_FACE)
-        return when {
-            finger && !face -> "指纹"
-            face && !finger -> "面容"
-            else -> "生物识别"
-        }
-    }
+    @Suppress("UNUSED_PARAMETER")
+    fun name(ctx: Context = AppGraph.context): String = "生物识别"
 
     private fun newKey(): SecretKey {
         val ks = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }

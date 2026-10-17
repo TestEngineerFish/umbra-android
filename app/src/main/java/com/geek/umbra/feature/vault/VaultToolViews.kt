@@ -407,9 +407,9 @@ internal fun VaultSettingsContent() {
         if (bioAvailable) {
             val on = se.faceIDEnabled && se.hasBiometricCredential
             add(UmbraSettingRow(
-                "用 $name 解锁",
-                sub = if (on) "主密码存在这台设备的安全硬件里，不上传、不进备份。重新录入${name}后会自动失效。"
-                else "打开时会当场验一次主密码和 $name，之后才存进这台设备的安全硬件。",
+                // 标题与副标题是设计侧 199 答复第 13 条定稿
+                "用${name}解锁",
+                sub = "仍需主密码作为最终凭证",
                 toggle = on,
                 onToggle = {
                     when {
@@ -422,7 +422,9 @@ internal fun VaultSettingsContent() {
             ))
         } else {
             // 不可用时不给一个点不动的开关，直接说明为什么。
-            add(UmbraSettingRow("用 $name 解锁", sub = "这台设备没有可用的生物识别", value = "不可用", tint = c.faint))
+            add(UmbraSettingRow("用${name}解锁", sub = "这台手机还没录入指纹或面部", value = "去系统设置", tint = c.faint, chevron = true) {
+                runCatching { AppGraph.context.startActivity(android.content.Intent(android.provider.Settings.ACTION_SECURITY_SETTINGS).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+            })
         }
         if (se.hasBiometricCredential) add(UmbraSettingRow("忘掉已存的主密码", tint = c.danger) {
             VaultSession.forgetPassword(); router.showToast("已清掉，下次要用主密码解锁")

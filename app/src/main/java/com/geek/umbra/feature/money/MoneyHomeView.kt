@@ -149,7 +149,7 @@ fun MoneyHomeView() {
     // 所以用 leading 把「返回 + 切换器」一起画，title 留给读屏 / 页面名（不画出来）。
     val leading: @Composable () -> Unit = {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            UmbraTopBarIcon(UmbraIconPaths.chevronLeft, "返回", { router.back() })
+            com.geek.umbra.designsystem.UmbraBackButton { router.back() }
             MoneyLedgerSwitch()
         }
     }
@@ -477,7 +477,7 @@ private fun CatRow(row: MoneyCatStatDTO, total: Long, first: Boolean) {
     val slot = MoneyStore.catSlot(row.cat)
     Box {
         Row(
-            Modifier.fillMaxWidth().heightIn(min = 44.dp).clickable(role = Role.Button) {
+            Modifier.fillMaxWidth().heightIn(min = UmbraDimens.tapMin).clickable(role = Role.Button) {
                 MoneyStore.listDir.value = "expense"
                 MoneyStore.listCat.value = row.cat
                 AppGraph.router.go(Route.MoneyList)

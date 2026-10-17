@@ -121,7 +121,7 @@ internal fun VaultHomeContent() {
                     VaultStore.unlock(pw, "")
                     if (VaultStore.s.unlocked) {
                         VaultSession.markUnlocked()
-                        router.showToast("${VaultSession.biometryName} 通过，已解锁")
+                        router.showToast("已解锁")
                     }
                 }
             }
@@ -139,8 +139,8 @@ internal fun VaultHomeContent() {
 
     fun tapFaceIcon() {
         if (VaultSession.s.faceState == FaceState.Scanning) return
-        if (!VaultSession.s.faceIDEnabled) { router.showToast("${VaultSession.biometryName} 已在保险箱设置里关掉"); return }
-        if (!VaultSession.biometryAvailable) { router.showToast("这台设备没有可用的 ${VaultSession.biometryName}"); return }
+        if (!VaultSession.s.faceIDEnabled) { router.showToast("${VaultSession.biometryName}已在保险箱设置里关掉"); return }
+        if (!VaultSession.biometryAvailable) { router.showToast("这台手机还没录入指纹或面部"); return }
         startScan()
     }
 
@@ -271,13 +271,14 @@ private fun LockedBody(
         FaceIconArea(se.faceState, faceUsable, name, onFace)
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(7.dp)) {
             val title = when (se.faceState) {
-                FaceState.Scanning -> "正在识别…"
-                FaceState.Failed -> "$name 没通过"
+                FaceState.Scanning -> "识别中…"
+                FaceState.Failed -> "${name}没通过"
                 FaceState.Idle -> VaultLockNote.LOCKED_TITLE
             }
             val sub = when (se.faceState) {
-                FaceState.Scanning -> "看一下屏幕就好"
-                FaceState.Failed -> "点一下识别图标再试一次，或者输入主密码。"
+                // 不写「看一下屏幕」：指纹机上不成立（设计侧 199 答复第 13 条）
+                FaceState.Scanning -> "按系统提示验证"
+                FaceState.Failed -> "系统没能识别，可能是没对准或超过了等待时间。点一下识别图标再试一次，或者输入主密码。"
                 FaceState.Idle -> when {
                     se.softLocked -> VaultLockNote.lockedLine(se.autoLockMinutes)
                     !se.faceIDEnabled -> "$name 已关闭，输入主密码解锁。主密码不保存、不上传，忘记无法找回。"
@@ -308,7 +309,7 @@ private fun LockedBody(
             UmbraButton(if (st.loading) "解锁中…" else "解锁保险箱", onSubmit, Modifier.fillMaxWidth(), enabled = !st.loading, height = 52.dp)
             // 用不了就不摆这颗按钮 —— 摆一个点了只会弹「已关掉」的按钮比不摆更糟。
             if (faceUsable) {
-                val label = when (se.faceState) { FaceState.Scanning -> "识别中…"; FaceState.Failed -> "再识别一次"; FaceState.Idle -> "用${name}解锁" }
+                val label = when (se.faceState) { FaceState.Scanning -> "识别中…"; FaceState.Failed -> "再识别一次"; FaceState.Idle -> "${name}解锁" }
                 Box(Modifier.heightIn(min = UmbraDimens.tapMin).clickable(enabled = se.faceState != FaceState.Scanning, role = Role.Button, onClick = onFace), contentAlignment = Alignment.Center) {
                     Text(label, color = if (se.faceState == FaceState.Scanning) c.faint else c.orangeText, style = TextStyle(fontSize = 15.sp, fontWeight = UmbraType.weight560))
                 }
@@ -356,7 +357,7 @@ private fun FaceErrorCard(name: String, f: VaultBiometricStore.Failure, onRetry:
         Row(verticalAlignment = Alignment.CenterVertically) {
             UmbraIcon(UmbraIconPaths.alertTriangle, c.warningText, size = 14.dp, strokeWidth = 2.1f)
             Spacer(Modifier.width(7.dp))
-            Text("$name 没通过", color = c.warningText, style = TextStyle(fontSize = 14.5.sp, fontWeight = UmbraType.weight560))
+            Text(f.title(name), color = c.warningText, style = TextStyle(fontSize = 14.5.sp, fontWeight = UmbraType.weight560))
         }
         Text(f.message(name), color = c.warningText, style = TextStyle(fontSize = 13.sp, lineHeight = 20.sp))
         Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
@@ -650,7 +651,7 @@ private fun presentMoreSheet(audit: VaultAudit) {
     val se = VaultSession.s
     val r = AppGraph.router
     val vaultName = st.vaults.firstOrNull { it.id == st.curVaultId }?.name ?: "默认库"
-    val bio = if (se.faceIDEnabled && se.hasBiometricCredential) "${VaultSession.biometryName} 已开启" else "只用主密码"
+    val bio = if (se.faceIDEnabled && se.hasBiometricCredential) "${VaultSession.biometryName}已开启" else "只用主密码"
     val items = mutableListOf(
         VaultSheetItem("安全体检", if (audit.total == 0) "没有发现问题" else "${audit.total} 项需要处理") { r.go(Route.VaultCheck) },
         VaultSheetItem("密码生成器", "本机随机，不联网") { r.go(Route.VaultGen) },

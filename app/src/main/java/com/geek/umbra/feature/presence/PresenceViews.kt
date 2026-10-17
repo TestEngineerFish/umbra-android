@@ -8,6 +8,7 @@
 // 账号页以后会嵌入 [PresenceRecordSection]（放在「账号」那一组之后）。只有时刻与计数，没有任何内容（§14.1 隐私）。
 package com.geek.umbra.feature.presence
 
+import com.geek.umbra.designsystem.UmbraDimens
 import android.text.format.DateFormat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -231,7 +232,7 @@ private fun Header(model: PresenceRecordModel) {
         // 年份切换：默认「过去一年」，往前是有数据的年份（服务端 years）。
         Box {
             Row(
-                Modifier.heightIn(min = 44.dp).clickable(role = Role.Button) { yearOpen = true }.padding(horizontal = 4.dp),
+                Modifier.heightIn(min = UmbraDimens.tapMin).clickable(role = Role.Button) { yearOpen = true }.padding(horizontal = 4.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp),
             ) {
                 Text(yearLabel(model.year), color = c.orangeText, style = TextStyle(fontSize = 13.sp, fontWeight = UmbraType.weight560))
@@ -248,7 +249,7 @@ private fun Header(model: PresenceRecordModel) {
         }
         // 右上「⋯」：关于 / 停止·继续统计 / 清空。
         Box {
-            Box(Modifier.size(44.dp).clickable(role = Role.Button) { moreOpen = true }, contentAlignment = Alignment.Center) {
+            Box(Modifier.size(UmbraDimens.tapMin).clickable(role = Role.Button) { moreOpen = true }, contentAlignment = Alignment.Center) {
                 UmbraIcon(UmbraExtraIcons.more, c.muted, size = 18.dp, contentDescription = stringResource(R.string.presence_more))
             }
             DropdownMenu(expanded = moreOpen, onDismissRequest = { moreOpen = false }, containerColor = c.card) {
@@ -301,7 +302,7 @@ private fun CalendarCard(model: PresenceRecordModel, locale: Locale) {
             }
             err != null -> {
                 Text(err.ifEmpty { stringResource(R.string.presence_loadFailed) }, color = c.dangerText, style = TextStyle(fontSize = 13.sp))
-                Box(Modifier.heightIn(min = 44.dp).clickable(role = Role.Button) { AppGraph.scope.launch { model.loadCalendar() } }, contentAlignment = Alignment.CenterStart) {
+                Box(Modifier.heightIn(min = UmbraDimens.tapMin).clickable(role = Role.Button) { AppGraph.scope.launch { model.loadCalendar() } }, contentAlignment = Alignment.CenterStart) {
                     Text(stringResource(R.string.presence_retry), color = c.orangeText, style = TextStyle(fontSize = 14.sp, fontWeight = UmbraType.weight560))
                 }
             }
@@ -426,7 +427,7 @@ private fun ActivityCard(model: PresenceRecordModel, locale: Locale) {
             Text(stringResource(R.string.presence_loading), color = c.muted, style = TextStyle(fontSize = 12.5.sp), modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp))
         } else if (model.months.lastOrNull()?.prev != null || model.monthError) {
             Box(
-                Modifier.fillMaxWidth().heightIn(min = 44.dp).clickable(role = Role.Button) {
+                Modifier.fillMaxWidth().heightIn(min = UmbraDimens.tapMin).clickable(role = Role.Button) {
                     AppGraph.scope.launch { if (model.months.isEmpty()) model.loadFirstMonth() else model.loadMore() }
                 },
                 contentAlignment = Alignment.Center,

@@ -3,6 +3,7 @@
 // 合并时宜挪进 designsystem（见交回报告）。
 package com.geek.umbra.feature.task
 
+import com.geek.umbra.designsystem.UmbraDimens
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Intent
@@ -109,7 +110,7 @@ fun CollapsingSearch(placeholder: String, text: String, onText: (String) -> Unit
                 },
             )
             if (text.isNotEmpty()) {
-                Box(Modifier.size(44.dp).clickable(role = Role.Button) { onText("") }, contentAlignment = Alignment.Center) {
+                Box(Modifier.size(UmbraDimens.tapMin).clickable(role = Role.Button) { onText("") }, contentAlignment = Alignment.Center) {
                     UmbraIcon(UmbraIconPaths.xCircle, c.faint, size = 16.dp, contentDescription = "清空搜索")
                 }
             } else if (trailingNote != null) {

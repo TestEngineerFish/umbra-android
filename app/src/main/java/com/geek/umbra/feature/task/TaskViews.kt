@@ -5,6 +5,7 @@
 // 重试 / 挂起 / 接着跑的判据与字面全在 TaskRetryRules.kt / TaskSuspendRules.kt —— 这里一句都不手写。
 package com.geek.umbra.feature.task
 
+import com.geek.umbra.designsystem.UmbraDimens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -269,7 +270,7 @@ private fun GoneRow(task: TaskItem) {
     ) {
         TaskGoneNote(TaskRetryCopy.missing)
         // 稿：32 胶囊，热区撑到 44 —— 外框撑热区，不把胶囊画大。
-        Box(Modifier.heightIn(min = 44.dp).clickable(role = Role.Button) { TasksStore.dismissGone(task.id) }, contentAlignment = Alignment.Center) {
+        Box(Modifier.heightIn(min = UmbraDimens.tapMin).clickable(role = Role.Button) { TasksStore.dismissGone(task.id) }, contentAlignment = Alignment.Center) {
             Box(
                 Modifier.height(32.dp).clip(RoundedCornerShape(50)).background(c.card)
                     .border(1.dp, c.border, RoundedCornerShape(50)).padding(horizontal = 14.dp),

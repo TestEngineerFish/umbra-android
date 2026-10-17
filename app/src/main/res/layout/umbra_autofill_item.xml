@@ -1,14 +1,33 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 自动填充建议的一行（RemoteViews 只能用 XML 布局）。颜色跟随系统填充下拉的主题。 -->
-<TextView xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/umbra_autofill_text"
+<!-- 自动填充建议的一条（RemoteViews 只能用 XML 布局）：标题 + 副标题两行（设计侧 199 答复第 12 条）。
+     已解锁：标题 = 条目名称、副标题 = 用户名（明文）；已上锁：「Umbra 密码保险箱」/「解锁后选账号」。密码永远不进建议条。
+     颜色跟随系统填充下拉的主题。 -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:minHeight="48dp"
     android:gravity="center_vertical"
+    android:orientation="vertical"
     android:paddingStart="16dp"
+    android:paddingTop="6dp"
     android:paddingEnd="16dp"
-    android:maxLines="1"
-    android:ellipsize="end"
-    android:textAppearance="?android:attr/textAppearanceListItemSmall"
-    android:textColor="?android:attr/textColorPrimary" />
+    android:paddingBottom="6dp">
+
+    <TextView
+        android:id="@+id/umbra_autofill_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:textAppearance="?android:attr/textAppearanceListItemSmall"
+        android:textColor="?android:attr/textColorPrimary" />
+
+    <TextView
+        android:id="@+id/umbra_autofill_sub"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:textAppearance="?android:attr/textAppearanceSmall"
+        android:textColor="?android:attr/textColorSecondary" />
+</LinearLayout>

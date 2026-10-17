@@ -4,6 +4,7 @@
 // 设计稿里有、服务端没有的「关联任务」整块不画 —— 画一个永远为空的分节等于告诉用户功能坏了。
 package com.geek.umbra.feature.inspiration
 
+import com.geek.umbra.designsystem.UmbraDimens
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -209,7 +210,7 @@ fun InspListView() {
                             Text("标签", color = c.faint, style = UmbraType.fieldLabel.copy(fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold))
                             allTags.forEach { t -> UmbraTagPill(t, tag == t, { tag = if (tag == t) null else t }) }
                             if (tag != null) {
-                                Box(Modifier.heightIn(min = 44.dp).clickable(role = Role.Button) { tag = null }.padding(horizontal = 10.dp), contentAlignment = Alignment.Center) {
+                                Box(Modifier.heightIn(min = UmbraDimens.tapMin).clickable(role = Role.Button) { tag = null }.padding(horizontal = 10.dp), contentAlignment = Alignment.Center) {
                                     Text("清除", color = c.orangeText, style = TextStyle(fontSize = 12.5.sp, fontWeight = UmbraType.weight560))
                                 }
                             }
@@ -487,7 +488,7 @@ private fun ResearchSection(i: Inspiration) {
             SelectionContainer { SimpleMarkdown(i.researchText, 15f) }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(i.research_at?.let { "查于 " + TaskTime.relative(it) } ?: "", color = c.faint, style = TextStyle(fontSize = 11.5.sp), modifier = Modifier.weight(1f))
-                Box(Modifier.heightIn(min = 44.dp).clickable(role = Role.Button) { research(i) }.padding(horizontal = 6.dp), contentAlignment = Alignment.Center) {
+                Box(Modifier.heightIn(min = UmbraDimens.tapMin).clickable(role = Role.Button) { research(i) }.padding(horizontal = 6.dp), contentAlignment = Alignment.Center) {
                     Text("重新查一次", color = c.orangeText, style = TextStyle(fontSize = 12.5.sp, fontWeight = UmbraType.weight560))
                 }
             }
@@ -632,7 +633,7 @@ private fun InspForm(
                         allTags.take(10).forEach { t ->
                             val cur = InspWriteRules.parseTags(tagsText)
                             val on = t in cur
-                            Box(Modifier.heightIn(min = 44.dp).clickable(role = Role.Checkbox) {
+                            Box(Modifier.heightIn(min = UmbraDimens.tapMin).clickable(role = Role.Checkbox) {
                                 onTags((if (on) cur - t else cur + t).joinToString("，"))
                             }, contentAlignment = Alignment.Center) {
                                 Text(t, color = if (on) c.orangeText else c.muted, style = TextStyle(fontSize = 12.5.sp),

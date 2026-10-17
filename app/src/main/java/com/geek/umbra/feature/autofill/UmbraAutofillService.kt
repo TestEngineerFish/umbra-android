@@ -110,12 +110,13 @@ class UmbraAutofillService : AutofillService() {
         val open = runCatching { VaultStore.s.unlocked && !VaultSession.s.softLocked }.getOrDefault(false)
         if (open) {
             for (r in AutofillRules.directSuggestions(VaultStore.s.items, parsed.target)) {
-                datasetFor(this, parsed, r.account.user, r.account.pwd, AutofillRules.rowTitle(r) + " · " + r.account.user.ifEmpty { "（没有账号）" })?.let { b.addDataset(it) }
+                datasetFor(this, parsed, r.account.user, r.account.pwd, AutofillRules.rowTitle(r), r.account.user.ifEmpty { "（没有账号）" })?.let { b.addDataset(it) }
             }
         }
-        // 末尾那条：要认证的 dataset，点了拉起解锁 / 挑选面板。
-        val label = if (open) "Umbra · 挑一个账号填充" else "Umbra · 解锁后填充"
-        val ds = Dataset.Builder(presentation(this, label))
+        // 末尾那条：要认证的 dataset，点了拉起解锁 / 挑选面板。上锁时只出这一条（设计侧 199 答复第 12 条定稿文字）。
+        val ds = Dataset.Builder(
+            if (open) presentation(this, "Umbra 密码保险箱", "挑别的账号") else presentation(this, "Umbra 密码保险箱", "解锁后选账号"),
+        )
         for (id in parsed.all) ds.setValue(id, null)
         ds.setAuthentication(AutofillActivity.intentSender(this, parsed))
         b.addDataset(ds.build())
@@ -126,12 +127,16 @@ class UmbraAutofillService : AutofillService() {
     override fun onSaveRequest(request: SaveRequest, callback: SaveCallback) = callback.onSuccess()
 
     companion object {
-        fun presentation(ctx: Context, text: String): RemoteViews =
-            RemoteViews(ctx.packageName, R.layout.umbra_autofill_item).apply { setTextViewText(R.id.umbra_autofill_text, text) }
+        fun presentation(ctx: Context, title: String, sub: String? = null): RemoteViews =
+            RemoteViews(ctx.packageName, R.layout.umbra_autofill_item).apply {
+                setTextViewText(R.id.umbra_autofill_text, title)
+                if (sub.isNullOrEmpty()) setViewVisibility(R.id.umbra_autofill_sub, android.view.View.GONE)
+                else setTextViewText(R.id.umbra_autofill_sub, sub)
+            }
 
         /** 一条能直接填的 dataset：账号框填用户名、密码框填密码。一个框都填不上回 null。 */
-        fun datasetFor(ctx: Context, p: ParsedFields, user: String, pwd: String, label: String): Dataset? {
-            val ds = Dataset.Builder(presentation(ctx, label))
+        fun datasetFor(ctx: Context, p: ParsedFields, user: String, pwd: String, label: String, sub: String? = null): Dataset? {
+            val ds = Dataset.Builder(presentation(ctx, label, sub))
             var any = false
             for (id in p.username) if (user.isNotEmpty()) { ds.setValue(id, AutofillValue.forText(user)); any = true }
             for (id in p.password) if (pwd.isNotEmpty()) { ds.setValue(id, AutofillValue.forText(pwd)); any = true }
