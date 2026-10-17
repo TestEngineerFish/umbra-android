@@ -3,11 +3,13 @@
 
 为什么生成而不是手抄：图标 path 是设计稿里的 Lucide 近似图形，iOS 那份已经归一化成
 只含 M/L/C/Z 的绝对坐标。两端读同一份数据，图标才不会各漂各的。
-用法：python3 -I tools/gen_icons.py   （在 UmbraAndroid 根目录跑，要求 ../UmbraiOS 并排）
+用法：python3 -I tools/gen_icons.py   （在 UmbraAndroid 根目录跑，要求 ../UmbraiOS 并排；在 worktree 里跑时用 UMBRA_IOS=<iOS 仓路径> 指定）
 """
-import re, sys, pathlib
+import os, re, sys, pathlib
 root = pathlib.Path(__file__).resolve().parent.parent
-src = root.parent / "UmbraiOS/UmbraiOS/DesignSystem/UmbraIconPath.swift"
+# worktree 在 ../UmbraAndroid-wt/<名>/ 下，并排推不出 iOS 仓，所以留一个环境变量口子
+ios = pathlib.Path(os.environ.get("UMBRA_IOS") or root.parent / "UmbraiOS")
+src = ios / "UmbraiOS/DesignSystem/UmbraIconPath.swift"
 out = root / "app/src/main/java/com/geek/umbra/designsystem/UmbraIconPaths.kt"
 if not src.exists():
     sys.exit(f"找不到 iOS 图标表：{src}")

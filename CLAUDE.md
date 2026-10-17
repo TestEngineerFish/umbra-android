@@ -54,8 +54,8 @@ R8 的问题只在运行时暴露（序列化类被裁、反射找不到），�
 模拟器：AVD `umbra_test`（API 34 arm64）。保险箱页面开了 FLAG_SECURE，截图是黑的，用 `uiautomator dump` 读界面。
 Compose 坑：组合函数里读 `StateFlow.value` / Store 辅助函数不会订阅；`val x by flow.collectAsState()` 不读 x 也不订阅。
 
-生成脚本（iOS 改了图标 / 文案后重跑）：`python3 -I tools/gen_icons.py`、`python3 -I tools/gen_strings.py`。
+生成脚本（iOS 改了图标 / 文案后重跑）：`python3 -I tools/gen_icons.py`、`python3 -I tools/gen_strings.py`。在 worktree 里跑要加 `UMBRA_IOS=<UmbraiOS 路径>`。
 
 ## 提交
 
-验证通过后直接 commit，中文 commit 信息，一个仓库一条。仓库暂无远程（要不要建 GitHub 仓由 sam 定）。
+验证通过后直接 commit 并 push（远程已建），中文 commit 信息。

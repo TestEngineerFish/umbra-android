@@ -150,12 +150,13 @@ export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
 | 保险箱（加密、建库、解锁、记录 / 节点、TOTP、生成器、体检、回收站） | ✅ | 与 PC `crypto.ts` 逐字节互通（node 生成向量做用例）；同步 🟡；页面开 FLAG_SECURE |
 | 常用语（同步、占位展开） | ✅ | 同步 🟡；Android 12 及以下剪贴板没有敏感标记 |
 | 我 · 首页 / 设备与能力 / 连接 / 通知 / 通用 / 关于 | ✅ | |
+| 通知权限（冷启动问一次；没问过当场弹框，问过才跳设置） | ✅ | 照 iOS 4bad681，`app/NotificationPermission.kt` 一处管；模拟器实测拒绝后不再追问 |
 | 账号 / 会员 / 积分 / 商城 / 存储 / 改密码 / 注销 | 🟡 | |
 | 记忆 | 🟡 | |
 | 知识库 | 🟡 | 原文交系统里能打开该类型的 App（没有 QuickLook） |
-| 执勤（含聊天里的早报卡） | 🟡 | 时分选择暂用 M3 TimePicker，待换 UmbraDateTimePanel |
+| 执勤（含聊天里的早报卡、提议卡撤销、例程 / 关注 / 规则子页、今天预算） | 🟡 | 已对齐 iOS 4bad681；联网部分待真机 |
 | 使用记录（活跃上报 + 方格图） | 🟡 | |
-| 远程控制（WebRTC 控制端、快照降级、文件面板） | 🟡 | 信令与视频全链路要真机；API 28–29 本机认证退到 BIOMETRIC_WEAK |
+| 远程控制（WebRTC 控制端、快照降级、文件面板） | 🟡 | 已对齐 iOS 4bad681（规则 15 条用例）；服务端未部署，信令与视频全链路待真机联调；API 28–29 本机认证退到 BIOMETRIC_WEAK；文件面板「分享…」「存到「下载」」是 Android 自有文案 |
 
 ### 系统集成
 | 功能 | 状态 | 说明 |

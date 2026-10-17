@@ -73,24 +73,12 @@ private val pagePadding = PaddingValues(start = UmbraDimens.pagePadX, end = Umbr
 
 // MARK: - 图标
 
-/**
- * 执勤自己用到、地基图标表里还没有的图标。iOS 181d116 把 minusCircle 加进了 UmbraIconPath.swift；
- * Android 的 UmbraIconPaths.kt 由 tools/gen_icons.py 生成、属于共享地基（本次不许改），先放在本包，合并时重跑 gen_icons 后删掉这里。
- */
-internal object DutyIcons {
-    /**
-     * 结局「没事」（批次 261 §四 日志结局 pill）：圆内一条横线 —— 秘书判断过、决定不出声。
-     * 原始 d：`M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M8 12h8`（圆取 xCircle 同一段贝塞尔），与 iOS UmbraIconPath.minusCircle 逐字相同。
-     */
-    const val minusCircle = "M12,3C9.644,3 7.302,3.97 5.636,5.636C3.97,7.302 3,9.644 3,12C3,14.36 3.97,16.7 5.636,18.36C7.302,20.03 9.644,21 12,21C14.36,21 16.7,20.03 18.36,18.36C20.03,16.7 21,14.36 21,12C21,9.644 20.03,7.302 18.36,5.636C16.7,3.97 14.36,3 12,3M8,12L16,12"
-}
-
 /** 判据回的图标名 → path（iOS `UmbraIconPath.named`）。表里没有就不画，不印一个错的形。 */
 internal fun dutyIconPath(name: String): String? = when (name) {
     "check" -> UmbraIconPaths.check
     "xCircle" -> UmbraIconPaths.xCircle
     "clock" -> UmbraIconPaths.clock
-    "minusCircle" -> DutyIcons.minusCircle
+    "minusCircle" -> UmbraIconPaths.minusCircle
     else -> null
 }
 
@@ -125,7 +113,7 @@ internal fun DutyHeadLine(state: DutyKit.HeadState) {
             when (state) {
                 DutyKit.HeadState.On -> Box(Modifier.size(7.dp).clip(CircleShape).background(c.success))
                 is DutyKit.HeadState.PausedUntil, DutyKit.HeadState.PausedForever -> UmbraIcon(UmbraIconPaths.pauseCircle, tint, size = 14.dp, strokeWidth = 2f)
-                DutyKit.HeadState.Off -> UmbraIcon(DutyIcons.minusCircle, tint, size = 14.dp, strokeWidth = 2f)
+                DutyKit.HeadState.Off -> UmbraIcon(UmbraIconPaths.minusCircle, tint, size = 14.dp, strokeWidth = 2f)
             }
         }
         Text(text, color = tint, style = TextStyle(fontSize = 15.sp))
