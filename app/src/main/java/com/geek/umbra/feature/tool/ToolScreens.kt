@@ -76,6 +76,9 @@ fun ToolHomeScreen() {
     val inspLoaded by InspirationStore.loadedOnce.collectAsState()
     val inspFirst by InspirationStore.firstLoading.collectAsState()
     val phrases by PhraseStore.items.collectAsState()
+    // everSynced 是普通属性不是流：零条常用语的人第一次同步完 items 仍是空列表、不会触发重画。
+    // 订阅 syncing 并在下面读它 —— 同步一结束这一页就重画，「—」才会换成「还没有常用语」。
+    val phraseSyncing by PhraseStore.syncing.collectAsState()
     val vault by VaultStore.toolStatus.collectAsState()
     val stats by MoneyStore.stats.collectAsState()
     val loadedLedger by MoneyStore.loadedLedger.collectAsState()
@@ -120,7 +123,7 @@ fun ToolHomeScreen() {
             ToolCard("vault", "保险箱", ToolCardRules.vaultSub(vault.unlocked, vault.count, vault.exists), UmbraIconPaths.lockKeyhole, route = Route.VaultHome),
         ),
         "输入辅助" to listOf(
-            ToolCard("phrase", "常用语", ToolCardRules.phraseSub(phrases.size, PhraseStore.everSynced), UmbraIconPaths.messageText, route = Route.MePhrases),
+            ToolCard("phrase", "常用语", ToolCardRules.phraseSub(phrases.size, phraseSyncing.let { PhraseStore.everSynced }), UmbraIconPaths.messageText, route = Route.MePhrases),
             // iOS 是「小组件与轻点背面」；Android 没有轻点背面的系统 API，改讲桌面快捷方式（第 199 封第 11 条待设计侧定名）
             ToolCard("widgets", "小组件与快捷方式", "桌面小组件 · 长按图标记一笔", UmbraIconPaths.layoutGrid, route = Route.ToolWidgets),
         ),

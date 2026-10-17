@@ -95,6 +95,7 @@ fun MoneyListView() {
     val loadedYm by MoneyStore.loadedYm.watch()
     // 当前账本：**直接订阅正本**，不在这一层留镜像（镜像只在切换那一瞬间不一致）。
     val ledger by MoneyStore.ledger.watch()
+    // ⚠️ 这一行不读 cats，所以并不订阅（by 委托不读就不订阅）；分类名 / 色槽跟着变靠 CatChips、EntryRow 里的 watchMoneyCats()。
     @Suppress("UNUSED_VARIABLE") val cats by MoneyStore.cats.watch()
     val offline by AppGraph.http.offline.watch()
     var refreshing by remember { mutableStateOf(false) }
@@ -226,6 +227,7 @@ fun MoneyListView() {
 /** 分类胶囊：「全部分类」+ 当前方向下真的出现过的那些分类。iOS: MoneyViews.swift:873 */
 @Composable
 private fun CatChips(entries: List<MoneyEntryDTO>, listDir: String, listCat: String?) {
+    watchMoneyCats() // 胶囊上的分类名读 cats 快照：在这一层订阅，同步改了分类而流水没变时才不画旧名
     val seen = ArrayList<String>()
     for (e in entries) {
         if (listDir != "all" && e.direction != listDir) continue
@@ -378,6 +380,7 @@ private fun SwipeAction(label: String, bg: Color, fg: Color, onClick: () -> Unit
 @Composable
 private fun EntryRow(e: MoneyEntryDTO, past: Boolean, stacks: Boolean, titleLines: Int, subLines: Int) {
     val c = UmbraTheme.colors
+    watchMoneyCats() // 色槽 / 图标 / 分类名读 cats 快照：这一行参数没变会被跳过，得在这一层订阅分类
     val income = e.direction == "income"
     Row(
         Modifier.fillMaxWidth().heightIn(min = UmbraDimens.rowMinH).padding(horizontal = 14.dp, vertical = 6.dp),

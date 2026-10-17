@@ -132,7 +132,7 @@ fun MoneyHomeView() {
     val ledger by MoneyStore.ledger.watch()
     val offline by AppGraph.http.offline.watch()
     val locked by AppGraph.guard.locked.watch()
-    // 让 catName / catSlot 跟着分类变（它们读 cats.value）。
+    // ⚠️ 这一行不读 cats，所以并不订阅（by 委托不读就不订阅）；真正让分类名 / 色槽跟着变的是各子卡里的 watchMoneyCats()。
     @Suppress("UNUSED_VARIABLE") val cats by MoneyStore.cats.watch()
     @Suppress("UNUSED_VARIABLE") val recurRules by MoneyStore.recurRules.watch()
 
@@ -434,6 +434,7 @@ private fun CatShareCard(st: MoneyStatsDTO, table: Boolean, onToggle: () -> Unit
 @Composable
 private fun Donut(st: MoneyStatsDTO) {
     val c = UmbraTheme.colors
+    watchMoneyCats() // 色槽 / 图标 / 分类名读的是 cats 快照：在这一层订阅，同步改了分类而 st 没变时才不画旧的
     val total = maxOf(st.expense, 1L)
     val segs = ArrayList<Pair<Color, Long>>()
     st.by_cat.take(5).forEach { segs.add(moneySlotColor(MoneyStore.catSlot(it.cat)) to it.cents) }
@@ -472,6 +473,7 @@ private fun Donut(st: MoneyStatsDTO) {
 @Composable
 private fun CatRow(row: MoneyCatStatDTO, total: Long, first: Boolean) {
     val c = UmbraTheme.colors
+    watchMoneyCats() // 色槽 / 图标 / 分类名读的是 cats 快照：在这一层订阅，同步改了分类而 st 没变时才不画旧的
     val slot = MoneyStore.catSlot(row.cat)
     Box {
         Row(
@@ -501,6 +503,7 @@ private fun CatRow(row: MoneyCatStatDTO, total: Long, first: Boolean) {
 @Composable
 private fun CatTable(st: MoneyStatsDTO) {
     val c = UmbraTheme.colors
+    watchMoneyCats() // 色槽 / 图标 / 分类名读的是 cats 快照：在这一层订阅，同步改了分类而 st 没变时才不画旧的
     val head = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = c.faint)
     Column {
         Row(Modifier.padding(bottom = 7.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -606,6 +609,7 @@ private fun TrendCard(st: MoneyStatsDTO, trend12: Boolean, table: Boolean, onTre
 @Composable
 private fun TopCard(entries: List<MoneyEntryDTO>) {
     val c = UmbraTheme.colors
+    watchMoneyCats() // 色槽 / 图标 / 分类名读的是 cats 快照：在这一层订阅，同步改了分类而 entries 没变时才不画旧的
     val top = entries.filter { it.direction == "expense" }.sortedByDescending { it.cents }.take(5)
     Column(Modifier.moneyCard().padding(15.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text("大额支出", color = c.text, style = TextStyle(fontSize = 15.5.sp, fontWeight = FontWeight.SemiBold), modifier = Modifier.padding(bottom = 5.dp))

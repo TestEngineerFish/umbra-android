@@ -197,7 +197,9 @@ object VaultStore {
         if (auk != null) { refreshUnlocked(); return }
         // 不因为凭证为空就提前拒绝：照发，让服务端的 401 来说话（共享密钥时代踩过的坑）。
         when (val r = http.raw("GET", "/vault/sync", mapOf("have_rev" to -1))) {
-            is HttpResult.Blocked -> fallBackToCache("连不上服务器：未登录：请求 ${r.path} 在本地被拦下（请求闸 SessionRequestGate）")
+            // 未登录（单机）：保险箱是本地功能，没有云端可拉不是错误 —— 安静地用本机缓存，不出错误卡、不挂离线条。
+            // （原来照 iOS 把请求闸的调试描述「未登录：请求 /vault/sync 在本地被拦下…」当成离线原因显示，模拟器实测。）
+            is HttpResult.Blocked -> { fallBackToCache(""); set { it.copy(offline = false) } }
             is HttpResult.Offline -> fallBackToCache("连不上服务器：${r.message}")
             is HttpResult.Fail -> when (r.status) {
                 // 401 / 403 只剩一种成因：这台手机的登录服务端不认。出口是账号页（解锁页按「登录」二字给「去账号」）。

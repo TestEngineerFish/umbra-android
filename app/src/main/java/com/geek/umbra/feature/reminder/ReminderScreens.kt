@@ -368,7 +368,9 @@ private fun WarnBanner(icon: String, title: String, body: String, actions: List<
  */
 @Composable
 private fun SyncBanner(offline: Boolean) {
-    val u = ReminderStore.unsynced
+    // unsynced 读的是 items 快照：只靠上层订阅的话 offline 不变这里会被跳过，「有 N 条」停在旧数。订阅并经由它读。
+    val items by ReminderStore.items.collectAsState()
+    val u = items.let { ReminderStore.unsynced }
     val n = u?.first ?: 0
     val hours = maxOf(1L, (System.currentTimeMillis() - (u?.second ?: System.currentTimeMillis())) / 3_600_000)
     val why = if (offline) "这台设备现在没有网络。" else "已经 $hours 小时没能传上去。"

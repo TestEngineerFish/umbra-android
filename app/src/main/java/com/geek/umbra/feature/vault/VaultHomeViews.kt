@@ -195,6 +195,7 @@ internal fun VaultHomeContent() {
     }
     fun typeName(id: String) = st.types.firstOrNull { it.id == id }?.name ?: "未分组"
     val isFiltered = query.isNotBlank() || cat.isNotEmpty()
+    val signedOut by com.geek.umbra.app.AppGraph.guard.locked.collectAsState()
 
     UmbraScreen(
         title = "保险箱",
@@ -209,7 +210,8 @@ internal fun VaultHomeContent() {
         if (VaultLockNote.shows(se.autoLockMinutes, noteClosed, se.lockNoteSilenced)) {
             item("note") { UnlockedNote(se.autoLockMinutes, onSilence = { VaultSession.silenceLockNote() }, onClose = { noteClosed = true }) }
         }
-        if (st.offline || st.syncProblem.isNotEmpty()) item("offline") { OfflineNote(st) }
+        // 未登录（单机）时本机这份就是全部数据：「离线 / 连上网会补推」都不成立，不画；syncProblem 照旧画。
+        if ((st.offline && !signedOut) || st.syncProblem.isNotEmpty()) item("offline") { OfflineNote(st) }
         item("profile") { ProfileCard(st) { switchProfile(st) { cat = "" } } }
         item("search") { UmbraSearchField(query, { query = it }, placeholder = "搜名称、账号或网址") }
         item("cats") {

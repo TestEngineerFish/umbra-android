@@ -34,6 +34,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -76,6 +77,7 @@ import com.geek.umbra.designsystem.UmbraTheme
 import com.geek.umbra.navigation.UmbraSheet
 import com.geek.umbra.net.ImageTier
 import com.geek.umbra.net.PreparedImage
+import com.geek.umbra.net.ServerSettings
 import com.geek.umbra.net.Uploads
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -246,7 +248,11 @@ private fun UploadVeil(frac: Float) {
 @Composable
 fun PendingStrip(items: List<PendingImage>, onItems: (List<PendingImage>) -> Unit, tierOnce: ImageTier?, onTierOnce: (ImageTier?) -> Unit, origin: Boolean, onOrigin: (Boolean) -> Unit, onAdd: () -> Unit) {
     val c = UmbraTheme.colors
-    val eff: ImageTier? = if (origin) ImageTier.Origin else tierOnce ?: ChatStore.settingsChatTier()
+    // settingsChatTier / longEdge 读的是 ServerSettings 快照：冷启动直接分享图进来时设置还没拉到、或经 socket 改了档位，
+    // 不订阅的话这一行一直停在「只有大小」、也不会按档位重算。订阅并经由它们读。
+    val settings by ServerSettings.settings.collectAsState()
+    val tiers by ServerSettings.imageTiers.collectAsState()
+    val eff: ImageTier? = if (origin) ImageTier.Origin else tierOnce ?: settings.let { ChatStore.settingsChatTier() }
     val key = (eff?.wire ?: "-") + "|" + items.joinToString(",") { it.id }
     val latest = rememberUpdated(items)
     LaunchedEffect(key) {
@@ -282,7 +288,7 @@ fun PendingStrip(items: List<PendingImage>, onItems: (List<PendingImage>) -> Uni
             Text("${items.size} / ${ChatImageMetric.MAX_COUNT}", color = c.faint, style = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold))
         }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(entryText(items, eff), color = c.muted, style = TextStyle(fontSize = 11.sp), maxLines = 1, modifier = Modifier.weight(1f, fill = false))
+            Text(tiers.let { entryText(items, eff) }, color = c.muted, style = TextStyle(fontSize = 11.sp), maxLines = 1, modifier = Modifier.weight(1f, fill = false))
             // 勾上「原尺寸」时「改这一次」隐掉 —— 两个入口同时在会让人以为各管一半
             if (!origin) Text(
                 stringResource(R.string.chat_imgTierOnce), color = c.orangeText,

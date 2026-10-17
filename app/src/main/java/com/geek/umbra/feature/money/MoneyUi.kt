@@ -182,5 +182,13 @@ fun MoneyPill(label: String, on: Boolean = false, onClick: () -> Unit) {
 @Composable
 fun <T> kotlinx.coroutines.flow.StateFlow<T>.watch(): androidx.compose.runtime.State<T> = collectAsState()
 
+/**
+ * 订阅分类表并**读一次**，返回当下的分类。MoneyStore.catName / catSlot / catArt 读的是 cats.value 快照：
+ * 只靠父页面订阅不够 —— 子组合函数参数没变就会被跳过，分类晚到 / 本机账本同步改了名时那一行还画旧的。
+ * 要在**真正画这几个值的那个组合函数里**调一次。⚠️ 必须有返回值：返回 Unit 的组合函数自成重组域，读记在它自己身上。
+ */
+@Composable
+fun watchMoneyCats(): List<MoneyCatDTO> = MoneyStore.cats.watch().value
+
 /** 页面间距常量（iOS sp4 = 12）。 */
 val MoneyGap: Dp = UmbraDimens.sp4

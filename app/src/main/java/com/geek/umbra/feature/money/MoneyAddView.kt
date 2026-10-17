@@ -812,6 +812,7 @@ private fun RecentRow(form: MoneyAddForm) {
 @Composable
 private fun CatPill(form: MoneyAddForm, slug: String) {
     val c = UmbraTheme.colors
+    watchMoneyCats() // 图标 / 色槽 / 名字读 cats 快照：form、slug 不变时这一格会被跳过，得自己订阅分类
     val on = form.cat == slug
     val shape = RoundedCornerShape(50)
     Box(
@@ -870,6 +871,7 @@ private fun CatGrid(form: MoneyAddForm) {
 @Composable
 private fun CatToolsRow(form: MoneyAddForm) {
     val c = UmbraTheme.colors
+    watchMoneyCats() // 「管理「X」的子类」的名字读 cats 快照：编辑深链直达时科目先于分类表到，订阅了分类到了才换成名字
     Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
         val style = TextStyle(fontSize = 12.5.sp, fontWeight = UmbraType.weight560)
         Box(Modifier.heightIn(min = UmbraDimens.tapMin).clickable(role = Role.Button) { form.addText = ""; form.addingCat = true }, contentAlignment = Alignment.Center) {
