@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 分享到灵感（feature/share/ShareActivity）：透明窗口，遮罩与底部卡片由 Compose 画，来源 App 在下面透出来。 -->
+    <style name="Theme.Umbra.Share" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:windowAnimationStyle">@android:style/Animation.Translucent</item>
+        <item name="colorAccent">@color/umbra_orange</item>
+    </style>
+</resources>

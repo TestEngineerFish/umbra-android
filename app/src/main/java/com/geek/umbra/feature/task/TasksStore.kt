@@ -160,6 +160,7 @@ object TasksStore {
             _items.value = fetched
             _loadedOnce.value = true
             syncBadge()
+            com.geek.umbra.feature.widget.WidgetBridge.syncTasks(fetched)
             // iOS 这里同步小组件快照 + 灵动岛（UmbraWidgetBridge.syncTasks）。Android 的 Glance 小组件 / 进行中通知
             // 本期不在这一包里（二期），灵动岛 Android 无法实现。
         }

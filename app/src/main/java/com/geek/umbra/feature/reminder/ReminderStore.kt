@@ -105,6 +105,7 @@ internal object ReminderCache {
 
     fun save(items: List<Reminder>) {
         ReminderFiles.write(ITEMS, buildJsonArray { items.forEach { add(ReminderCodec.encode(it)) } }.toString())
+        com.geek.umbra.feature.widget.WidgetBridge.remindersChanged()
     }
 
     private val storedServer: String? get() = meta.strictString("syncedServer")
