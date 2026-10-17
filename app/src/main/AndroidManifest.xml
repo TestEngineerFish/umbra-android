@@ -7,6 +7,20 @@
     <!-- 提醒：精确闹钟（Android 14+ 默认拒，没授权时退非精确并在列表横幅说明）与开机后重排 -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- 聊天：按住说话（SpeechRecognizer）要麦克风；Android 9 存图到相册要写外部存储（10 起 MediaStore 不需要） -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
+    <uses-feature android:name="android.hardware.camera.any" android:required="false" />
+
+    <!-- 聊天：Android 11 起的包可见性 —— 不声明的话 SpeechRecognizer.isRecognitionAvailable 恒为 false、拍照 Intent 找不到相机 -->
+    <queries>
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
+        <intent>
+            <action android:name="android.media.action.IMAGE_CAPTURE" />
+        </intent>
+    </queries>
 
     <application
         android:name=".app.UmbraApp"
@@ -65,6 +79,16 @@
             <meta-data
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/reminder_file_paths" />
+        </provider>
+        <!-- 聊天：拍照落盘与复制图片进剪贴板用的 FileProvider（子类化，免得和别的模块的 FileProvider 撞 android:name） -->
+        <provider
+            android:name=".feature.chat.ChatFileProvider"
+            android:authorities="${applicationId}.chat.files"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/chat_file_paths" />
         </provider>
         <!-- 保险箱密码自动填充（feature/autofill）：系统设置里选成「自动填充服务」后生效 -->
         <service
