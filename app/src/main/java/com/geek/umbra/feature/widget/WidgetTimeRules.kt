@@ -38,6 +38,10 @@ data class TaskWidgetSnapshot(
     val todayDone: Int = 0,
     /** 写入时刻（毫秒）。超过 10 分钟没更新时小组件要显示「更新于」。 */
     val savedAtMs: Long = 0,
+    /** 执行中任务的当前步名（4×2 那档「第 3/8 步 · 当前步」；第 199 封 #10）。拉不到是 null。 */
+    val stepTitle: String? = null,
+    /** 执行中任务的开始时刻（4×2 那档「已用 1分12秒」；与进行中通知的计时器同一个起点）。 */
+    val startedAtMs: Long? = null,
 ) {
     val percent: Double? get() = if (stepsTotal > 0) stepsDone.toDouble() / stepsTotal else null
 }
@@ -168,7 +172,10 @@ object WidgetTaskRules {
      * 执行中只认 `status == "running"`（iOS 原样：`$0.status == "running"`）。
      * 「今天完成」= done 且 updated_at 是今天（按本机时区判日界，服务端存 UTC —— TaskTime.parse 认 SQLite 那种无时区串按 UTC）。
      */
-    fun snapshot(items: List<TaskItem>, nowMs: Long, zone: ZoneId = ZoneId.systemDefault()): TaskWidgetSnapshot {
+    fun snapshot(
+        items: List<TaskItem>, nowMs: Long, zone: ZoneId = ZoneId.systemDefault(),
+        stepTitle: String? = null, startedAtMs: Long? = null,
+    ): TaskWidgetSnapshot {
         val running = items.firstOrNull { it.status == "running" }
         val today = LocalDate.ofInstant(Instant.ofEpochMilli(nowMs), zone)
         val todayDone = items.count { it.status == "done" && TaskTime.parse(it.updated_at)?.let { d -> LocalDate.ofInstant(d, zone) == today } == true }
@@ -180,6 +187,8 @@ object WidgetTaskRules {
             statusLine = running?.let { line(it) },
             todayDone = todayDone,
             savedAtMs = nowMs,
+            stepTitle = running?.let { stepTitle },
+            startedAtMs = running?.let { startedAtMs },
         )
     }
 

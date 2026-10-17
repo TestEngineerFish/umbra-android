@@ -164,6 +164,18 @@
         <receiver
             android:name=".feature.widget.WidgetRefreshReceiver"
             android:exported="false" />
+        <!-- 任务通知的动作钮（feature/widget/TaskNotifyActions.kt）：不显示界面的跳板（停止 / 去确认 / 重新发起 / 去看能力）
+             与「重试任务」的后台接收器 -->
+        <activity
+            android:name=".feature.widget.TaskNotifyActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.NoDisplay" />
+        <receiver
+            android:name=".feature.widget.TaskNotifyReceiver"
+            android:exported="false" />
 
         <!-- App 内切语言：Android 12 及以下由 AppCompat 记住选择 -->
         <service

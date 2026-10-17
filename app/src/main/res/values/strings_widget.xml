@@ -4,11 +4,14 @@
 <resources>
     <string name="widget_task_name">任务</string>
     <string name="widget_task_desc">执行中任务的进度；没有时显示今天完成数。</string>
-    <string name="widget_reminder_name">提醒 · 今天</string>
+    <!-- 第 199 封 #11：说明页第 2 步写「挑「任务」或「今日提醒」」，小组件选择器里的名字要对得上 -->
+    <string name="widget_reminder_name">今日提醒</string>
     <string name="widget_reminder_desc">今天到点和已过期的提醒。勾选要进 App。</string>
-    <!-- 进行中通知的渠道（替代 iOS 灵动岛 / 锁屏实况） -->
-    <string name="task_progress_channel">任务进度</string>
-    <string name="task_progress_channel_desc">任务执行中的进度，以及跑完 / 失败时的那一条。</string>
+    <!-- 任务通知的两个渠道（替代 iOS 灵动岛 / 锁屏实况；第 199 封 #9） -->
+    <string name="task_live_channel">任务进行中</string>
+    <string name="task_live_channel_desc">任务执行中与等你确认时的那一条，不响。</string>
+    <string name="task_result_channel">任务结果</string>
+    <string name="task_result_channel_desc">任务跑完或失败时的那一条。</string>
     <!-- 桌面快捷方式（长按图标） -->
     <string name="shortcut_money_add">记一笔</string>
     <string name="shortcut_insp_new">记灵感</string>

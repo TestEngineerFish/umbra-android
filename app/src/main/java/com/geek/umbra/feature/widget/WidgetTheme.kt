@@ -17,6 +17,7 @@ import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.action.Action
 import androidx.glance.appwidget.action.actionStartActivity
+import androidx.glance.appwidget.appWidgetBackground
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.background
 import androidx.glance.color.ColorProvider
@@ -74,18 +75,23 @@ internal fun WWordmark(big: Boolean = false) {
         GlanceModifier.size(side).background(WTheme.orange).cornerRadius(if (big) 6.dp else 5.dp),
         contentAlignment = Alignment.Center,
     ) {
+        // 出图 #10 字标是 650 → Bold（Glance 只有三档字重）。
         Text("U", style = TextStyle(color = WTheme.onOrange, fontSize = if (big) 12.sp else 9.sp, fontWeight = FontWeight.Bold))
     }
 }
 
-/** 小组件左上角那一行：字标 + 名字（iOS 两个小组件的 header）。 */
+/**
+ * 小组件左上角那一行：字标 + 名字（iOS 两个小组件的 header），右侧可挂一句（「N 条」/「更新于 HH:mm」）。
+ * 出图 #10：名字 10.5/600、字距 .06em、faint。Glance 只有 Normal / Medium / Bold 三档字重，600 按答复的全局规则退 Bold；
+ * Glance 的 TextStyle 没有字距，这一项做不到。
+ */
 @Composable
-internal fun WHeader(label: String, trailing: String? = null) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
+internal fun WHeader(label: String, trailing: String? = null, modifier: GlanceModifier = GlanceModifier) {
+    Row(modifier, verticalAlignment = Alignment.CenterVertically) {
         WWordmark()
         Spacer(GlanceModifier.width(6.dp))
-        Text(label, style = TextStyle(color = WTheme.faint, fontSize = 10.5.sp, fontWeight = FontWeight.Medium), modifier = GlanceModifier.defaultWeight())
-        if (trailing != null) Text(trailing, style = TextStyle(color = WTheme.faint, fontSize = 10.5.sp))
+        Text(label, style = TextStyle(color = WTheme.faint, fontSize = 10.5.sp, fontWeight = FontWeight.Bold), maxLines = 1, modifier = GlanceModifier.defaultWeight())
+        if (trailing != null) Text(trailing, style = TextStyle(color = WTheme.faint, fontSize = 10.5.sp), maxLines = 1)
     }
 }
 
@@ -109,6 +115,10 @@ internal fun WSignedOut(modifier: GlanceModifier) {
     }
 }
 
-/** 卡片底（iOS `.containerBackground(for: .widget) { WTheme.card }`）。圆角在 Android 12+ 才生效，以下由启动器裁。 */
+/**
+ * 卡片底（iOS `.containerBackground(for: .widget) { WTheme.card }`）。第 199 封 #10：圆角交系统裁切 ——
+ * Android 12+ 标成 appWidgetBackground 并取系统半径 system_app_widget_background_radius，不自绘圆角、不加阴影；
+ * 12 以下 Glance 不应用圆角，由启动器自己处理。card 底随系统深浅色（WTheme.card 是 day/night 一对）。
+ */
 internal fun GlanceModifier.widgetCard(): GlanceModifier =
-    fillMaxSize().background(WTheme.card).cornerRadius(18.dp)
+    fillMaxSize().appWidgetBackground().background(WTheme.card).cornerRadius(android.R.dimen.system_app_widget_background_radius)

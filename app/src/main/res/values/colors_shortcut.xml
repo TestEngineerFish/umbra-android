@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 桌面快捷方式自适应图标的底色 = token bg（UmbraTokens.kt UmbraLight.bg #F1EFEA）。资源 XML 读不到 Kotlin token，只能在这里抄一份。 -->
+<resources>
+    <color name="shortcut_icon_bg">#FFF1EFEA</color>
+</resources>

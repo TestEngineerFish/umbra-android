@@ -124,8 +124,9 @@ fun ToolHomeScreen() {
         ),
         "输入辅助" to listOf(
             ToolCard("phrase", "常用语", ToolCardRules.phraseSub(phrases.size, phraseSyncing.let { PhraseStore.everSynced }), UmbraIconPaths.messageText, route = Route.MePhrases),
-            // iOS 是「小组件与轻点背面」；Android 没有轻点背面的系统 API，改讲桌面快捷方式（第 199 封第 11 条待设计侧定名）
-            ToolCard("widgets", "小组件与快捷方式", "桌面小组件 · 长按图标记一笔", UmbraIconPaths.layoutGrid, route = Route.ToolWidgets),
+            // iOS 是「小组件与轻点背面」；Android 没有轻点背面的系统 API，改讲桌面快捷方式。
+            // 页名与副标题按设计侧第 199 封答复第 11 条（答复写「我」页入口，Android 的入口实际在工具页这张卡）。
+            ToolCard("widgets", "小组件与快捷方式", "任务 + 今日提醒 · 长按图标记一笔", UmbraIconPaths.layoutGrid, route = Route.ToolWidgets),
         ),
     )
 
