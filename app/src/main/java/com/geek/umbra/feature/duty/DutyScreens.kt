@@ -1,31 +1,34 @@
-// 执勤模块的页面入口。路由分发表（navigation/RouteScreens.kt）只调这里的函数；
-// 移植时替换占位实现，函数签名不要改（改了要同步改分发表）。
+// 执勤模块的页面入口。路由分发表（navigation/RouteScreens.kt）只调这里的函数；函数签名不要改（改了要同步改分发表）。
 package com.geek.umbra.feature.duty
 
 import androidx.compose.runtime.Composable
-import com.geek.umbra.designsystem.PlaceholderScreen
 
+/** 「我 › 执勤」首页（iOS DutyHomeView）。 */
 @Composable
 fun DutyScreen() {
-    PlaceholderScreen("执勤")
+    DutyHomeView()
 }
 
+/** 编辑 / 新建一条（id = null 是新建，iOS DutyEditView）。 */
 @Composable
 fun DutyEditScreen(id: String?) {
-    PlaceholderScreen("执勤条目")
+    DutyEditView(id)
 }
 
+/** 全部日志（iOS DutyLogView）。 */
 @Composable
 fun DutyLogScreen() {
-    PlaceholderScreen("全部日志")
+    DutyLogView()
 }
 
+/** 一个流程（只读 + 一键跑，iOS DutyFlowView）。 */
 @Composable
 fun DutyFlowScreen(id: String) {
-    PlaceholderScreen("流程")
+    DutyFlowView(id)
 }
 
+/** 一次流程运行的详情（iOS DutyFlowRunView）。 */
 @Composable
 fun DutyFlowRunScreen(id: String) {
-    PlaceholderScreen("运行详情")
+    DutyFlowRunView(id)
 }
