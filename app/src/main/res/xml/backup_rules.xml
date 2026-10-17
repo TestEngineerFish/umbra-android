@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 11 及以下的备份规则，内容同 data_extraction_rules.xml -->
+<full-backup-content>
+    <exclude domain="sharedpref" path="umbra_secure.xml" />
+    <exclude domain="file" path="vault" />
+    <exclude domain="sharedpref" path="umbra_vault.xml" />
+</full-backup-content>

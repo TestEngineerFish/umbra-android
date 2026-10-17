@@ -1,0 +1,8 @@
+<resources>
+    <!-- 只给启动瞬间与系统窗口用；界面颜色全由 Compose 的 UmbraTheme 下发。windowBackground 用暖灰底，
+         冷启动不闪白。 -->
+    <style name="Theme.Umbra" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:windowBackground">@color/umbra_bg</item>
+        <item name="colorAccent">@color/umbra_orange</item>
+    </style>
+</resources>
