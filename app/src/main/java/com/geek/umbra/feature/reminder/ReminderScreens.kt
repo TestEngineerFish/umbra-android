@@ -2,6 +2,7 @@
 // 路由分发表（navigation/RouteScreens.kt）只调这里的三个函数，签名不改。
 package com.geek.umbra.feature.reminder
 
+import androidx.compose.foundation.layout.widthIn
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -660,7 +661,7 @@ private fun SnoozeButton(r: Reminder) {
                 .combinedClickable(role = Role.Button, onClick = { doSnooze(10, "10 分钟后") }, onLongClick = { open = true }),
             contentAlignment = Alignment.Center,
         ) { Text("稍后提醒 · 10 分钟后", color = c.text, style = TextStyle(fontSize = 15.5.sp, fontWeight = UmbraType.weight560)) }
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }, containerColor = c.card) {
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }, containerColor = c.card, modifier = Modifier.widthIn(min = 180.dp)) {
             listOf(10 to "10 分钟后", 30 to "30 分钟后", 60 to "1 小时后").forEach { (m, l) ->
                 DropdownMenuItem(text = { Text(l, color = c.text) }, onClick = { open = false; doSnooze(m, l) })
             }
@@ -1015,7 +1016,7 @@ private fun MenuRow(label: String, value: String, sub: Boolean = false, options:
             Spacer(Modifier.width(6.dp))
             UmbraIcon(UmbraIconPaths.chevronDown, c.faint, size = 14.dp, strokeWidth = 2.2f)
         }
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }, containerColor = c.card, modifier = Modifier.align(Alignment.CenterEnd)) {
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }, containerColor = c.card, modifier = Modifier.align(Alignment.CenterEnd).widthIn(min = 180.dp)) {
             options.forEach { o ->
                 DropdownMenuItem(
                     text = { Text(display(o), color = c.text) },

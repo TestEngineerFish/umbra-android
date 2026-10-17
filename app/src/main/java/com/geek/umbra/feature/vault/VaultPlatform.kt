@@ -136,6 +136,7 @@ object VaultBiometricStore {
         /** 错误卡标题（设计侧 199 答复第 13 条）。 */
         fun title(name: String): String = when (this) {
             Lockout -> "${name}暂时停用"
+            Invalidated -> "${name}要重新授权"
             Unavailable -> "${name}用不了"
             else -> "${name}没通过"
         }
@@ -144,7 +145,7 @@ object VaultBiometricStore {
             Cancelled -> "已取消。点一下识别图标再试一次，或者输入主密码。"
             // 以下几句是设计侧 199 答复第 13 条定稿
             Lockout -> "失败次数过多，系统暂停了识别。用主密码解锁。"
-            Invalidated -> "设备的${name}数据变了，需要重新输入一次主密码来重新授权$name。"
+            Invalidated -> "这台手机的指纹或面部有变动。输入一次主密码，之后就能接着用${name}解锁。"
             Unavailable -> "这台手机还没录入指纹或面部"
             Failed -> "系统没能识别，可能是没对准或超过了等待时间。点一下识别图标再试一次，或者输入主密码。"
         }

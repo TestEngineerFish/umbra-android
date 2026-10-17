@@ -8,6 +8,7 @@
 // 账号页以后会嵌入 [PresenceRecordSection]（放在「账号」那一组之后）。只有时刻与计数，没有任何内容（§14.1 隐私）。
 package com.geek.umbra.feature.presence
 
+import androidx.compose.foundation.layout.widthIn
 import com.geek.umbra.designsystem.UmbraDimens
 import android.text.format.DateFormat
 import androidx.compose.foundation.background
@@ -238,7 +239,7 @@ private fun Header(model: PresenceRecordModel) {
                 Text(yearLabel(model.year), color = c.orangeText, style = TextStyle(fontSize = 13.sp, fontWeight = UmbraType.weight560))
                 UmbraIcon(UmbraIconPaths.chevronDown, c.orangeText, size = 12.dp, contentDescription = stringResource(R.string.presence_yearPick))
             }
-            DropdownMenu(expanded = yearOpen, onDismissRequest = { yearOpen = false }, containerColor = c.card) {
+            DropdownMenu(expanded = yearOpen, onDismissRequest = { yearOpen = false }, containerColor = c.card, modifier = Modifier.widthIn(min = 180.dp)) {
                 PresenceKit.yearOptions(model.calendar?.years ?: emptyList()).forEach { y ->
                     DropdownMenuItem(
                         text = { Text((if (y == model.year) "✓ " else "") + yearLabel(y), color = c.text) },
@@ -252,7 +253,7 @@ private fun Header(model: PresenceRecordModel) {
             Box(Modifier.size(UmbraDimens.tapMin).clickable(role = Role.Button) { moreOpen = true }, contentAlignment = Alignment.Center) {
                 UmbraIcon(UmbraExtraIcons.more, c.muted, size = 18.dp, contentDescription = stringResource(R.string.presence_more))
             }
-            DropdownMenu(expanded = moreOpen, onDismissRequest = { moreOpen = false }, containerColor = c.card) {
+            DropdownMenu(expanded = moreOpen, onDismissRequest = { moreOpen = false }, containerColor = c.card, modifier = Modifier.widthIn(min = 180.dp)) {
                 DropdownMenuItem(text = { Text(aboutTitle, color = c.text) }, onClick = {
                     moreOpen = false
                     // 只有一颗「知道了」：系统弹窗那一档总带「取消」，这里用底部弹层。

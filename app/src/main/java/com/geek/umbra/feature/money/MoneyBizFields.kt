@@ -14,6 +14,7 @@
 // iOS 里那几处写死的小圆角（7 / 8 / 9 / 11 / 14）照抄成 dp 字面量，出处标在各自那一行。
 package com.geek.umbra.feature.money
 
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -502,7 +503,7 @@ private fun BizTierRow(tier: DeductTier, onTier: (DeductTier) -> Unit, tierAuto:
                 Text(tier.label, color = c.text, style = TextStyle(fontSize = 12.5.sp))
                 UmbraIcon(UmbraIconPaths.chevronDown, c.faint, size = 12.dp, strokeWidth = 1.8f)
             }
-            DropdownMenu(expanded = open, onDismissRequest = { open = false }, containerColor = c.card) {
+            DropdownMenu(expanded = open, onDismissRequest = { open = false }, containerColor = c.card, modifier = Modifier.widthIn(min = 180.dp)) {
                 DeductTier.entries.forEach { k ->
                     DropdownMenuItem(text = { Text(k.label, color = c.text) }, onClick = { open = false; onTier(k) })
                 }

@@ -812,7 +812,7 @@ private fun BarMenu(icon: String, label: String, onTouch: () -> Unit, items: Lis
     val c = UmbraTheme.colors
     Box {
         BarButton(icon, label, onTouch) { open = true }
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }, containerColor = c.card) {
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }, containerColor = c.card, modifier = Modifier.widthIn(min = 180.dp)) {
             items.forEach { item ->
                 DropdownMenuItem(
                     text = { Text(item.label, color = c.text) },

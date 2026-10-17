@@ -9,6 +9,7 @@
 // 非会员置灰 + 点了跳商城（Route.SetShop）。
 package com.geek.umbra.feature.remote
 
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -299,7 +300,7 @@ fun RemoteDeviceMenu(device: KnownDevice) {
     val c = UmbraTheme.colors
     Box {
         UmbraTopBarIcon(UmbraIconPaths.deviceDesktop, stringResource(R.string.remote_menu_a11y), { open = true }, tint = c.orange)
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }, containerColor = c.card) {
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }, containerColor = c.card, modifier = Modifier.widthIn(min = 180.dp)) {
             listOf(
                 Triple(RemoteEntry.View, R.string.remote_entry_view, UmbraIconPaths.eye),
                 Triple(RemoteEntry.Control, R.string.remote_entry_control, RemoteIcons.pointer),

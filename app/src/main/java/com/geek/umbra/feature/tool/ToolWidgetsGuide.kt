@@ -54,7 +54,7 @@ fun ToolWidgetsGuide() {
         item("intro") {
             // 导语沿用 iOS 原句（WidgetsGuideView.swift:18 那组的 intro，没有 iOS 专有的说法）。
             Text(
-                "跟随任务和提醒的变化刷新，点击直达对应页面。",
+                "两个小组件跟着任务和提醒的事件刷新，点一下直达对应页面；数据超过 10 分钟没更新会显示「更新于」时间。",
                 color = UmbraTheme.colors.muted, style = TextStyle(fontSize = 12.5.sp, lineHeight = 21.25.sp),
             )
         }

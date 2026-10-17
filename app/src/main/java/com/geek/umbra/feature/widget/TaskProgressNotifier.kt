@@ -200,8 +200,17 @@ object TaskProgressNotifier {
     }
 
     /** 跟着的任务离开了常驻态：撤掉常驻那条，按结果发一条（失败 / 完成 / 已取消）。 */
-    private suspend fun finish(ctx: Context, id: String, ended: TaskItem?) {
+    private suspend fun finish(ctx: Context, id: String, listed: TaskItem?) {
         nm(ctx).cancel(TAG_LIVE + id, ID_LIVE)
+        // 列表里没有它 ≠ 服务器上删了：列表只拉最近 30 条，任务多了它会被挤出去。单独问一次详情，
+        // 只有回 404 才算「找不到」（否则那句「在服务器上找不到了」是假话）；问不到（断网）就按原来的 null 收尾、不下定论。
+        var gone404 = false
+        val ended: TaskItem? = listed ?: when (val r = AppGraph.http.raw("GET", "/tasks/${com.geek.umbra.net.UmbraUrl.segment(id)}")) {
+            is com.geek.umbra.net.HttpResult.Ok ->
+                runCatching { com.geek.umbra.net.UmbraJson.decodeFromString(com.geek.umbra.model.TaskDetail.serializer(), r.body).task }.getOrNull()
+            is com.geek.umbra.net.HttpResult.Fail -> { gone404 = r.status == 404; null }
+            else -> null
+        }
         val title = ended?.title ?: currentTitle ?: ""
         if (current == id) { current = null; lastPosted = null }
         pausedAt.remove(id); stepCache.remove(id); questions.remove(id); firstSeen.remove(id)
@@ -215,8 +224,15 @@ object TaskProgressNotifier {
                 )
                 postResult(ctx, id, title, body, listOf(Pair("查看产出", openTask(ctx, id))))
             }
-            else -> if (TaskNotifyRules.postsDone(AppForeground.isForeground, showing)) {
-                postResult(ctx, id, title, LiveActivityRules.finalFrame(ended?.status).first, emptyList())
+            // 四态之外两态（设计侧批次 201 第 7 条）：服务端找不到 / 被取消。本机点「停止」造成的取消不发。
+            else -> when {
+                ended == null && gone404 -> postResult(ctx, id, title, TaskNotifyRules.NOT_FOUND_BODY, listOf(Pair(TaskNotifyRules.NOT_FOUND_ACTION, openTaskList(ctx))), contentIntent = openTaskList(ctx))
+                ended == null -> Unit // 没问到：不知道它怎么结束的，不发一条可能说错的通知
+                TaskLocalStops.take(id) -> Unit
+                ended.status == "cancelled" || ended.status == "canceled" || ended.status == "stopped" ->
+                    postResult(ctx, id, title, TaskNotifyRules.cancelledBody(ended.steps_done, ended.steps_total), emptyList())
+                TaskNotifyRules.postsDone(AppForeground.isForeground, showing) ->
+                    postResult(ctx, id, title, LiveActivityRules.finalFrame(ended.status).first, emptyList())
             }
         }
     }
@@ -252,6 +268,15 @@ object TaskProgressNotifier {
     private fun listLine(task: TaskItem): String = UmbraStatus.valueOf(taskStatusOf(task.status).name).label
 
     /** 点通知 → 这条任务的详情（umbra://task/<id>，深链已在 MainActivity 接好）。 */
+    /** 落任务列表（服务端已经找不到这条任务，进详情只会是一张「不存在」）。 */
+    private fun openTaskList(ctx: Context): PendingIntent =
+        PendingIntent.getActivity(
+            ctx, "tasks".hashCode(),
+            Intent(ctx, MainActivity::class.java).setAction(Intent.ACTION_VIEW).setData(Uri.parse("umbra://tasks"))
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+
     private fun openTask(ctx: Context, id: String): PendingIntent =
         PendingIntent.getActivity(
             ctx, id.hashCode(),
@@ -380,7 +405,10 @@ object TaskProgressNotifier {
     )
 
     /** 结果那一条（失败 / 完成 / 已取消）：「任务结果」渠道，普通可划掉。 */
-    private fun postResult(ctx: Context, id: String, title: String, body: String, actions: List<Pair<String, PendingIntent>>) {
+    private fun postResult(
+        ctx: Context, id: String, title: String, body: String, actions: List<Pair<String, PendingIntent>>,
+        contentIntent: PendingIntent = openTask(ctx, id),
+    ) {
         ensureChannels(ctx)
         val n = NotificationCompat.Builder(ctx, CHANNEL_RESULT)
             .setSmallIcon(R.drawable.ic_task_notification)
@@ -389,7 +417,7 @@ object TaskProgressNotifier {
             .setStyle(NotificationCompat.BigTextStyle().bigText(body))
             .setColor(orange)
             .setAutoCancel(true)
-            .setContentIntent(openTask(ctx, id))
+            .setContentIntent(contentIntent)
             .apply { actions.forEach { (label, pi) -> addAction(0, label, pi) } }
             .build()
         runCatching { nm(ctx).notify(TAG_DONE + id, ID_DONE, n) }

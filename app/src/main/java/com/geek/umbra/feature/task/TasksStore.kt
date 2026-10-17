@@ -234,7 +234,10 @@ object TasksStore {
 
     /** 强制结束一个任务，然后刷新列表。**把成没成交回去**：吐司要按回应说。 */
     suspend fun stopTask(id: String): Boolean {
+        // 本机停的不发「已取消」通知（设计侧批次 201 第 7 条）：记号要在请求之前打，收尾就在下面那次重拉里
+        com.geek.umbra.feature.widget.TaskLocalStops.mark(id)
         val r = AppGraph.http.raw("POST", "/tasks/${UmbraUrl.segment(id)}/stop")
+        if (r !is HttpResult.Ok) com.geek.umbra.feature.widget.TaskLocalStops.unmark(id)
         loadTasks()
         return r is HttpResult.Ok
     }

@@ -4,6 +4,7 @@
 // 设计稿里有、服务端没有的「关联任务」整块不画 —— 画一个永远为空的分节等于告诉用户功能坏了。
 package com.geek.umbra.feature.inspiration
 
+import androidx.compose.foundation.layout.widthIn
 import com.geek.umbra.designsystem.UmbraDimens
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -180,7 +181,7 @@ fun InspListView() {
             UmbraTopBarIcon(UmbraIconPaths.plus, "新建", { router.go(Route.InspEdit(null)) }, tint = c.orange)
             Box {
                 UmbraTopBarIcon(UmbraIconPaths.sortLines, "排序", { sortOpen = true }, tint = c.orange)
-                DropdownMenu(expanded = sortOpen, onDismissRequest = { sortOpen = false }, containerColor = c.card) {
+                DropdownMenu(expanded = sortOpen, onDismissRequest = { sortOpen = false }, containerColor = c.card, modifier = Modifier.widthIn(min = 180.dp)) {
                     InspSort.entries.forEach { o ->
                         DropdownMenuItem(
                             text = { Text((if (sort == o) "✓ " else "") + o.label, color = c.text) },
@@ -280,7 +281,7 @@ private fun InspCard(i: Inspiration) {
             }
         }
         // 长按 = 快捷菜单；删除仍必进确认弹窗。
-        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }, containerColor = c.card) {
+        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }, containerColor = c.card, modifier = Modifier.widthIn(min = 180.dp)) {
             DropdownMenuItem(text = { Text(if (i.status == "done") "标回待办" else "标记已实现", color = c.text) },
                 onClick = { menu = false; setStatus(i, if (i.status == "done") "open" else "done") })
             DropdownMenuItem(text = { Text(if (i.status == "archived") "取消归档" else "归档", color = c.text) },

@@ -123,4 +123,14 @@ class TaskNotifyRulesTest {
         assertEquals(6 to 0, R.reminderRows(6, 7))
         assertEquals(6 to 2, R.reminderRows(8, 7))
     }
+
+    /** 设计侧批次 201 第 7 条定稿：已取消正文带步数；步数拿不到不编「第 ?/? 步」；本机停的记号只取一次。 */
+    @org.junit.Test fun cancelledAndLocalStop() {
+        org.junit.Assert.assertEquals("已取消，停在第 3/8 步。做完的部分留在任务详情里", TaskNotifyRules.cancelledBody(3, 8))
+        org.junit.Assert.assertEquals("已取消。做完的部分留在任务详情里", TaskNotifyRules.cancelledBody(null, 8))
+        org.junit.Assert.assertEquals("已取消，停在第 8/8 步。做完的部分留在任务详情里", TaskNotifyRules.cancelledBody(9, 8))
+        TaskLocalStops.mark("t1")
+        org.junit.Assert.assertTrue(TaskLocalStops.take("t1"))
+        org.junit.Assert.assertFalse(TaskLocalStops.take("t1"))
+    }
 }

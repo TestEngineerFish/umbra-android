@@ -9,6 +9,7 @@
 
 package com.geek.umbra.feature.remote
 
+import androidx.compose.foundation.layout.widthIn
 import android.content.ContentValues
 import android.content.Intent
 import android.os.Build
@@ -221,7 +222,7 @@ private fun TransferRow(client: RemoteClient, t: RemoteTransfer) {
                             Box(Modifier.defaultMinSize(UmbraDimens.tapMin, UmbraDimens.tapMin).clickable { menu = true }, contentAlignment = Alignment.Center) {
                                 Text(stringResource(R.string.remote_files_save), color = c.orangeText, style = UmbraRemoteType.transferAction)
                             }
-                            DropdownMenu(expanded = menu, onDismissRequest = { menu = false }, containerColor = c.card) {
+                            DropdownMenu(expanded = menu, onDismissRequest = { menu = false }, containerColor = c.card, modifier = Modifier.widthIn(min = 180.dp)) {
                                 DropdownMenuItem(
                                     text = { Text("分享…", color = c.text) },
                                     leadingIcon = { UmbraIcon(UmbraIconPaths.shareUp, c.text, size = 18.dp) },

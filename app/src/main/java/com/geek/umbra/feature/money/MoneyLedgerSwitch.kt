@@ -1,6 +1,7 @@
 // 账本切换器与只读账本胶囊 —— 照抄 iOS Features/Money/MoneyLedgerSwitch.swift。
 package com.geek.umbra.feature.money
 
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -87,7 +88,7 @@ fun MoneyLedgerSwitch(modifier: Modifier = Modifier) {
             Spacer(Modifier.width(6.dp))
             UmbraIcon(UmbraIconPaths.chevronDown, c.muted, size = 12.dp, strokeWidth = 1.9f)
         }
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }, containerColor = c.card) {
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }, containerColor = c.card, modifier = Modifier.widthIn(min = 180.dp)) {
             Ledger.entries.forEach { v ->
                 DropdownMenuItem(
                     text = { Text(v.displayName, color = c.text) },

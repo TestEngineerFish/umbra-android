@@ -3,6 +3,7 @@
 // iOS 出处：ChatThreadView.swift:2373-2486（UmbraBubbleShape / UmbraBlinkCaret / UmbraThinkingDots / UmbraStatus(taskStatus:)）。
 package com.geek.umbra.feature.chat
 
+import androidx.compose.foundation.layout.widthIn
 import android.annotation.SuppressLint
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
@@ -128,7 +129,7 @@ fun ChatMenuBox(items: List<ChatMenuItem>, modifier: Modifier = Modifier, onClic
         ),
     ) {
         content()
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }, containerColor = c.card) {
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }, containerColor = c.card, modifier = Modifier.widthIn(min = 180.dp)) {
             items.forEach { it ->
                 DropdownMenuItem(
                     text = { Text(it.label, color = if (it.danger) c.dangerText else c.text) },

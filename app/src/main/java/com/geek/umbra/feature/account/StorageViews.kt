@@ -3,6 +3,7 @@
 // 两屏读同一份 `GET /storage`；判据全在 StorageRules（纯函数、有用例），这个文件只画。
 package com.geek.umbra.feature.account
 
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -290,7 +291,7 @@ fun StoragePage() {
             var open by remember { mutableStateOf(false) }
             Box {
                 UmbraTopBarIcon(UmbraExtraIcons.more, "更多", { open = true })
-                DropdownMenu(expanded = open, onDismissRequest = { open = false }, containerColor = c.card) {
+                DropdownMenu(expanded = open, onDismissRequest = { open = false }, containerColor = c.card, modifier = Modifier.widthIn(min = 180.dp)) {
                     DropdownMenuItem(
                         text = {
                             Text(

@@ -5,6 +5,7 @@
 // 新建一律是画布记录（一个账号节点）；旧记录可增删控件、上下移、就地生成密码。
 package com.geek.umbra.feature.vault
 
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -280,7 +281,7 @@ private fun BlockEditor(b: VBlock, idx: Int, count: Int, onChange: (VBlock) -> U
                 Box(Modifier.size(UmbraDimens.tapMin).clickable(role = Role.Button) { menu = true }, contentAlignment = Alignment.Center) {
                     UmbraIcon(UmbraExtraIcons.more, c.faint, size = 18.dp, contentDescription = "更多")
                 }
-                DropdownMenu(menu, { menu = false }, containerColor = c.card) {
+                DropdownMenu(menu, { menu = false }, containerColor = c.card, modifier = Modifier.widthIn(min = 180.dp)) {
                     DropdownMenuItem({ Text(VaultRecordCopy.BLOCK_MENU[0], color = if (idx > 0) c.text else c.faint) }, { menu = false; onMove(-1) }, enabled = idx > 0)
                     DropdownMenuItem({ Text(VaultRecordCopy.BLOCK_MENU[1], color = if (idx < count - 1) c.text else c.faint) }, { menu = false; onMove(1) }, enabled = idx < count - 1)
                     DropdownMenuItem({ Text(VaultRecordCopy.BLOCK_MENU[2], color = c.dangerText) }, { menu = false; onRemove() })

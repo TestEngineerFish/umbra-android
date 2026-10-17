@@ -40,7 +40,28 @@ sealed interface TaskNotifyFailAction {
     data object Caps : TaskNotifyFailAction
 }
 
+/**
+ * 本机点了「停止」的任务。设计侧批次 201 第 7 条：本机停的不发「已取消」通知 —— 用户就在现场；
+ * 只有别的设备停的、或服务端停的才发。记号在发 POST 之前打（收尾在随后的重拉里就会触发），失败再撤。
+ */
+object TaskLocalStops {
+    private val ids = java.util.Collections.synchronizedSet(mutableSetOf<String>())
+    fun mark(id: String) { ids += id }
+    fun unmark(id: String) { ids -= id }
+    /** 取走记号：收尾时问一次就清掉，下次同一个任务再被别处停掉照常发。 */
+    fun take(id: String): Boolean = ids.remove(id)
+}
+
 object TaskNotifyRules {
+    /** 已取消那一条的正文（设计侧批次 201 第 7 条定稿）。步数拿不到时不编「第 ?/? 步」。 */
+    fun cancelledBody(done: Int?, total: Int?): String =
+        if (done != null && total != null && total > 0) "已取消，停在第 ${done.coerceIn(0, total)}/$total 步。做完的部分留在任务详情里"
+        else "已取消。做完的部分留在任务详情里"
+
+    /** 服务端找不到这条任务时的正文（同上定稿），配动作「打开任务」落任务列表。 */
+    const val NOT_FOUND_BODY = "这条任务在服务器上找不到了，可能已在别的设备上删掉。"
+    const val NOT_FOUND_ACTION = "打开任务"
+
     /** 需确认那一态的标题后缀（答复 #9：`任务名 · 等你确认`）。 */
     const val AWAITING_SUFFIX = " · 等你确认"
     /** 需确认时状态栏胶囊那三个字。 */
