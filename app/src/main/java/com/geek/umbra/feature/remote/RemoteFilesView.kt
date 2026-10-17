@@ -391,7 +391,7 @@ private fun share(ctx: android.content.Context, file: File) {
 
 /**
  * 存进公共「下载」目录（Android 10+ 的 MediaStore.Downloads，不要权限）。先标 IS_PENDING，写完再放出来 —— 别的 App 不会读到半个文件。
- * 返回 null = 存好了；否则是提示条冒号后那半句原因（批次 202 ③）。重名交给系统自动加「(1)」。
+ * 返回 null = 存好了；否则是提示条冒号后那半句原因（批次 202 ③，另两句定稿见批次 203）。重名交给系统自动加「(1)」。
  * 空间先用 StatFs 估一次（写到一半才满会留半个文件再删，体验差）；估过了写时仍可能满，ENOSPC 也归到空间那句。
  */
 private suspend fun saveToDownloads(ctx: android.content.Context, file: File, displayName: String): String? = withContext(Dispatchers.IO) {
@@ -406,7 +406,7 @@ private suspend fun saveToDownloads(ctx: android.content.Context, file: File, di
         put(MediaStore.Downloads.IS_PENDING, 1)
     }
     val uri = runCatching { cr.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values) }.getOrNull()
-        ?: return@withContext "系统没给出存放的位置"
+        ?: return@withContext "系统暂时不让写入「下载」文件夹"
     val err = runCatching {
         cr.openOutputStream(uri)?.use { out -> file.inputStream().use { it.copyTo(out) } } ?: error("no stream")
     }.exceptionOrNull()
@@ -415,8 +415,9 @@ private suspend fun saveToDownloads(ctx: android.content.Context, file: File, di
         runCatching { cr.update(uri, values, null, null) }
         null
     } else {
+        // 写了一半的条目删掉，不在「下载」里留坏文件；删不掉也照旧报这句（批次 203）。
         runCatching { cr.delete(uri, null, null) }
-        if (generateSequence(err) { it.cause }.any { it.message?.contains("ENOSPC") == true }) NO_SPACE else "写入时出错了"
+        if (generateSequence(err) { it.cause }.any { it.message?.contains("ENOSPC") == true }) NO_SPACE else "写到一半中断了，文件没存全"
     }
 }
 
