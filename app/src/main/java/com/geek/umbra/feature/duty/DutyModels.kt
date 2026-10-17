@@ -351,7 +351,50 @@ data class DutyForecast(val runs_out_at_ms: Long? = null, val note: String = "")
     }
 }
 
-/** `GET /duties` 整份。iOS DutyModels.swift:415 */
+/**
+ * 执勤预算（`GET /duties` 的 `budget`，服务端 ae8cc4f 起）：**按天** —— cap = 周额度 × budget_pct ÷ 7，spent = 今天用的。
+ * 没会员 / 不限时服务端给 null（页上那根进度条就不出）。点数可能带小数（判断一次 0.3 点），按 Double 收。iOS DutyModels.swift:415
+ */
+data class DutyBudget(val cap: Double, val spent: Double, val period: String = "day") {
+    companion object {
+        fun from(c: JsonObject) = DutyBudget(
+            cap = c["cap"].strictDouble() ?: 0.0,
+            spent = c["spent"].strictDouble() ?: 0.0,
+            period = c["period"].strictString() ?: "day",
+        )
+    }
+}
+
+/**
+ * 档位原因码（`GET /duties` 的 `tier_code`，ae8cc4f 起）。按类型解码而不是到处比字符串：认不出的（服务端以后加的）归 [Other]。
+ * 这是执勤自己的档位码，不是模型厂商的欠费码 —— 两回事。iOS DutyModels.swift:432
+ */
+enum class DutyTierCode(val raw: String) {
+    None(""), NoMembership("no_membership"), Quota("quota"), Budget("budget"), BudgetTier("budget_tier"), Other("other");
+
+    companion object {
+        fun of(raw: String): DutyTierCode = entries.firstOrNull { it.raw == raw } ?: Other
+    }
+}
+
+/** 周额度窗口（`GET /duties` 的 `week`，ae8cc4f 起）。端上只用它判「周额度剩不到三成」那一句。iOS DutyModels.swift:445 */
+data class DutyWeek(val used: Double, val total: Double) {
+    /** 剩几成（0…1）。total 为 0 算不出 → null。 */
+    val left: Double? get() = if (total > 0) maxOf(0.0, 1 - used / total) else null
+
+    companion object {
+        fun from(c: JsonObject) = DutyWeek(c["used"].strictDouble() ?: 0.0, c["total"].strictDouble() ?: 0.0)
+    }
+}
+
+/** 额度窗口满了的那一个（`GET /duties` 的 `full`，a3bcc36 起，只在 tier_code = quota 时有）：哪个窗口、几时重置。iOS DutyModels.swift:462 */
+data class DutyFull(val kind: String, val end_ms: Long?) {
+    companion object {
+        fun from(c: JsonObject) = DutyFull(c.optString("kind") ?: "", c.looseLong("end_ms"))
+    }
+}
+
+/** `GET /duties` 整份。iOS DutyModels.swift:476 */
 data class DutyListDTO(
     val settings: DutySettings = DutySettings(),
     /** "normal" | "save" | "essential" | "stopped"（M1a 契约 §16.3 四档） */
@@ -361,6 +404,17 @@ data class DutyListDTO(
     val items: List<DutyItem> = emptyList(),
     /** null = 服务端没回（M0）或者算不出来。 */
     val forecast: DutyForecast? = null,
+    /**
+     * 档位的原因码（ae8cc4f 起）。老服务端没有 = [DutyTierCode.None]。
+     * 「调高预算」只给 budget（今天的执勤预算用完了）—— 没会员 / 额度窗口满了，调高预算没用。
+     */
+    val tier_code: DutyTierCode = DutyTierCode.None,
+    /** 今天的执勤预算（按天）。null = 没会员 / 不限 / 老服务端。 */
+    val budget: DutyBudget? = null,
+    /** 周额度窗口（节省档分两句用）。null = 没会员 / 老服务端。 */
+    val week: DutyWeek? = null,
+    /** 额度满了的窗口与重置时刻（tier_code = quota 时）。 */
+    val full: DutyFull? = null,
 ) {
     /** 早报那一条（每人至多一条）。 */
     val brief: DutyItem? get() = items.firstOrNull { it.preset == DutyRules.MORNING_BRIEF }
@@ -373,6 +427,10 @@ data class DutyListDTO(
             estimate_weekly_pct = c["estimate_weekly_pct"].strictDouble() ?: 0.0,
             items = c["items"].objects { DutyItem.from(it) } ?: emptyList(),
             forecast = (c["forecast"] as? JsonObject)?.let { DutyForecast.from(it) },
+            tier_code = DutyTierCode.of(c.optString("tier_code") ?: ""),
+            budget = (c["budget"] as? JsonObject)?.let { DutyBudget.from(it) },
+            week = (c["week"] as? JsonObject)?.let { DutyWeek.from(it) },
+            full = (c["full"] as? JsonObject)?.let { DutyFull.from(it) },
         )
     }
 }
@@ -409,8 +467,13 @@ data class DutyMeta(
     val plannedAtMs: Long,
     val simple: Boolean,
     val items: List<Item>,
-    /** 额度预报：早报卡最后画一行橙字。空 = 没有。 */
+    /** 额度预报：早报卡最后画一行。空 = 没有。 */
     val forecastNote: String = "",
+    /**
+     * 早报末尾「另外有 N 条建议」的 N（`meta.duty.proposals_n`，服务端 ae8cc4f 起，没有为 0）。null = 老消息没这个字段，
+     * 那就退回从 [forecastNote] 里认那句话（[DutyKit.forecastTail]）。iOS DutyModels.swift:583
+     */
+    val proposalsN: Int? = null,
     /** 这条消息是哪一次判断发的；空串 = 没判断，「为什么现在发」按 shiftId 去日志里找理由。 */
     val decisionId: String = "",
     /** 服务端写回的卡底反馈 verdict = "up" / "mute"，空串 = 没给过（重启之后「已反馈」靠它，不靠内存）。 */
@@ -504,7 +567,12 @@ data class DutyMeta(
                 dutyId = nsStr(d["duty_id"]), shiftId = nsStr(d["shift_id"]), runId = nsStr(d["run_id"]), name = nsStr(d["name"]),
                 kind = nsStr(d["kind"]), plannedAtMs = nsInt64(d["planned_at_ms"]),
                 simple = nsBool(d["simple"]) ?: false, items = items,
-                forecastNote = nsStr(d["forecast_note"]), decisionId = nsStr(d["decision_id"]),
+                forecastNote = nsStr(d["forecast_note"]),
+                // Swift `as? NSNumber`：数字（布尔也是 NSNumber，true = 1）收，字符串不收；负数夹到 0。
+                proposalsN = d["proposals_n"].scalar?.content?.let { c ->
+                    when (c) { "true" -> 1; "false" -> 0; else -> c.toDoubleOrNull()?.toInt() }
+                }?.let { maxOf(0, it) },
+                decisionId = nsStr(d["decision_id"]),
                 feedbackVerdict = verdict, feedbackMute = mute,
             )
         }
@@ -672,7 +740,7 @@ data class DutyFeedbackDTO(val ok: Boolean, val duty: DutyItem?) {
 /**
  * `GET /duties/proposals` 的一条。`draft` 的形状随 `kind` 走：new = 自建条目体；tune = `{patch, from?, to?}`；
  * quiet = `{settings, from}`；block = `{patch: {params: {blocks}}}`；flow = `{name, graph, time_hhmm, nodes}`；follow = `{topic, query}`。
- * 所以 draft 留成任意 JSON，画卡时按种类取那几格（[DutyKit.proposalDetail]）。
+ * 所以 draft 留成任意 JSON，画卡时按种类取那几格（[DutyKit.proposalChange]）。
  */
 data class DutyProposal(
     val id: String,

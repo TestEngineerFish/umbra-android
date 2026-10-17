@@ -29,11 +29,40 @@ class DutyM2Test {
         "duty.block.remindersSoon" to "两小时内的提醒",
         "duty.block.followsHot" to "重要关注的新动向",
         "duty.pr.detailStop" to "停掉这一条（随时可以在执勤表里再打开）",
-        "duty.pr.detailArrow" to "%1\$@ → %2\$@",
-        "duty.pr.detailBlock" to "早报的块改成：%@",
-        "duty.pr.detailFollow" to "关注「%1\$@」，检索：%2\$@",
-        "duty.pr.detailFollowTopic" to "关注「%@」",
+        "duty.pr.detailFollow" to "关注「%1\$@」· 检索：%2\$@",
+        "duty.pr.detailFollowTopic" to "关注「%@」· 检索就用这个词",
         "duty.pr.detailPoints" to "每次约 %@ 点",
+        "duty.pr.diffTime" to "时间",
+        "duty.pr.diffTimeOf" to "%@时间",
+        "duty.pr.diffQuiet" to "静默时段",
+        "duty.pr.quietTo" to "静默时段改成 %@",
+        "duty.pr.flowNote" to "定时：每个工作日 %@",
+        "duty.pr.done" to "改好了",
+        "duty.pr.doneStop" to "停掉了「%@」",
+        "duty.pr.doneStopPlain" to "停掉了",
+        "duty.pr.doneTime" to "%1\$@改到 %2\$@ 了",
+        "duty.pr.doneTimePlain" to "改到 %@ 了",
+        "duty.pr.doneQuiet" to "静默时段改到 %@ 了",
+        "duty.pr.doneBlock" to "早报改成说：%@",
+        "duty.pr.doneFollow" to "关注了「%@」",
+        "duty.pr.doneFlow" to "建好了例程「%1\$@」，每个工作日 %2\$@ 跑",
+        "duty.pr.doneFlowOnly" to "建好了例程「%@」，没有定时",
+        "duty.pr.doneNew" to "加上了：%@",
+        "duty.today.at" to "今天 %@",
+        "duty.budgetToday.value" to "%1\$@ / %2\$@ 点",
+        "duty.tier.saveBudget" to "今天的执勤预算用过六成了。先省着用：不再逐条判断、只做最要紧的，可有可无的条目先停，明天预算重算后恢复。",
+        "duty.tier.saveWeek" to "周额度剩不到三成。先省着用：不再逐条判断、只做最要紧的，可有可无的条目先停，额度回到三成以上就恢复。",
+        "duty.tier.essentialText" to "周额度剩不到 15%。只跑优先级 4 以上的条目，其余跳过，额度回到 15% 以上就恢复。",
+        "duty.tier.stopBudget" to "今天的执勤预算用完了，执勤停到明天 00:00。早报照发，不花额度的部分不受影响。",
+        "duty.tier.stopQuota" to "周额度用满了，执勤停到 %@。早报照发，不花额度的部分不受影响。",
+        "duty.tier.stopQuotaPlain" to "周额度用满了，执勤停了。早报照发，不花额度的部分不受影响。",
+        "duty.tier.stopMember" to "没有会员，执勤停了。开会员后接着跑。",
+        "duty.tier.untilDay" to "%1\$@月%2\$@日 %3\$@",
+        "duty.items.last" to "上一次：%@",
+        "duty.items.lastFailed" to "%1\$@没跑成：%2\$@",
+        "duty.items.lastFailedPlain" to "%@没跑成",
+        "duty.outcome.ran" to "做了",
+        "duty.outcome.skipped" to "跳过",
     )
     private val tr = trOf(zh)
     private val at8 = 1_792_108_800_000L
@@ -148,25 +177,65 @@ class DutyM2Test {
 
     @Test fun proposalCases() {
         val K = DutyKit
-        fun detail(k: String, d: String, est: Int = 0) = K.proposalDetail(proposal(k, d, est), tr)
-        assertEquals("tune 改时间", "08:00 → 09:10", detail("tune", """{"patch": {"time": "09:10"}, "from": "08:00", "to": "09:10"}"""))
-        assertEquals("tune 停掉先于时刻", "停掉这一条（随时可以在执勤表里再打开）",
-            detail("tune", """{"patch": {"enabled": false}, "from": "08:00", "to": "09:10"}"""))
-        assertEquals("tune 什么都没给 → 不画细节", "", detail("tune", """{"patch": {}}"""))
-        assertEquals("quiet", "22:30–07:30 → 23:30–07:00",
-            detail("quiet", """{"settings": {"quiet_start": "23:30", "quiet_end": "07:00"}, "from": "22:30–07:30"}"""))
-        assertEquals("quiet 没有原值：只说改成几点，不悬一个箭头", "23:30–07:00",
-            detail("quiet", """{"settings": {"quiet_start": "23:30", "quiet_end": "07:00"}}"""))
-        assertEquals("block：认得的说名字，认不出的原样", "早报的块改成：天气、今天的提醒、holiday",
-            detail("block", """{"patch": {"params": {"blocks": ["weather", "reminders", "holiday"]}}}"""))
-        assertEquals("follow", "关注「某手机」，检索：某手机 发布", detail("follow", """{"topic": "某手机", "query": "某手机 发布"}"""))
-        assertEquals("follow 没检索式不留半句", "关注「某手机」", detail("follow", """{"topic": "某手机", "query": ""}"""))
-        assertEquals("new：触发说人话 · 要求", "每个工作日 18:00 · 今天做了什么",
-            detail("new", """{"name": "x", "trigger": {"type": "recur", "cycle": "day", "workday_only": true, "time_hhmm": "18:00"}, "action": {"type": "say", "brief": "今天做了什么"}}"""))
-        assertEquals("new 没有触发：不留空的一段", "今天做了什么", detail("new", """{"name": "x", "action": {"type": "say", "brief": "今天做了什么"}}"""))
-        assertEquals("flow 步骤 + 点数", "① 天气  ② 提醒  ③ 汇总 · 每次约 4 点",
-            detail("flow", """{"name": "f", "time_hhmm": "08:30", "nodes": ["天气", "提醒", "汇总"]}""", est = 4))
-        assertEquals("flow 没有步骤只说点数", "每次约 2 点", detail("flow", """{"nodes": []}""", est = 2))
+        fun change(k: String, d: String, est: Int = 0, name: String = "", blocks: List<String>? = null) =
+            K.proposalChange(proposal(k, d, est), tr, dutyName = name, currentBlocks = blocks)
+        // ③ 变化块（批次 261 §二 3）：三种写法各自成形，删除线 / 600 / 胶囊交给画法 —— 判据只回结构。
+        assertEquals("tune 改时间 → 前后对比，标签带条目名", DutyKit.ProposalChange.Diff("早报时间", "08:00", "09:10"),
+            change("tune", """{"patch": {"time": "09:10"}, "from": "08:00", "to": "09:10"}""", name = "早报"))
+        assertEquals("tune 找不到条目名 → 标签只写「时间」", DutyKit.ProposalChange.Diff("时间", "08:00", "09:10"),
+            change("tune", """{"patch": {"time": "09:10"}, "from": "08:00", "to": "09:10"}"""))
+        assertEquals("tune 停掉先于时刻", DutyKit.ProposalChange.Text("停掉这一条（随时可以在执勤表里再打开）"),
+            change("tune", """{"patch": {"enabled": false}, "from": "08:00", "to": "09:10"}"""))
+        assertEquals("tune 什么都没给 → 不画变化块", DutyKit.ProposalChange.None, change("tune", """{"patch": {}}"""))
+        assertEquals("quiet 前后对比", DutyKit.ProposalChange.Diff("静默时段", "22:30–07:30", "23:30–07:00"),
+            change("quiet", """{"settings": {"quiet_start": "23:30", "quiet_end": "07:00"}, "from": "22:30–07:30"}"""))
+        assertEquals("quiet 没有原值：一句话，不画悬空的删除线", DutyKit.ProposalChange.Text("静默时段改成 23:30–07:00"),
+            change("quiet", """{"settings": {"quiet_start": "23:30", "quiet_end": "07:00"}}"""))
+        assertEquals("block：节点链，早报原来没有的那块标「+」，认不出的原样",
+            DutyKit.ProposalChange.Nodes(listOf(DutyKit.ProposalNode("天气"), DutyKit.ProposalNode("今天的提醒", true), DutyKit.ProposalNode("holiday", true)), ""),
+            change("block", """{"patch": {"params": {"blocks": ["weather", "reminders", "holiday"]}}}""", blocks = listOf("weather")))
+        assertEquals("block 不知道早报现在说哪几块 → 一颗都不标「+」",
+            DutyKit.ProposalChange.Nodes(listOf(DutyKit.ProposalNode("天气")), ""),
+            change("block", """{"patch": {"params": {"blocks": ["weather"]}}}"""))
+        assertEquals("follow 有检索式（批次 261 §三 4）", DutyKit.ProposalChange.Text("关注「9 号线」· 检索：杭州地铁 9 号线"),
+            change("follow", """{"topic": "9 号线", "query": "杭州地铁 9 号线"}"""))
+        assertEquals("follow 没检索式：不和标题重复", DutyKit.ProposalChange.Text("关注「9 号线」· 检索就用这个词"),
+            change("follow", """{"topic": "9 号线", "query": ""}"""))
+        assertEquals("new：触发说人话 · 要求", DutyKit.ProposalChange.Text("每个工作日 18:00 · 今天做了什么"),
+            change("new", """{"name": "x", "trigger": {"type": "recur", "cycle": "day", "workday_only": true, "time_hhmm": "18:00"}, "action": {"type": "say", "brief": "今天做了什么"}}"""))
+        assertEquals("new 什么都没有 → 不画", DutyKit.ProposalChange.None, change("new", """{"name": "x"}"""))
+        assertEquals("flow：节点链（不用 ①②③）+ 点数",
+            DutyKit.ProposalChange.Nodes(listOf(DutyKit.ProposalNode("天气"), DutyKit.ProposalNode("提醒"), DutyKit.ProposalNode("汇总")), "每次约 4 点"),
+            change("flow", """{"name": "f", "time_hhmm": "08:30", "nodes": ["天气", "提醒", "汇总"]}""", est = 4))
+        assertEquals("flow 没有步骤只说点数", DutyKit.ProposalChange.Text("每次约 2 点"), change("flow", """{"nodes": []}""", est = 2))
+
+        // ④ 主钮按种类写动词（「好」作废）。
+        fun primary(k: String, d: String = "{}") = K.proposalPrimaryKey(proposal(k, d))
+        assertEquals("主钮：加上 / 照改 / 停掉 / 照改 / 加上 / 建并定时 / 关注",
+            listOf("duty.pr.yes.add", "duty.pr.yes.apply", "duty.pr.yes.stop", "duty.pr.yes.apply", "duty.pr.yes.add",
+                "duty.pr.flowSchedule", "duty.pr.yes.follow"),
+            listOf(primary("new"), primary("tune", """{"patch": {"time": "09:10"}}"""), primary("tune", """{"patch": {"enabled": false}}"""),
+                primary("quiet"), primary("block"), primary("flow"), primary("follow")))
+        assertEquals("做成例程：时间不进钮，写在卡上一行", "定时：每个工作日 08:00", K.proposalNote(proposal("flow", """{"time_hhmm": "08:00"}"""), tr))
+        assertNull("别的种类没有定时那一行", K.proposalNote(proposal("new", "{}"), tr))
+
+        // 吐司写具体结果（不写「照这条改好了」）。
+        fun done(k: String, d: String, schedule: Boolean = true, name: String = "") = K.proposalDoneText(proposal(k, d), schedule, tr, dutyName = name)
+        assertEquals("吐司 tune", "早报改到 09:10 了", done("tune", """{"patch": {"time": "09:10"}, "from": "08:00", "to": "09:10"}""", name = "早报"))
+        assertEquals("吐司 tune 停掉", "停掉了「巡视」", done("tune", """{"patch": {"enabled": false}}""", name = "巡视"))
+        assertEquals("吐司 quiet", "静默时段改到 23:00–07:00 了", done("quiet", """{"settings": {"quiet_start": "23:00", "quiet_end": "07:00"}}"""))
+        assertEquals("吐司 建并定时（批次 263 字面）", "建好了例程「早上三件事」，每个工作日 08:00 跑",
+            done("flow", """{"name": "早上三件事", "time_hhmm": "08:00"}"""))
+        assertEquals("吐司 只建", "建好了例程「早上三件事」，没有定时", done("flow", """{"name": "早上三件事"}""", schedule = false))
+        assertEquals("吐司 new", "加上了：每个工作日 07:50 说天气",
+            done("new", """{"name": "说天气", "trigger": {"type": "recur", "cycle": "day", "workday_only": true, "time_hhmm": "07:50"}}"""))
+        assertEquals("吐司 follow", "关注了「9 号线」", done("follow", """{"topic": "9 号线"}"""))
+
+        // 超过 3 条折叠成「还有 N 条」。
+        assertEquals("5 条摊开 3 张", 3, K.proposalShown(5, false).shown)
+        assertEquals("5 条折起 2 张", 2, K.proposalShown(5, false).more)
+        assertEquals("正好 3 条不折", 0, K.proposalShown(3, false).more)
+        assertEquals("点过「还有 N 条」全摊开", 5, K.proposalShown(5, true).shown)
         assertEquals("flow 定时钮的时刻", "08:30", K.proposalFlowTime(proposal("flow", """{"time_hhmm": "08:30"}""")))
         assertEquals("flow 时刻认不出 → 08:00", "08:00", K.proposalFlowTime(proposal("flow", """{"time_hhmm": "坏"}""")))
         assertEquals("种类小标 key", "duty.pr.kind.quiet", K.proposalKindKey("quiet"))
@@ -187,6 +256,97 @@ class DutyM2Test {
         assertEquals("items 不是数组 → 空，不让整区解不开", 0, DutyProposalsDTO.from(obj("""{"items": "坏"}""")).items.size)
         assertEquals("scan 新增条数", 2, DutyProposalScanDTO.from(obj("""{"ok": true, "added": [{"id": "a"}, {"id": "b"}]}""")).added)
         assertEquals("scan 没有 added → 0", 0, DutyProposalScanDTO.from(obj("""{"ok": true}""")).added)
+    }
+
+    private fun list(j: String) = DutyListDTO.from(obj(j))
+
+    /** 批次 261 §四：页头状态、暂停到几时、上一次失败说原因、日志结局图标、聊天早报卡末尾拆两行。 */
+    @Test fun pageCases() {
+        val K = DutyKit
+        val now = at8 // 某天 08:00（上海）
+        val on = DutySettings(enabled = true, consented = true)
+        assertEquals("开着、没暂停 → 执勤中", DutyKit.HeadState.On, K.headState(on, now))
+        assertEquals("没确认过 → 没开（同总开关的画法）", DutyKit.HeadState.Off, K.headState(DutySettings(enabled = true, consented = false), now))
+        assertEquals("暂停到一个时刻", DutyKit.HeadState.PausedUntil(now + 3_600_000), K.headState(on.copy(paused_until_ms = now + 3_600_000), now))
+        assertEquals("十年之外 = 到你恢复", DutyKit.HeadState.PausedForever,
+            K.headState(on.copy(paused_until_ms = now + DutyRules.FOREVER_THRESHOLD_MS + 1), now))
+        assertEquals("暂停到点了 → 执勤中", DutyKit.HeadState.On, K.headState(on.copy(paused_until_ms = now - 1), now))
+        assertEquals("同一天写「今天 HH:mm」", "今天 18:00", K.whenText(now + 10 * 3_600_000, now, tr))
+        assertEquals("别的天写月-日 时:分", DutyRules.monthDayTime(now + 25 * 3_600_000), K.whenText(now + 25 * 3_600_000, now, tr))
+
+        val failed = DutyShift(id = "s1", planned_at_ms = now, outcome = "failed", reason_text = "这条执勤要跑的流程已经删了")
+        assertEquals("失败说原因", "今天 08:00没跑成：这条执勤要跑的流程已经删了", K.lastLine(failed, now, tr).text)
+        assertEquals("失败那一行标红", true, K.lastLine(failed, now, tr).failed)
+        assertEquals("失败没给原因：不留冒号", "今天 08:00没跑成", K.lastLine(DutyShift(id = "s2", planned_at_ms = now, outcome = "failed"), now, tr).text)
+        assertEquals("没失败照旧", "上一次：做了", K.lastLine(DutyShift(id = "s3", planned_at_ms = now, outcome = "ran"), now, tr).text)
+
+        assertEquals("说了 / 建了任务 = 对勾", "check", K.outcomeIcon(DutyShift(id = "a", planned_at_ms = now, outcome = "ran")))
+        assertEquals("秘书判断后没事 = 横线圈", "minusCircle", K.outcomeIcon(DutyShift(id = "b", planned_at_ms = now, outcome = "skipped", decision_id = "d1")))
+        assertEquals("规矩挡下的跳过 = 钟", "clock", K.outcomeIcon(DutyShift(id = "c", planned_at_ms = now, outcome = "skipped")))
+        assertEquals("没跑成 = 圆叉", "xCircle", K.outcomeIcon(DutyShift(id = "d", planned_at_ms = now, outcome = "failed")))
+        assertNull("没结案不画图标", K.outcomeIcon(DutyShift(id = "e", planned_at_ms = now, state = "deferred", outcome = null)))
+        assertEquals("预算用完的「停」带调高预算", true, K.tierOffersBudget("stopped", DutyTierCode.Budget))
+        assertEquals("没会员的「停」不给", false, K.tierOffersBudget("stopped", DutyTierCode.NoMembership))
+        assertEquals("额度窗口满了的「停」不给", false, K.tierOffersBudget("stopped", DutyTierCode.Quota))
+        assertEquals("老服务端没有 tier_code：不猜", false, K.tierOffersBudget("stopped", DutyTierCode.None))
+        assertEquals("节省档不带", false, K.tierOffersBudget("save", DutyTierCode.BudgetTier))
+        assertEquals("认不出的档位码归 other", DutyTierCode.Other, DutyTierCode.of("zzz"))
+        // 今天执勤预算（按天，ae8cc4f）。
+        assertEquals("预算数值：整数不带小数", "2.1 / 6 点", K.budgetText(DutyBudget(cap = 6.0, spent = 2.1), tr))
+        assertEquals("进度一半", 0.5, K.budgetFraction(DutyBudget(cap = 6.0, spent = 3.0)), 0.0)
+        assertEquals("超额封在 1", 1.0, K.budgetFraction(DutyBudget(cap = 6.0, spent = 9.0)), 0.0)
+        assertEquals("cap 为 0 按用满", 1.0, K.budgetFraction(DutyBudget(cap = 0.0, spent = 0.0)), 0.0)
+        val l = list("""{"tier": "stopped", "tier_code": "budget", "budget": {"cap": 6, "spent": 6.4, "period": "day"}}""")
+        assertEquals("解出 tier_code", DutyTierCode.Budget, l.tier_code)
+        assertEquals("解出 budget", DutyBudget(cap = 6.0, spent = 6.4), l.budget)
+        assertNull("budget null → 不出进度条", list("""{"budget": null}""").budget)
+        assertEquals("老服务端没有 tier_code", DutyTierCode.None, list("{}").tier_code)
+        // 档位一句（批次 265，字面以协调方核过服务端行为后定的为准）。
+        fun tier(j: String): DutyKit.TierCopy = K.tierCopy(list(j), at8, tr)
+        assertEquals("节省·今天预算用过六成、周额度还够",
+            "今天的执勤预算用过六成了。先省着用：不再逐条判断、只做最要紧的，可有可无的条目先停，明天预算重算后恢复。",
+            tier("""{"tier": "save", "tier_code": "budget_tier", "budget": {"cap": 10, "spent": 6}, "week": {"used": 50, "total": 100}}""").text)
+        assertEquals("节省·周额度剩不到三成", true,
+            tier("""{"tier": "save", "budget": {"cap": 10, "spent": 1}, "week": {"used": 75, "total": 100}}""").text?.startsWith("周额度剩不到三成"))
+        assertEquals("节省·两条同时成立用周额度那句", true,
+            tier("""{"tier": "save", "budget": {"cap": 10, "spent": 8}, "week": {"used": 75, "total": 100}}""").text?.startsWith("周额度剩不到三成"))
+        assertEquals("节省·算不出也用周额度那句", true, tier("""{"tier": "save"}""").text?.startsWith("周额度剩不到三成"))
+        assertEquals("只保要紧", true, tier("""{"tier": "essential"}""").text?.startsWith("周额度剩不到 15%"))
+        val sb = tier("""{"tier": "stopped", "tier_code": "budget"}""")
+        assertEquals("停·budget", true, sb.text?.startsWith("今天的执勤预算用完了"))
+        assertEquals("停·budget 带调高预算", DutyKit.TierAction.Budget, sb.action)
+        fun quota(end: Long?): String? = K.tierCopy(
+            DutyListDTO(tier = "stopped", tier_code = DutyTierCode.Quota, full = end?.let { DutyFull("week", it) }), at8, tr,
+        ).text
+        assertEquals("停·额度用满 同日写 HH:MM", "周额度用满了，执勤停到 11:00。早报照发，不花额度的部分不受影响。", quota(at8 + 3 * 3_600_000))
+        assertEquals("停·额度用满 跨日写 M月D日 HH:MM", true, quota(at8 + 2 * 86_400_000)?.contains("停到 10月18日 08:00"))
+        assertEquals("停·额度用满 没有 full：去掉「到 …」", "周额度用满了，执勤停了。早报照发，不花额度的部分不受影响。", quota(null))
+        assertEquals("解出 full", DutyFull("week", 5), list("""{"full": {"kind": "week", "end_ms": 5}}""").full)
+        assertEquals("解出 week，剩 25%", 0.25, list("""{"week": {"used": 75, "total": 100}}""").week?.left)
+        val sm = tier("""{"tier": "stopped", "tier_code": "no_membership"}""")
+        assertEquals("停·没会员", "没有会员，执勤停了。开会员后接着跑。", sm.text)
+        assertEquals("停·没会员带开会员", DutyKit.TierAction.Membership, sm.action)
+        assertEquals("停·认不出码：照服务端原话", "服务端原话", tier("""{"tier": "stopped", "tier_reason": "服务端原话"}""").text)
+        assertNull("正常档不出", tier("""{"tier": "normal"}""").text)
+
+        // 早报末尾条数：新消息照 proposals_n，老消息退回认那句话。
+        val line = "另外，我有 2 条建议放在执勤页「秘书的提议」里，你看看要不要。"
+        assertEquals("有 proposals_n 就用它", 3, K.forecastTail(line, 3).proposals)
+        assertEquals("那句话照样从预报格里拿掉", "", K.forecastTail(line, 3).forecast)
+        assertNull("proposals_n = 0 → 不出「看建议」", K.forecastTail(line, 0).proposals)
+        assertEquals("老消息没字段：退回认那句话", 2, K.forecastTail(line, null).proposals)
+        assertEquals("meta 解出 proposals_n", 4, DutyMeta.parse(obj("""{"kind": "brief", "proposals_n": 4}"""))?.proposalsN)
+        assertNull("老消息没有 proposals_n", DutyMeta.parse(obj("""{"kind": "brief"}"""))?.proposalsN)
+
+        // 聊天早报卡末尾：服务端把预报和「我有 N 条建议」用换行接在同一格里。
+        val both = K.splitForecast("照这周的节奏，周四会用完额度；我先把可有可无的执勤停到周一重置，聊天的额度留给你。\n另外，我有 2 条建议放在执勤页「秘书的提议」里，你看看要不要。")
+        assertEquals("拆出预报那句", "照这周的节奏，周四会用完额度；我先把可有可无的执勤停到周一重置，聊天的额度留给你。", both.forecast)
+        assertEquals("拆出建议条数", 2, both.proposals)
+        val only = K.splitForecast("另外，我有 3 条建议放在执勤页「秘书的提议」里，你看看要不要。")
+        assertEquals("只有建议那句 → 预报为空", "", only.forecast)
+        assertEquals("只有建议那句的条数", 3, only.proposals)
+        assertNull("没有建议那句 → null，不出「看建议」", K.splitForecast("照这周的节奏，周四会用完额度。").proposals)
+        assertEquals("空格子", "", K.splitForecast("").forecast)
     }
 
     @Test fun metaCases() {

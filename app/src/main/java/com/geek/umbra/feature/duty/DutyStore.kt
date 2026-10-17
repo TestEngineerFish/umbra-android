@@ -66,6 +66,16 @@ data class DutyState(
     val proposals: List<DutyProposal>? = null,
     /** 提议那一区有一下在途：那一区的钮一起不让连点（不用 busy：「现在看一遍」要好几秒，别的开关不该跟着点不动）。 */
     val proposalBusy: Boolean = false,
+    /**
+     * 「现在看一遍」在跑（钮上「正在看…」+ 旋转弧）。和 [proposalBusy] 分开：点「加上」那一下也置 proposalBusy，
+     * 那一两百毫秒里区头的钮不该跟着变成「正在看…」—— 人会以为自己点到了别的。iOS DutyStore.swift:64
+     */
+    val scanning: Boolean = false,
+    /**
+     * 点过、还在「撤销」那几秒里的提议（批次 261 §二：点完任何一颗都出吐司带「撤销」）。卡先收起，请求等窗口过了才发：
+     * 服务端没有「撤回一次采纳 / 拒绝」的接口，「不用」更是落了库就 30 天不再提 —— 先发再撤做不到，只能晚发。
+     */
+    val heldProposals: Set<String> = emptySet(),
     /** 正在一键跑的流程（按 id）：按钮变「正在跑…」、不许连点。 */
     val flowStarting: Set<String> = emptySet(),
 )
@@ -216,12 +226,51 @@ object DutyStore {
         }
     }
 
+    /** 撤销窗口里挂着的那几下（按提议 id）。 */
+    private val holdJobs = mutableMapOf<String, kotlinx.coroutines.Job>()
+
+    /** 撤销窗口：比吐司停留（带动作 3 秒，`Router.showToast`）多 0.2 秒，吐司收起之前点「撤销」一定来得及。iOS DutyStore.swift:70 */
+    const val UNDO_WINDOW_MS = 3_200L
+
+    /**
+     * 先收起一张提议、过了撤销窗口再真发（[commit] 就是 [acceptProposal] / [rejectProposal]）。iOS DutyStore.swift:224
+     * 窗口里点了「撤销」（[releaseProposal]）就什么都不发、卡原样回来。发失败也把卡放回来，[onFail] 吐那句原话。
+     * 挂在单例（AppGraph.scope）上而不是卡片上：人点完就返回「我」页时卡已经没了，这一下照样要发出去。
+     * 两张连着点时第二张可能撞上第一张的在途（[proposalWrite] 在途回 null = 什么都没做）—— 先等它落地再发，不然那一下被静默吞掉。
+     */
+    fun holdProposal(id: String, commit: suspend () -> String?, onFail: (String) -> Unit) {
+        set { it.copy(heldProposals = it.heldProposals + id) }
+        holdJobs[id]?.cancel()
+        holdJobs[id] = scope.launch {
+            kotlinx.coroutines.delay(UNDO_WINDOW_MS)
+            if (id !in s.heldProposals) return@launch
+            while (s.proposalBusy) kotlinx.coroutines.delay(150)
+            val err = commit()
+            set { it.copy(heldProposals = it.heldProposals - id) }
+            holdJobs.remove(id)
+            if (err != null) onFail(err)
+        }
+    }
+
+    /** 「撤销」：窗口还没过就取消那一下，卡回到原位。窗口已过（请求已发）时什么都不做 —— 吐司那时也已经收了。 */
+    fun releaseProposal(id: String) {
+        holdJobs.remove(id)?.cancel()
+        set { it.copy(heldProposals = it.heldProposals - id) }
+    }
+
     /** 「现在看一遍」→ 新冒出来几条（Ok）或失败原话（Failed）。在途时连点 → null。 */
     suspend fun scanProposals(): DutyRes<Int>? {
-        val r = proposalWrite { DutyApi.scanProposals() } ?: return null
-        return when (r) {
-            is DutyRes.Ok -> { reloadProposals(); DutyRes.Ok(r.value.added) }
-            is DutyRes.Failed -> r
+        if (s.scanning) return null
+        set { it.copy(scanning = true) }
+        try {
+            while (s.proposalBusy) kotlinx.coroutines.delay(150)
+            val r = proposalWrite { DutyApi.scanProposals() } ?: return null
+            return when (r) {
+                is DutyRes.Ok -> { reloadProposals(); DutyRes.Ok(r.value.added) }
+                is DutyRes.Failed -> r
+            }
+        } finally {
+            set { it.copy(scanning = false) }
         }
     }
 
