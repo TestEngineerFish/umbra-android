@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 提醒附件「拍照」的临时文件：相机 App 写进 cache/reminder-camera/，读完即删。 -->
+<paths>
+    <cache-path name="reminder_camera" path="reminder-camera/" />
+</paths>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 提醒通知的小图标：与 App 内 UmbraIconPaths.bell 同一份 Lucide 铃铛描边（状态栏要单色剪影）。 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M18,8C18,6.429 17.35,4.868 16.24,3.757C15.13,2.647 13.57,2 12,2C10.43,2 8.868,2.647 7.757,3.757C6.647,4.868 6,6.429 6,8C6,15 3,17 3,17L21,17C21,17 18,15 18,8M13.7,21C13.46,21.38 13.09,21.68 12.66,21.83C12.24,21.98 11.76,21.98 11.34,21.83C10.91,21.68 10.54,21.38 10.3,21"
+        android:strokeWidth="2"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000" />
+</vector>
