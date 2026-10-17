@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 自动填充建议的一行（RemoteViews 只能用 XML 布局）。颜色跟随系统填充下拉的主题。 -->
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/umbra_autofill_text"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:minHeight="48dp"
+    android:gravity="center_vertical"
+    android:paddingStart="16dp"
+    android:paddingEnd="16dp"
+    android:maxLines="1"
+    android:ellipsize="end"
+    android:textAppearance="?android:attr/textAppearanceListItemSmall"
+    android:textColor="?android:attr/textColorPrimary" />

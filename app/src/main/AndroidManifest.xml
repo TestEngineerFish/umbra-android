@@ -66,6 +66,26 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/reminder_file_paths" />
         </provider>
+        <!-- 保险箱密码自动填充（feature/autofill）：系统设置里选成「自动填充服务」后生效 -->
+        <service
+            android:name=".feature.autofill.UmbraAutofillService"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:permission="android.permission.BIND_AUTOFILL_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.autofill.AutofillService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.autofill"
+                android:resource="@xml/umbra_autofill_service" />
+        </service>
+        <!-- 自动填充的解锁 / 挑选面板（由服务里那条要认证的 dataset 拉起，不对外） -->
+        <activity
+            android:name=".feature.autofill.AutofillActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:taskAffinity=""
+            android:windowSoftInputMode="adjustResize" />
 
         <!-- App 内切语言：Android 12 及以下由 AppCompat 记住选择 -->
         <service

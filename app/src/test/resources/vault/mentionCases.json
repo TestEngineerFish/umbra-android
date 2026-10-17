@@ -1,0 +1,29 @@
+{
+  "_note": "保险箱节点 @ 引用：PC（tests/vaultMention.test.ts）与 iOS（Tools/swifttests/VaultMentionRulesTests.swift）共用。resolve 里有的 = 节点还在、值是现名；没有的 = 缺失。改正则先改这里。",
+  "resolve": { "i_1/n_a": "网银", "i_1/n_t": "文本" },
+  "cases": [
+    { "name": "句中一个引用", "text": "账号见 @[网银](i_1/n_a) 。", "plain": "账号见 @网银 。",
+      "segs": [{ "t": "text", "v": "账号见 " }, { "t": "m", "itemId": "i_1", "nodeId": "n_a", "fallback": "网银" }, { "t": "text", "v": " 。" }] },
+    { "name": "备份名过期，以现名为准", "text": "@[旧名字](i_1/n_a)", "plain": "@网银",
+      "segs": [{ "t": "m", "itemId": "i_1", "nodeId": "n_a", "fallback": "旧名字" }] },
+    { "name": "缺失：退回备份名", "text": "@[已删的](i_2/n_x)", "plain": "@已删的",
+      "segs": [{ "t": "m", "itemId": "i_2", "nodeId": "n_x", "fallback": "已删的" }] },
+    { "name": "缺失且备份名为空", "text": "@[](i_2/n_x)", "plain": "@未命名",
+      "segs": [{ "t": "m", "itemId": "i_2", "nodeId": "n_x", "fallback": "" }] },
+    { "name": "邮箱不是引用", "text": "邮箱 a@b.com", "plain": "邮箱 a@b.com",
+      "segs": [{ "t": "text", "v": "邮箱 a@b.com" }] },
+    { "name": "id 里有空格不认", "text": "@[x](i 1/n_a)", "plain": "@[x](i 1/n_a)",
+      "segs": [{ "t": "text", "v": "@[x](i 1/n_a)" }] },
+    { "name": "备份名带括号不认", "text": "@[a(b)](i_1/n_a)", "plain": "@[a(b)](i_1/n_a)",
+      "segs": [{ "t": "text", "v": "@[a(b)](i_1/n_a)" }] },
+    { "name": "两个紧挨着", "text": "@[a](i_1/n_a)@[b](i_9/n_9)", "plain": "@网银@b",
+      "segs": [{ "t": "m", "itemId": "i_1", "nodeId": "n_a", "fallback": "a" }, { "t": "m", "itemId": "i_9", "nodeId": "n_9", "fallback": "b" }] },
+    { "name": "多行", "text": "第一行\n@[网银](i_1/n_a)\n末行", "plain": "第一行\n@网银\n末行",
+      "segs": [{ "t": "text", "v": "第一行\n" }, { "t": "m", "itemId": "i_1", "nodeId": "n_a", "fallback": "网银" }, { "t": "text", "v": "\n末行" }] },
+    { "name": "emoji 在前（UTF-16 下标）", "text": "🔑@[网银](i_1/n_a)🔒", "plain": "🔑@网银🔒",
+      "segs": [{ "t": "text", "v": "🔑" }, { "t": "m", "itemId": "i_1", "nodeId": "n_a", "fallback": "网银" }, { "t": "text", "v": "🔒" }] },
+    { "name": "UUID 形状的 id", "text": "@[x](3f2a-9c_b/n-1)", "plain": "@x",
+      "segs": [{ "t": "m", "itemId": "3f2a-9c_b", "nodeId": "n-1", "fallback": "x" }] },
+    { "name": "空串", "text": "", "plain": "", "segs": [] }
+  ]
+}
