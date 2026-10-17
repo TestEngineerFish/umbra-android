@@ -6,7 +6,10 @@ plugins {
 
 android {
     namespace = "com.geek.umbra"
-    compileSdk = 37
+    // 写完整平台名而不是 compileSdk = 37：Android 17 的平台包目录叫 android-37.0（带小版本号），
+    // Android Studio 2025.3 同步时按 37 去找 android-37，报「Could not find compile target android-37」。
+    // 升回 AGP 9.4 + 新版 Studio 后可以改回 compileSdk = 37。
+    compileSdkVersion("android-37.0")
 
     defaultConfig {
         // 与 iOS 主 App 的 Bundle ID 相同，服务端推送 / 统计按同一个名字认端。
