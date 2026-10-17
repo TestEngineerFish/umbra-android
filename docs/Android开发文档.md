@@ -29,7 +29,7 @@ Android 端**功能与 iOS 端对齐**，服务端完全共用（同一套接口
 | 项 | 选型 | 版本 | 理由 |
 |---|---|---|---|
 | 语言 | Kotlin | 2.4.21 | 要求 |
-| 构建 | Gradle / AGP | 9.8.1 / 9.4.1 | AGP 9 内置 Kotlin 支持，不再需要 `kotlin-android` 插件 |
+| 构建 | Gradle / AGP | 9.8.1 / 9.1.0 | AGP 9 内置 Kotlin 支持。**暂用 9.1.0**：sam 的 Android Studio 2025.3 最高认 9.1；装 Studio Quail 4 / Rabbit 1 后升回 9.4.1 并删 `gradle.properties` 里的 `suppressUnsupportedCompileSdk` |
 | SDK | compileSdk / targetSdk / minSdk | 37 / 37 / 28 | 37 = Android 17 最新稳定；28 起 BiometricPrompt、AutofillService、Keystore AES-GCM 完整可用，覆盖 >95% |
 | JDK | 构建用 Android Studio 自带 JBR 21，字节码目标 17 | — | |
 | UI | Jetpack Compose（BOM）+ Material 3 | 2026.09.00 / M3 1.4.0 | 原生声明式 UI，与 SwiftUI 心智同构 |
@@ -122,7 +122,7 @@ export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
 ### 基础
 | 功能 | 状态 | 说明 |
 |---|---|---|
-| 工程骨架 / 版本目录 / 构建 | ✅ | AGP 9.4.1 + Kotlin 2.4.21 + compileSdk 37 |
+| 工程骨架 / 版本目录 / 构建 | ✅ | AGP 9.1.0 + Kotlin 2.4.21 + compileSdk 37（Android Studio 2025.3 可直接打开） |
 | 设计系统 token、图标、通用组件 | ✅ | token / 图标 path / 文案由 `tools/gen_*.py` 从 iOS 生成 |
 | 四 Tab 外壳 + 每 Tab 返回栈 + 跨 Tab 跳转 | ✅ | Navigation 3；再点当前 Tab 回根 |
 | 深链 `umbra://` | ✅ | 另加 Android 独有 `umbra://inspiration/new`（快捷方式用） |

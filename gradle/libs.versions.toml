@@ -1,7 +1,9 @@
 # 版本全部是 2026-10-17 从 Google Maven / Maven Central 元数据里查到的最新稳定版。
 # 升级时改这一个文件；不要在模块的 build.gradle.kts 里写死版本号。
 [versions]
-agp = "9.4.1"
+# 9.1.0 而不是最新的 9.4.1：sam 的 Android Studio 2025.3 最高只认 AGP 9.1（2026-10-17）。
+# 装了 Studio Quail 4 / Rabbit 1（支持 AGP 7.1–9.4）后改回 9.4.1，并删掉 gradle.properties 里的 suppressUnsupportedCompileSdk。
+agp = "9.1.0"
 kotlin = "2.4.21"
 composeBom = "2026.09.00"
 activityCompose = "1.13.0"

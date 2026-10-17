@@ -1,6 +1,6 @@
 # UmbraAndroid 工程约定
 
-Kotlin + Jetpack Compose，**minSdk 28 / targetSdk 37**，AGP 9.4.1，Kotlin 2.4.21。
+Kotlin + Jetpack Compose，**minSdk 28 / targetSdk 37**，AGP 9.1.0（为兼容 sam 的 Android Studio 2025.3 暂不用 9.4.1，见 libs.versions.toml 注释），Kotlin 2.4.21。
 功能与 iOS 端（`../UmbraiOS`）对齐，界面复用 iOS 的设计稿与 token。
 **总入口：`docs/Android开发文档.md`**（技术选型、平台映射、功能清单与状态）；逐模块规格在 `docs/reference/`。
 
