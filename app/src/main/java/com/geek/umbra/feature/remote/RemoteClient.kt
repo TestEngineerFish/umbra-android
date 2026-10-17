@@ -78,8 +78,6 @@ import java.io.RandomAccessFile
 import java.lang.ref.WeakReference
 import java.net.URI
 import java.nio.ByteBuffer
-import java.text.DateFormat
-import java.util.Date
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.resume
@@ -173,6 +171,16 @@ object RemoteCenter {
         _client.value?.teardown()
         start(launch)
     }
+
+    /**
+     * 「改成只看」（批次 264 §五：可控名额被占时的主钮；iOS: RemoteClient.swift:96）：同一台、同一个来源，档位换成 view 重发一次 ——
+     * 走查看同意卡。只看也满了，服务端回 busy + `busy_kind = view`，落到「只看已满」那一张。
+     */
+    fun retryAsView() {
+        val launch = _client.value?.launch ?: return
+        _client.value?.teardown()
+        start(launch.copy(mode = "view"))
+    }
 }
 
 // MARK: - 传输中的文件
@@ -204,12 +212,30 @@ class RemoteClient(val launch: RemoteLaunch) {
 
     val id: String = UUID.randomUUID().toString()
 
-    var phase by mutableStateOf(Phase.Requesting); private set
+    private var phaseState by mutableStateOf(Phase.Requesting)
+    /** 会话走到哪一步。进 AwaitingConsent 那一下记下 [consentSince]（iOS 是 phase 的 didSet）。 */
+    var phase: Phase
+        get() = phaseState
+        private set(v) {
+            if (v == Phase.AwaitingConsent && phaseState != Phase.AwaitingConsent) consentSince = now
+            phaseState = v
+        }
+    /** 同意卡弹到对方那边的时刻（单调时钟秒，进 awaitingConsent 那一下）：等待页「还剩 N 秒」从这里倒数。 */
+    var consentSince by mutableStateOf<Double?>(null); private set
     /** 结束原因（[RemoteCopy.endReasonKey] 的输入）；发起被拒时是 null、看 [errorCode]。 */
     var endReason by mutableStateOf<String?>(null); private set
     /** 发起被拒的码（`rc_error.code`）与服务端那句原话。 */
     var errorCode by mutableStateOf<String?>(null); private set
     var errorMessage by mutableStateOf<String?>(null); private set
+    /** `rc_error.busy_kind`（只在 code = busy 时有，服务端 656c2f4 起带）：control = 可控名额被占 / view = 只看也满了。 */
+    var busyKind by mutableStateOf<String?>(null); private set
+    /**
+     * 被控端结束前经 rc 通道说的「为什么」（`{t:"bye"}`）。服务端随后的 rc_state ended 多半只写 by_host，
+     * 结束卡的字面由 [RemoteCopy.endCopy] 拿它和服务端原因一起选。
+     */
+    var bye by mutableStateOf<RemoteBye?>(null); private set
+    /** 结束时还在同意阶段（requesting / awaitingConsent）：此时服务端的 `no_permission` = 对方点了「去系统设置」（granting）。 */
+    var endedDuringConsent by mutableStateOf(false); private set
     var mode by mutableStateOf(launch.mode); private set
     var source by mutableStateOf(launch.source); private set
     var hostName by mutableStateOf(launch.deviceName); private set
@@ -237,6 +263,10 @@ class RemoteClient(val launch: RemoteLaunch) {
     var pinRequested by mutableStateOf(false); private set
     var localAuthPassed by mutableStateOf(false); private set
     var pinError by mutableStateOf<String?>(null); private set
+    /** PIN 连错锁定到几时（毫秒）。无人值守页据此换成「先停一下」那一态、数字键盘置灰。 */
+    var pinLockedUntilMs by mutableStateOf<Long?>(null); private set
+    /** 本机认证（生物识别）正在问：无人值守页「用生物识别」那颗钮不重复拉起。 */
+    private var authInFlight = false
     var pinBusy by mutableStateOf(false); private set
     /** 被控端前台是黑名单应用（推流暂停）：画「对方当前窗口受保护」。 */
     var protectedApp by mutableStateOf<String?>(null); private set
@@ -244,6 +274,13 @@ class RemoteClient(val launch: RemoteLaunch) {
     var channelOpen by mutableStateOf(false); private set
     /** 一句短提示（输入被拒、剪贴板发出去了、降到快照……），会话页自己画、几秒后消失。 */
     var toast by mutableStateOf<String?>(null)
+    /**
+     * 底部那条带「申请控制」的轻提示（批次 264 §二：空闲降档「N 分钟没操作，降为只看。会话还在。」；
+     * 只看档点画面「现在是只看，点了不会操作对方」）。和 [toast] 分开：它带一颗动作，停留也比一闪而过长。
+     */
+    var hint by mutableStateOf<String?>(null)
+    /** 刚因为空闲被降了档：随后到的 `rc_state`（mode 变 view）不再另吐一句「已降为只看」—— 那条轻提示已经说了。 */
+    private var idleDowngraded = false
     /** 首次无人值守连接时要人核对短码（§14.4）。 */
     var askVerifyCode by mutableStateOf(false)
     val fileLists = mutableStateMapOf<String, List<RemoteFileItem>>()
@@ -315,6 +352,7 @@ class RemoteClient(val launch: RemoteLaunch) {
     /** 本地收尾（不再发信令）：服务端说结束了 / 我们刚发完 rc_end。 */
     private fun finish(reason: String?) {
         if (phase == Phase.Ended) return
+        endedDuringConsent = phase == Phase.Requesting || phase == Phase.AwaitingConsent
         phase = Phase.Ended
         endReason = reason
         reconnecting = false
@@ -363,7 +401,10 @@ class RemoteClient(val launch: RemoteLaunch) {
                 buffered.clear()
                 for (b in held) if (RemoteJson.str(b["session_id"]) == sid) RemoteJson.str(b["type"])?.let { process(it, b) }
             }
-            "rc_error" -> fail(RemoteJson.str(j["code"]) ?: "bad_request", RemoteJson.str(j["message"]))
+            "rc_error" -> {
+                busyKind = RemoteJson.str(j["busy_kind"])
+                fail(RemoteJson.str(j["code"]) ?: "bad_request", RemoteJson.str(j["message"]))
+            }
             "rc_state" -> RemoteState.parse(j)?.let(::applyState)
             "rc_offer" -> RemoteJson.str(j["sdp"])?.let(::handleOffer)
             "rc_ice" -> handleRemoteCandidate(j)
@@ -377,7 +418,12 @@ class RemoteClient(val launch: RemoteLaunch) {
             val up = st.mode == "control"
             mode = st.mode
             upgradePending = false
-            toast = str(if (up) R.string.remote_toast_upgraded else R.string.remote_toast_downgraded)
+            if (up) hint = null
+            // 空闲降档那一下本地已经落到只看、也挂了轻提示：服务端随后推来的 view 不再另吐「已降为只看」（iOS: RemoteClient.swift:342）。
+            if (!(idleDowngraded && !up)) toast = str(if (up) R.string.remote_toast_upgraded else R.string.remote_toast_downgraded)
+            idleDowngraded = false
+        } else if (idleDowngraded && st.mode == "view") {
+            idleDowngraded = false
         }
         RemoteCopy.noticeKey(st.notice)?.let {
             upgradePending = false
@@ -451,14 +497,18 @@ class RemoteClient(val launch: RemoteLaunch) {
             end("auth_failed")
             return
         }
+        if (authInFlight) return
+        authInFlight = true
         val prompt = BiometricPrompt(act, ContextCompat.getMainExecutor(ctx), object : BiometricPrompt.AuthenticationCallback() {
             override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                authInFlight = false
                 if (phase == Phase.Ended) return
                 localAuthPassed = true
                 maybeAskVerify()
             }
 
             override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                authInFlight = false
                 if (phase != Phase.Ended) end("auth_failed")
             }
         })
@@ -467,7 +517,13 @@ class RemoteClient(val launch: RemoteLaunch) {
             .setSubtitle(str(R.string.remote_auth_reason))
             .setAllowedAuthenticators(auths)
             .build()
-        runCatching { prompt.authenticate(info) }.onFailure { end("auth_failed") }
+        runCatching { prompt.authenticate(info) }.onFailure { authInFlight = false; end("auth_failed") }
+    }
+
+    /** 无人值守页「用生物识别」：系统那一弹还没判过时再拉起一次。正在问 / 已经过了什么都不做（iOS: RemoteClient.swift:455）。 */
+    fun retryLocalAuth() {
+        if (!unattended || localAuthPassed || phase == Phase.Ended) return
+        authenticateLocally()
     }
 
     /** 首次连这台无人值守的电脑：请人核对一次短码（§14.4）。核对过记在本机（只记「这台核过」，不记短码本身）。 */
@@ -506,7 +562,7 @@ class RemoteClient(val launch: RemoteLaunch) {
         if (phase == Phase.Ended || snapshotMode) return
         closePeer()
         snapshotMode = true
-        toast = str(R.string.remote_toast_fallback)
+        // 不再吐一句「直连没打通」：会话页工具条下挂着一条快照浮条（iOS 稿 03），一直在、不会一闪就没。
         startSnapshots()
     }
 
@@ -571,6 +627,7 @@ class RemoteClient(val launch: RemoteLaunch) {
         if (mode != "view" || upgradePending) return
         if (AppGraph.socket.send(RemoteSignal.mode(sid, "control"))) {
             upgradePending = true
+            hint = null
             toast = str(R.string.remote_toast_upgradeAsked)
         } else toast = str(R.string.remote_err_not_connected)
     }
@@ -597,7 +654,9 @@ class RemoteClient(val launch: RemoteLaunch) {
         if (mode != "control" || snapshotMode) {
             if (now - lastDeniedToastAt > 3) {
                 lastDeniedToastAt = now
-                toast = str(if (snapshotMode) R.string.remote_toast_snapshotNoInput else R.string.remote_denied_view_only)
+                // 只看档点画面：底部轻提示带「申请控制」（iOS 稿 03「只看提示」）；快照里不能控，照旧一闪而过。
+                if (snapshotMode) toast = str(R.string.remote_toast_snapshotNoInput)
+                else if (!upgradePending) hint = str(R.string.remote_toast_viewOnly)
             }
             return
         }
@@ -798,11 +857,9 @@ class RemoteClient(val launch: RemoteLaunch) {
             is RemoteHostMessage.PinResult -> {
                 pinBusy = false
                 when {
-                    m.ok -> { pinRequested = false; pinError = null }
-                    m.lockedUntilMs != null -> pinError = str(
-                        R.string.remote_pin_locked, DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(m.lockedUntilMs)),
-                    )
-                    else -> pinError = str(R.string.remote_pin_wrong)
+                    m.ok -> { pinRequested = false; pinError = null; pinLockedUntilMs = null }
+                    m.lockedUntilMs != null -> { pinLockedUntilMs = m.lockedUntilMs; pinError = null }
+                    else -> pinError = m.left?.let { str(R.string.remote_pin_wrongLeft, it.toString()) } ?: str(R.string.remote_pin_wrong)
                 }
             }
             is RemoteHostMessage.Protected -> protectedApp = m.app
@@ -810,7 +867,14 @@ class RemoteClient(val launch: RemoteLaunch) {
             is RemoteHostMessage.Denied -> toast =
                 if (m.reason == "blacklist" && !m.app.isNullOrEmpty()) str(R.string.remote_denied_blacklistApp, m.app)
                 else remoteString(RemoteCopy.deniedKey(m.reason))
-            RemoteHostMessage.IdleDowngrade -> toast = str(R.string.remote_toast_idleDowngrade)
+            is RemoteHostMessage.Bye -> bye = m.bye
+            is RemoteHostMessage.IdleDowngrade -> {
+                // 被控端先发 rc_mode（服务端随后推 rc_state），再发这一条：本地先把档位落到只看，免得那几百毫秒里的输入白发。
+                idleDowngraded = mode == "control"
+                if (mode == "control") mode = "view"
+                upgradePending = false
+                hint = str(R.string.remote_toast_idleDowngrade, (m.minutes ?: RemoteFallback.CONTROL_IDLE_MIN).toString())
+            }
             is RemoteHostMessage.Files -> fileLists[m.dir] = m.items.sortedByDescending { it.mtimeMs }
             is RemoteHostMessage.FileBegin -> if (m.size > 0) updateTransfer(m.id) { it.copy(size = m.size) }
             is RemoteHostMessage.FileEnd -> markTransfer(m.id, if (m.ok) null else (m.error ?: str(R.string.remote_files_failed)))

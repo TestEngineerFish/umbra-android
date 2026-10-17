@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  远程控制里 iOS 文案点名了 iPhone / Face ID 的几句，Android 换成平台字面（手写，不由 gen_strings.py 生成）。
+  生物识别统一叫「生物识别」：设计侧《答复实现侧 · Android 平台差异》第 13 条。
+-->
+<resources>
+    <string name="remote_android_unattended_faceId">用生物识别</string>
+    <string name="remote_android_unattended_faceTitle">用生物识别确认是你</string>
+    <string name="remote_android_files_push">从手机推一个过去</string>
+</resources>

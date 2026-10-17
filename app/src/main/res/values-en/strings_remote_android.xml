@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 见 values/strings_remote_android.xml：iOS 文案里 iPhone / Face ID 的几句换成 Android 平台字面。 -->
+<resources>
+    <string name="remote_android_unattended_faceId">Use biometrics</string>
+    <string name="remote_android_unattended_faceTitle">Confirm it\'s you with biometrics</string>
+    <string name="remote_android_files_push">Send one from this phone</string>
+</resources>
