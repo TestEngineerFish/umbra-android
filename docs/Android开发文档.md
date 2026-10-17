@@ -202,7 +202,8 @@ export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
 - 视觉层（色板、字号、间距、圆角、组件形制、文案、语气）**完全沿用 iOS 稿**，token 逐值搬到 `designsystem/`。
 - 平台交互层按 Android 惯例替换，替换清单见第四节（底栏、返回、底部弹层、对话框、左滑）。
   iOS 稿里的「液态玻璃胶囊底栏」在 Android 上改为不透明的 M3 NavigationBar，色板仍用 Umbra token。
-- 这些平台差异的取舍交 Claude Design 裁定（信：`docs/design/交办单-Android端平台差异.md`），裁定前按上面的默认实现。
+- 平台差异的取舍已由 Claude Design 裁定：第 199 封 → `docs/design/答复实现侧-Android平台差异.md`（十四条 + 全局热区 48dp、字重映射），
+  2026-10-17 全部落地（e3a016c），回执第 201 封（九处〔判断〕待设计侧认），出图在 Claude Design 项目 `Android 端/Pages/平台差异.dc.html`。
 
 ## 八、分期
 
