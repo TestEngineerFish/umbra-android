@@ -44,5 +44,15 @@
                 android:name="autoStoreLocales"
                 android:value="true" />
         </service>
+        <!-- 分享本 App 生成的文件（记账导出 CSV）。authority = ${applicationId}.files；路径白名单在 res/xml/file_paths.xml -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.files"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
     </application>
 </manifest>

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- FileProvider 能交出去的目录。记账导出：cacheDir 下 umbra-money-export-<uuid>/ 里的 csv（导完即清）。
+     只开 cacheDir：filesDir 里是本机账本与暂存附件，不该有任何一条路能被分享出去。 -->
+<paths>
+    <cache-path name="cache" path="." />
+</paths>
