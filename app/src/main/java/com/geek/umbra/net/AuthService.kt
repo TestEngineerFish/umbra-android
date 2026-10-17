@@ -61,9 +61,18 @@ class AuthService(
 
     // MARK: - 登录门
 
-    /** `GET /auth/config`：404 / 断网都当 local（老服务端没有这条）。 */
-    suspend fun fetchConfig(): AuthConfig = withContext(BackgroundWork) {
-        val c = http.get<AuthConfig>("/auth/config") ?: AuthConfig()
+    /**
+     * `GET /auth/config`。服务端明确回了（含 404 / 500 —— 老服务端没有这条）才定登录方式；
+     * **断网回 null，不改已知的 [config]**（iOS AuthService.authConfig：offline 抛出、不写缓存）。
+     * 以前断网也当 local 记下，登录屏又只问一次 —— 冷启动那一下网没通，就一直卡在账号密码表单上，
+     * 而 Casdoor 服务器上那张表单根本登不进去（2026-10-17 sam 实测撞到）。
+     */
+    suspend fun fetchConfig(): AuthConfig? = withContext(BackgroundWork) {
+        val c = when (val r = http.raw("GET", "/auth/config")) {
+            is HttpResult.Ok -> runCatching { UmbraJson.decodeFromString(AuthConfig.serializer(), r.body) }.getOrNull() ?: AuthConfig()
+            is HttpResult.Fail -> AuthConfig()
+            is HttpResult.Offline, is HttpResult.Blocked -> return@withContext null
+        }
         config = c
         c
     }
@@ -80,7 +89,8 @@ class AuthService(
             return
         }
         val c = fetchConfig()
-        val asked = if (c.isOidc) Gate.Login else withContext(BackgroundWork) {
+        // 问不到（断网）就照旧往下走 —— 下面也问不到，落登录屏（iOS AuthGate.swift:57-61）。
+        val asked = if (c?.isOidc == true) Gate.Login else withContext(BackgroundWork) {
             when (val r = http.raw("GET", "/auth/invite-required")) {
                 is HttpResult.Ok -> {
                     val o = runCatching { UmbraJson.parseToJsonElement(r.body) as JsonObject }.getOrNull()

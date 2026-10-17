@@ -111,7 +111,7 @@ fun AccountScreen() {
     var oidc by remember { mutableStateOf(AppGraph.auth.config?.isOidc ?: false) }
 
     LaunchedEffect(Unit) {
-        if (AppGraph.auth.config == null) oidc = AppGraph.auth.fetchConfig().isOidc
+        if (AppGraph.auth.config == null) AppGraph.auth.fetchConfig()?.let { oidc = it.isOidc }
         AppGraph.auth.refresh()
         credits = AccountApi.credits()
         membership = AccountApi.membership()

@@ -88,7 +88,15 @@ fun AuthScreen(gate: Gate) {
     var lockLeft by remember { mutableIntStateOf(0) }
     var waitingOidc by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) { if (config == null) config = auth.fetchConfig() }
+    // 登录方式没问到（断网 / 冷启动网还没通）就一直补问：3 → 6 → … 封顶 30 秒。问到一次就停。
+    // 不补问的话，问不到时这一屏会一直是账号密码表单，等网好了也不会换成 Casdoor 的那颗钮。
+    LaunchedEffect(Unit) {
+        var wait = 3_000L
+        while (config == null) {
+            auth.fetchConfig()?.let { config = it; return@LaunchedEffect }
+            delay(wait); wait = (wait * 2).coerceAtMost(30_000L)
+        }
+    }
     LaunchedEffect(fail) {
         val f = fail
         if (f is AuthFailure.Locked) {
@@ -104,6 +112,9 @@ fun AuthScreen(gate: Gate) {
         if (busy) return
         busy = true; fail = null
         scope.launch {
+            // 还不知道这台服务器怎么登录时，按下去先再问一次：是 Casdoor 就换成开登录页那颗钮，不把账号密码发给不收它的接口。
+            if (config == null) auth.fetchConfig()?.let { config = it }
+            if (config?.isOidc == true) { busy = false; return@launch }
             when (view) {
                 AuthView.Login -> fail = auth.loginLocal(email, password)
                 AuthView.Register -> {
