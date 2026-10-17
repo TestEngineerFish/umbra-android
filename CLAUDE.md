@@ -44,7 +44,15 @@ export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
 ./gradlew :app:compileDebugKotlin     # 最快的编译检查
 ./gradlew :app:testDebugUnitTest      # 纯判据用例
 ./gradlew :app:assembleDebug          # 出 APK
+./gradlew :app:assembleRelease        # R8 压缩混淆；改了序列化模型 / 加了依赖必须编一次并装到模拟器上跑
 ```
+
+release 包本机验证（调试证书签名，同包名要先卸载 debug 包）：
+`build-tools/37.0.0/zipalign -p 4` → `apksigner sign --ks ~/.android/debug.keystore --ks-pass pass:android` → `adb install`。
+R8 的问题只在运行时暴露（序列化类被裁、反射找不到），所以「编过」不算数。
+
+模拟器：AVD `umbra_test`（API 34 arm64）。保险箱页面开了 FLAG_SECURE，截图是黑的，用 `uiautomator dump` 读界面。
+Compose 坑：组合函数里读 `StateFlow.value` / Store 辅助函数不会订阅；`val x by flow.collectAsState()` 不读 x 也不订阅。
 
 生成脚本（iOS 改了图标 / 文案后重跑）：`python3 -I tools/gen_icons.py`、`python3 -I tools/gen_strings.py`。
 
