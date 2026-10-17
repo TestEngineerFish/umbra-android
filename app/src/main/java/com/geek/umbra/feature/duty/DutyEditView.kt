@@ -1,6 +1,6 @@
 // 执勤通用编辑器 —— 照搬 iOS Features/Duty/DutyEditView.swift（契约 §16.8 第 1 条「自己定」，也用来改预设建出来的条目）：
 //   名字 → 触发四选一（一次 / 周期 / 时间窗口 / 隔一段做一次（M2 巡视），周期里有「我通常上线的时候」）→ 动作（发一段话 / 建任务 /
-//   跑一个流程（流程本身在电脑上编）；跑工作流置灰并写原因）→ 规矩（要不要秘书判断、优先级、冷却、每天最多几点、遵守静默）→ 保存。
+//   跑一个例程（例程本身在电脑上编 —— 批次 263：执勤的「流程」定名「例程」，代码标识 flow 不改）；跑 PC 上的工作流置灰并写原因）→ 规矩（要不要秘书判断、优先级、冷却、每天最多几点、遵守静默）→ 保存。
 //   删除在右上 ⋯。
 //
 // 文字（名字、要秘书说什么、任务目标）在弹层里填，同早报「城市」那一格 —— 这一页没有长文本框。
@@ -209,7 +209,16 @@ private class Editor(
                 ) { askTime(t, pickTime) }
             }
         }
-        return DutySection("trigger", header = s(R.string.duty_edit_when), footer = DutyKit.trigger(t, tr), rows = rows)
+        // 起止填反（结束不晚于开始）当场说，不等按「保存」才吐一句（批次 261 §三 2：iOS 稿 02「起止填错」那一态 ——
+        // 组脚换成红字那一句，告诉人该怎么办）。巡视的组脚是「隔一段做一次」那句说明（§三 3），其余照旧是触发说人话。iOS DutyEditView.swift:137
+        val p = d.problem(System.currentTimeMillis())
+        if (p == "duty.edit.err.intervalRange" || p == "duty.edit.err.window") {
+            return DutySection("trigger", header = s(R.string.duty_edit_when), footer = tr.k(p), footerTone = DutyFooterTone.Danger, rows = rows)
+        }
+        return DutySection(
+            "trigger", header = s(R.string.duty_edit_when),
+            footer = if (t.type == "interval") s(R.string.duty_edit_intervalHint) else DutyKit.trigger(t, tr), rows = rows,
+        )
     }
 
     private fun weekdayRows(t: DutyTrigger) = (0..6).map { w ->
@@ -270,7 +279,7 @@ private class Editor(
 
     /** 巡视的间隔（M2）：那几档之外的值（别的端写的）照样标出当前值 —— 列表里没有就不打勾，problem 会指出越界。 */
     private fun askEvery(t: DutyTrigger) {
-        dutyPresentList("edit-every", s(R.string.duty_edit_every), s(R.string.duty_edit_intervalHint), DutyKit.intervalOptions.map { m ->
+        dutyPresentList("edit-every", s(R.string.duty_edit_every), s(R.string.duty_edit_err_everyMin), DutyKit.intervalOptions.map { m ->
             DutySheetItem(DutyKit.everyText(m, tr), checked = t.every_min == m) { edit { it.copy(trigger = it.trigger.copy(every_min = m)) } }
         })
     }

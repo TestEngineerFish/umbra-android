@@ -40,7 +40,7 @@ class DutyKitTest {
         "duty.act.sayPlain" to "发一段话",
         "duty.act.taskNow" to "建任务：%@",
         "duty.act.taskAsk" to "先问我，再建任务：%@",
-        "duty.act.flow" to "跑执勤流程",
+        "duty.act.flow" to "跑例程",
         "duty.act.workflow" to "跑电脑上的工作流（暂不可用）",
         "duty.mode.judge" to "秘书判断要不要做",
         "duty.mode.always" to "到点就做",
@@ -48,10 +48,10 @@ class DutyKitTest {
         "duty.cooldown.none" to "不限",
         "duty.cooldown.hours" to "%@ 小时",
         "duty.cooldown.minutes" to "%@ 分钟",
-        "duty.tier.save" to "节省档：不再调用判断，汇总换快档",
-        "duty.tier.essential" to "只保要紧：周额度剩得不多，只做重要的",
-        "duty.tier.stopped" to "额度不够，执勤先出简版",
-        "duty.tier.other" to "执勤在省着用额度",
+        "duty.tier.save" to "节省",
+        "duty.tier.essential" to "只保要紧",
+        "duty.tier.stopped" to "停",
+        "duty.tier.other" to "省着用",
         "duty.tag.manual" to "手动",
         "duty.tag.simple" to "简版",
         "duty.log.merged" to "并进 %1\$@ %2\$@",
@@ -206,13 +206,13 @@ class DutyKitTest {
     @Test fun tierCases() {
         val K = DutyKit
         val n = K.tierLine("normal", "", "照这周的节奏，周四会用完额度", tr)
-        assertNull("normal 不出橙字", n.headline)
+        assertNull("normal 不出档位小标", n.headline)
         assertEquals("normal 照样出预报", "照这周的节奏，周四会用完额度", n.detail)
         val s = K.tierLine("save", "周额度剩 25%", "周额度剩 25%", tr)
-        assertEquals("节省档", "节省档：不再调用判断，汇总换快档", s.headline)
+        assertEquals("节省档的小标（批次 261：档位是状态小标）", "节省", s.headline)
         assertEquals("原因与预报一样时只出一次", "周额度剩 25%", s.detail)
-        assertEquals("停", "额度不够，执勤先出简版", K.tierLine("stopped", "", null, tr).headline)
-        assertEquals("认不出的档不画 key", "执勤在省着用额度", K.tierLine("weird", "", null, tr).headline)
+        assertEquals("停", "停", K.tierLine("stopped", "", null, tr).headline)
+        assertEquals("认不出的档不画 key", "省着用", K.tierLine("weird", "", null, tr).headline)
         assertEquals("什么都没有", DutyKit.TierLine(null, null), K.tierLine("normal", "", null, tr))
     }
 

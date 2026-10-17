@@ -2,7 +2,7 @@
 //   · 所有带 `meta.duty` 的消息：气泡之上一行标头「执勤 · 早报 · 08:00」（`simple` 时跟一个「简版」小标）；
 //   · `kind == "brief"` 且有 items：正文画成早报卡（分节列出 items），不再画那段 markdown；
 //   · 每条右下「关注 / 不感兴趣」，「你关注的」里的「后续」能点回上一次那条，「还关注吗？」那节「继续 / 结束」；
-//   · 卡底「有用 / 别发这类了 / 为什么现在发」；额度预报（forecast_note）画在卡的最后一行；
+//   · 卡底「有用 / 别发这类了 / 为什么现在发」；额度预报（forecast_note）画在卡的最后一行（muted + 图标）；「另外有 N 条建议」单起一行带「看建议」（批次 261 §四）；
 //   · 额度用完的系统行下面「用一张周重置卡」。
 //
 // 时刻用 `planned_at_ms`（这一班本该什么时候值），不用消息落库时刻：8:00 的早报 8:02 才写完，标头仍该是「08:00」。
@@ -42,6 +42,7 @@ import com.geek.umbra.designsystem.UmbraStripAction
 import com.geek.umbra.designsystem.UmbraTheme
 import com.geek.umbra.designsystem.UmbraType
 import com.geek.umbra.feature.chat.ChatApi
+import com.geek.umbra.navigation.Route
 import com.geek.umbra.navigation.UmbraAlert
 
 /** 早报消息整块：标头 → 卡（右边留气泡的让位）→ 卡底三颗（iOS ChatThreadView.swift:440-469 的那一段）。 */
@@ -102,8 +103,21 @@ internal fun DutyBriefCardView(m: DutyMeta, modifier: Modifier = Modifier) {
                 for (item in sec.items) BriefItem(m, item, sec.section, st)
             }
         }
-        if (m.forecastNote.isNotEmpty()) {
-            Text(m.forecastNote, color = c.warningText, style = TextStyle(fontSize = 12.5.sp, lineHeight = 18.sp))
+        // 卡末尾（批次 261 §四 末行）：预报行 muted + 图标，不用橙 / 琥珀；「另外有 N 条建议」不是预报，单起一行 +
+        // 次钮「看建议」直达执勤页（提议区就在总开关组之后）。服务端把两句接在同一格 forecast_note 里，拆法见 DutyKit.splitForecast；
+        // 新消息带 proposals_n 就用它（DutyKit.forecastTail）。iOS DutyChatViews.swift:70
+        val tail = DutyKit.forecastTail(m.forecastNote, m.proposalsN)
+        if (tail.forecast.isNotEmpty()) {
+            Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                UmbraIcon(UmbraIconPaths.info, c.muted, size = 13.dp, strokeWidth = 2f, modifier = Modifier.padding(top = 2.5.dp))
+                Text(tail.forecast, color = c.muted, style = TextStyle(fontSize = 12.5.sp, lineHeight = 18.sp))
+            }
+        }
+        tail.proposals?.let { n ->
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(ctx.getString(R.string.duty_card_forecastMore, "$n"), color = c.muted, style = TextStyle(fontSize = 12.5.sp), modifier = Modifier.weight(1f))
+                UmbraStripAction(ctx.getString(R.string.duty_card_seeProposals), c.orangeText, { AppGraph.router.jump(Route.MeDuty) })
+            }
         }
     }
 }

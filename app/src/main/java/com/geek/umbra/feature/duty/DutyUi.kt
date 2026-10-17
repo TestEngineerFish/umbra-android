@@ -97,6 +97,8 @@ internal data class DutyRow(
     /** 副行的前置提醒：12 三角 + 这半句走 warningText，后面接 sub。 */
     val subWarn: String? = null,
     val value: String? = null,
+    /** 值前面的小图标（path；日志结局 pill：对勾 / 横线圈 / 钟 / 圆叉，批次 261 §四），与值同色。 */
+    val valueIcon: String? = null,
     /** 值用等宽（时刻）。 */
     val mono: Boolean = false,
     /** 值的颜色，默认 muted。 */
@@ -209,12 +211,15 @@ internal fun DutyRowView(row: DutyRow) {
             }
         }
         if (row.value != null) {
-            Text(
-                row.value, color = row.valueTint ?: c.muted,
-                style = TextStyle(fontSize = if (row.mono) 13.5.sp else 14.5.sp, fontFamily = if (row.mono) FontFamily.Monospace else FontFamily.Default),
-                maxLines = 1, overflow = TextOverflow.MiddleEllipsis, textAlign = TextAlign.End,
-                modifier = Modifier.widthIn(max = 150.dp),
-            )
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                if (row.valueIcon != null) UmbraIcon(row.valueIcon, row.valueTint ?: c.muted, size = 13.dp, strokeWidth = 2f)
+                Text(
+                    row.value, color = row.valueTint ?: c.muted,
+                    style = TextStyle(fontSize = if (row.mono) 13.5.sp else 14.5.sp, fontFamily = if (row.mono) FontFamily.Monospace else FontFamily.Default),
+                    maxLines = 1, overflow = TextOverflow.MiddleEllipsis, textAlign = TextAlign.End,
+                    modifier = Modifier.widthIn(max = 150.dp),
+                )
+            }
         }
         if (row.toggle != null) UmbraSwitch(row.toggle, { row.action?.invoke() })
         if (row.chevron) UmbraIcon(UmbraIconPaths.chevronRight, c.faint, size = 15.dp, strokeWidth = 2.2f)

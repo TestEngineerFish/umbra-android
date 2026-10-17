@@ -174,7 +174,7 @@ object DutyKit {
     // MARK: 档位那一行（契约 §16.8 第 2 条）
 
     data class TierLine(
-        /** 非 normal 时那一行橙字（「节省」「只保要紧」「停」）；normal = null。 */
+        /** 非 normal 时那颗档位小标（「节省」「只保要紧」「停」，批次 261 §四：warning-soft 底，不用橙字）；normal = null。 */
         val headline: String?,
         /** 服务端给的原因 + 预报那句，去重、去空，用「 · 」接。没有就 null。 */
         val detail: String?,
@@ -194,6 +194,120 @@ object DutyKit {
             if (t.isNotEmpty() && t !in parts && t != headline) parts += t
         }
         return TierLine(headline, if (parts.isEmpty()) null else parts.joinToString(" · "))
+    }
+
+    /**
+     * 档位小标之后要不要带「调高预算」（批次 261 §四：只有「停」带）：只在 `tier_code == budget`（今天的执勤预算用完了）时给 ——
+     * 没会员 / 额度窗口满了的「停」调高预算没用。老服务端没有 `tier_code` 时不给 —— 分不出来就不猜。iOS DutyKit.swift:218
+     */
+    fun tierOffersBudget(tier: String, code: DutyTierCode): Boolean = tier == "stopped" && code == DutyTierCode.Budget
+
+    /** 档位那一块的次钮（批次 265）：预算用完 →「调高预算」；没会员 →「开会员」；其余不出。 */
+    enum class TierAction { None, Budget, Membership }
+
+    /** 档位那一句 + 次钮。 */
+    data class TierCopy(val text: String?, val action: TierAction)
+
+    /**
+     * 档位那一句 + 次钮（批次 265 §档位，字面以协调方核过服务端行为后定的为准）。iOS DutyKit.swift:27-57
+     * - 节省：今天预算用过六成（spent ≥ 0.6 × cap）且周额度剩 ≥ 三成 → 「今天的执勤预算用过六成了…」；
+     *   周额度剩不到三成（两条同时成立、或算不出时也是它）→ 「周额度剩不到三成…」；
+     * - 只保要紧：「周额度剩不到 15%…」；
+     * - 停：budget →「…停到明天 00:00…」+ 调高预算；quota →「周额度用满了，执勤停到 X…」（X 取 full.end_ms，没有就不写「到 X」）；
+     *   no_membership →「没有会员，执勤停了…」+ 开会员；码认不出（老服务端）→ 服务端原话（`tierLine.detail`），不出钮。
+     * 正常档 text = null。
+     */
+    fun tierCopy(l: DutyListDTO, nowMs: Long, tr: DutyTr): TierCopy = when (l.tier) {
+        "normal", "" -> TierCopy(null, TierAction.None)
+        "save" -> {
+            val weekLow = l.week?.left?.let { it < 0.3 } ?: true
+            val budgetHigh = l.budget?.let { it.cap > 0 && it.spent >= 0.6 * it.cap } ?: false
+            TierCopy(tr.k(if (budgetHigh && !weekLow) "duty.tier.saveBudget" else "duty.tier.saveWeek"), TierAction.None)
+        }
+        "essential" -> TierCopy(tr.k("duty.tier.essentialText"), TierAction.None)
+        "stopped" -> when (l.tier_code) {
+            DutyTierCode.Budget -> TierCopy(tr.k("duty.tier.stopBudget"), TierAction.Budget)
+            DutyTierCode.NoMembership -> TierCopy(tr.k("duty.tier.stopMember"), TierAction.Membership)
+            DutyTierCode.Quota -> {
+                val end = l.full?.end_ms
+                if (end == null || end <= 0) TierCopy(tr.k("duty.tier.stopQuotaPlain"), TierAction.None)
+                else TierCopy(tr.k("duty.tier.stopQuota", untilText(end, nowMs, tr)), TierAction.None)
+            }
+            else -> TierCopy(tierLine(l.tier, l.tier_reason, null, tr).detail, TierAction.None)
+        }
+        else -> TierCopy(tierLine(l.tier, l.tier_reason, null, tr).detail, TierAction.None)
+    }
+
+    /** 停到几时：同一天写「HH:MM」，跨日写「M月D日 HH:MM」（上海时区，同服务端开班口径）。 */
+    fun untilText(ms: Long, nowMs: Long, tr: DutyTr): String {
+        if (DutyRules.day(ms) == DutyRules.day(nowMs)) return DutyRules.hhmm(ms)
+        val d = java.time.Instant.ofEpochMilli(ms).atZone(DutyRules.tz)
+        return tr.k("duty.tier.untilDay", d.monthValue.toString(), d.dayOfMonth.toString(), DutyRules.hhmm(ms))
+    }
+
+    /** 「今天执勤预算」那一行的数值：「2.1 / 6 点」。整数不带小数，其余留一位。 */
+    fun budgetText(b: DutyBudget, tr: DutyTr): String = tr.k("duty.budgetToday.value", pointText(b.spent), pointText(b.cap))
+
+    /** 进度 0…1（超额封在 1；cap 为 0 按用满）。 */
+    fun budgetFraction(b: DutyBudget): Double {
+        if (b.cap <= 0) return 1.0
+        return minOf(1.0, maxOf(0.0, b.spent / b.cap))
+    }
+
+    private fun pointText(v: Double): String {
+        if (!v.isFinite() || v <= 0) return "0"
+        // Swift `.rounded()` 是四舍五入（远离零）；v > 0，Math.round 同义
+        val r = Math.round(v * 10) / 10.0
+        return if (r == Math.rint(r)) r.toLong().toString() else String.format(Locale.ROOT, "%.1f", r)
+    }
+
+    // MARK: 页头状态（批次 261 §四：只有文字不够，图标 + 文字）
+
+    /** 页头那一行的四种状态。iOS DutyKit.swift:86 */
+    sealed interface HeadState {
+        data object On : HeadState
+        data class PausedUntil(val ms: Long) : HeadState
+        data object PausedForever : HeadState
+        data object Off : HeadState
+    }
+
+    /** 页头那一行：没开（总开关关着或没确认过）→ 暂停中 → 执勤中。 */
+    fun headState(s: DutySettings, nowMs: Long): HeadState {
+        if (!DutyRules.switchOn(s)) return HeadState.Off
+        return when (val p = DutyRules.pause(s.paused_until_ms, nowMs)) {
+            DutyPause.None -> HeadState.On
+            is DutyPause.Until -> HeadState.PausedUntil(p.ms)
+            DutyPause.Forever -> HeadState.PausedForever
+        }
+    }
+
+    /** 一个时刻说人话：今天的写「今天 18:00」，别的天写「10-18 09:00」（暂停到、上一次失败用）。按上海时区判同一天。 */
+    fun whenText(ms: Long, nowMs: Long, tr: DutyTr): String =
+        if (DutyRules.day(ms) == DutyRules.day(nowMs)) tr.k("duty.today.at", DutyRules.hhmm(ms)) else DutyRules.monthDayTime(ms)
+
+    /**
+     * 日志 / 执勤表上结局的图标名（iOS `UmbraIconPath` 的名字；这个文件不碰 Compose，只回名字，页面上 [dutyOutcomeIconPath] 换成 path）。
+     * 批次 261 §四：说了 / 建了任务 = 对勾，没事 = 横线圈，跳过 = 钟，没跑成 = 圆叉。
+     * 「没事」= 交给秘书判断之后决定不发（`skipped` 且有 decision）；规矩直接拦下的跳过（没有 decision）、错过、被拦下都是钟。
+     * 没结案的（进行中 / 延后 / 等信号）不画图标 —— 它们还不是结局。
+     */
+    fun outcomeIcon(s: DutyShift): String? = when (s.outcome) {
+        "ran" -> "check"
+        "failed" -> "xCircle"
+        "skipped" -> if (s.decision_id.isEmpty()) "clock" else "minusCircle"
+        "missed", "blocked" -> "clock"
+        else -> null
+    }
+
+    /** 执勤表一行的「上一次」那一行。 */
+    data class LastLine(val text: String, val failed: Boolean)
+
+    /** 执勤表一行的「上一次」：失败要说原因（批次 261 §四），写成「今天 08:00没跑成：原因」；其余照旧「上一次：做了」。 */
+    fun lastLine(s: DutyShift, nowMs: Long, tr: DutyTr): LastLine {
+        if (s.outcome != "failed") return LastLine(tr.k("duty.items.last", tr.k(DutyRules.stateKey(s))), false)
+        val w = whenText(s.planned_at_ms, nowMs, tr)
+        val why = s.reason_text.trim()
+        return LastLine(if (why.isEmpty()) tr.k("duty.items.lastFailedPlain", w) else tr.k("duty.items.lastFailed", w, why), true)
     }
 
     // MARK: 日志行（契约 §16.8 第 3 条）
@@ -304,64 +418,195 @@ object DutyKit {
         else -> "duty.pr.kind.new"
     }
 
-    /** 「做成流程」那种的定时钮写几点：`draft.time_hhmm`，认不出给 08:00（同 PC）。 */
+    /** 「做成例程」那种的定时写几点：`draft.time_hhmm`，认不出给 08:00（同 PC）。 */
     fun proposalFlowTime(p: DutyProposal): String {
         val t = p.draft["time_hhmm"].str ?: ""
         return if (DutyRules.validHHMM(t)) t else "08:00"
     }
 
-    /** 早报那几块的名字：认得的走块名，认不出的原样（服务端以后加的块，印英文名比漏掉强）。 */
+    /** 早报那几块在节点链里的名字：认得的走块名，认不出的原样（服务端以后加的块，印英文名比漏掉强）。 */
     private fun blockName(b: String, tr: DutyTr): String {
         val key = blockKey(b)
         val s = tr.k(key)
         return if (s == key) b else s
     }
 
-    /** 流程步骤前的序号：①…⑩，再往后写「11.」。 */
-    private fun stepMark(i: Int): String {
-        val marks = "①②③④⑤⑥⑦⑧⑨⑩"
-        return if (i < marks.length) marks[i].toString() else "${i + 1}."
+    /** 变化块节点链里的一颗胶囊。`added` = 这一块是新加的（批次 261 §二：早报加一块时那颗带「+」、600 字重）。 */
+    data class ProposalNode(val label: String, val added: Boolean = false)
+
+    /**
+     * 提议卡的「变化块」（批次 261 §二 3）：让人一眼看出「点了会变成什么」。三种写法 + 没什么可说。iOS DutyKit.swift:170
+     * 原来是一行 faint 小字（`proposalDetail`），节点用 ①②③ 串起来 —— 稿上改成胶囊 + 箭头，前后对比用删除线，
+     * 所以这里回结构、不回拼好的一句话：删除线 / 600 字重 / 胶囊是画法，拼成字符串就丢了。
+     */
+    sealed interface ProposalChange {
+        /** 什么都画不出来（服务端没给够）：卡上不画这一块。 */
+        data object None : ProposalChange
+        /** 一句话：新条目、停掉、关注。 */
+        data class Text(val text: String) : ProposalChange
+        /** 前后对比「标签 旧值 → 新值」：改时间、静默时段。 */
+        data class Diff(val label: String, val from: String, val to: String) : ProposalChange
+        /** 节点链：早报的块、做成例程。`meta` 跟在链后（faint，「每次约 3 点」），空串不画。 */
+        data class Nodes(val nodes: List<ProposalNode>, val meta: String) : ProposalChange
     }
 
-    /** 一条提议的细节那一行（按种类说人话，同 PC `proposalDetail`）；没什么可说 → 空串。每种都说**改成什么**，不重复标题。 */
-    fun proposalDetail(p: DutyProposal, tr: DutyTr): String {
+    /** 「调整」里是不是「停掉这一条」（`patch.enabled == false`）。它先于改时刻判：两样都给时，停掉才是这条提议的本意。 */
+    fun proposalIsStop(p: DutyProposal): Boolean = p.kind == "tune" && p.draft["patch"]["enabled"].bool == false
+
+    /**
+     * 一条提议的变化块（按种类，同 PC）。[dutyName]：提议指向的那一条叫什么（调整用来写「早报时间」，找不到给空串）；
+     * [currentBlocks]：早报现在说哪几块（null = 不知道 —— 没读到早报，那就一颗都不标「+」，标错比不标更糟）。
+     */
+    fun proposalChange(p: DutyProposal, tr: DutyTr, dutyName: String = "", currentBlocks: List<String>? = null): ProposalChange {
         val d = p.draft
         return when (p.kind) {
             "tune" -> {
-                if (d["patch"]["enabled"].bool == false) return tr.k("duty.pr.detailStop")
+                if (proposalIsStop(p)) return ProposalChange.Text(tr.k("duty.pr.detailStop"))
                 val from = d["from"].str ?: ""
                 val to = d["to"].str ?: ""
-                if (from.isEmpty() || to.isEmpty()) "" else tr.k("duty.pr.detailArrow", from, to)
+                if (from.isEmpty() || to.isEmpty()) return ProposalChange.None
+                val label = if (dutyName.isEmpty()) tr.k("duty.pr.diffTime") else tr.k("duty.pr.diffTimeOf", dutyName)
+                ProposalChange.Diff(label, from, to)
             }
             "quiet" -> {
                 val s = d["settings"]
                 val range = "${s["quiet_start"].str ?: ""}–${s["quiet_end"].str ?: ""}"
                 val from = d["from"].str ?: ""
-                // 没有「原来是几点」就只说改成几点 —— 「 → 23:00–07:00」开头悬着一个箭头。
-                if (from.isEmpty()) range else tr.k("duty.pr.detailArrow", from, range)
+                // 没有「原来是几点」就只说改成几点 —— 删除线那一格空着、箭头悬在半空，读起来像少了一截。
+                if (from.isEmpty()) ProposalChange.Text(tr.k("duty.pr.quietTo", range))
+                else ProposalChange.Diff(tr.k("duty.pr.diffQuiet"), from, range)
             }
             "block" -> {
                 val blocks = (d["patch"]["params"]["blocks"].arr ?: emptyList()).mapNotNull { it.str }.filter { it.isNotEmpty() }
-                if (blocks.isEmpty()) "" else tr.k("duty.pr.detailBlock", blocks.joinToString(tr.k("duty.list.sep")) { blockName(it, tr) })
+                if (blocks.isEmpty()) ProposalChange.None
+                else ProposalChange.Nodes(blocks.map { b -> ProposalNode(blockName(b, tr), currentBlocks?.let { b !in it } ?: false) }, "")
             }
             "follow" -> {
                 val topic = d["topic"].str ?: ""
                 val query = d["query"].str ?: ""
-                if (topic.isEmpty()) "" else if (query.isEmpty()) tr.k("duty.pr.detailFollowTopic", topic) else tr.k("duty.pr.detailFollow", topic, query)
+                if (topic.isEmpty()) ProposalChange.None
+                else ProposalChange.Text(if (query.isEmpty()) tr.k("duty.pr.detailFollowTopic", topic) else tr.k("duty.pr.detailFollow", topic, query))
             }
             "new" -> {
                 val trig = trigger(DutyTrigger.parse(d["trigger"]), tr)
                 val brief = clip(d["action"]["brief"].str ?: "", 40)
-                listOf(trig, brief).filter { it.isNotEmpty() }.joinToString(" · ")
+                val line = listOf(trig, brief).filter { it.isNotEmpty() }.joinToString(" · ")
+                if (line.isEmpty()) ProposalChange.None else ProposalChange.Text(line)
             }
             "flow" -> {
-                val nodes = (d["nodes"].arr ?: emptyList()).mapNotNull { it.str }
-                val steps = nodes.mapIndexed { i, n -> "${stepMark(i)} $n" }.joinToString("  ")
+                val nodes = (d["nodes"].arr ?: emptyList()).mapNotNull { it.str }.filter { it.isNotEmpty() }
                 val pts = tr.k("duty.pr.detailPoints", p.est_points.toString())
-                if (steps.isEmpty()) pts else "$steps · $pts"
+                if (nodes.isEmpty()) ProposalChange.Text(pts) else ProposalChange.Nodes(nodes.map { ProposalNode(it) }, pts)
             }
-            else -> ""
+            else -> ProposalChange.None
         }
+    }
+
+    /** 主钮的字面 key（批次 261 §二 4：「好」作废，按种类写动词）。「做成例程」的主钮是「建并定时」、次钮「只建」。 */
+    fun proposalPrimaryKey(p: DutyProposal): String = when (p.kind) {
+        "tune" -> if (proposalIsStop(p)) "duty.pr.yes.stop" else "duty.pr.yes.apply"
+        "quiet" -> "duty.pr.yes.apply"
+        "flow" -> "duty.pr.flowSchedule"
+        "follow" -> "duty.pr.yes.follow"
+        else -> "duty.pr.yes.add" // new / block
+    }
+
+    /** 「做成例程」卡上那一行定时（时间不进钮，写在卡上）。别的种类 null。 */
+    fun proposalNote(p: DutyProposal, tr: DutyTr): String? =
+        if (p.kind == "flow") tr.k("duty.pr.flowNote", proposalFlowTime(p)) else null
+
+    /**
+     * 点了主钮 / 次钮之后的吐司：写具体结果（批次 261 §二：「早报改到 09:10 了」），不写「照这条改好了」。
+     * [schedule] 只对「做成例程」有意义（建并定时 / 只建）。iOS DutyKit.swift:260
+     */
+    fun proposalDoneText(p: DutyProposal, schedule: Boolean, tr: DutyTr, dutyName: String = ""): String {
+        val d = p.draft
+        val draftName = (d["name"].str ?: "").trim()
+        return when (p.kind) {
+            "tune" -> {
+                if (proposalIsStop(p)) return if (dutyName.isEmpty()) tr.k("duty.pr.doneStopPlain") else tr.k("duty.pr.doneStop", dutyName)
+                val to = d["to"].str ?: ""
+                if (to.isEmpty()) tr.k("duty.pr.done")
+                else if (dutyName.isEmpty()) tr.k("duty.pr.doneTimePlain", to) else tr.k("duty.pr.doneTime", dutyName, to)
+            }
+            "quiet" -> {
+                val s = d["settings"]
+                tr.k("duty.pr.doneQuiet", "${s["quiet_start"].str ?: ""}–${s["quiet_end"].str ?: ""}")
+            }
+            "block" -> {
+                val blocks = (d["patch"]["params"]["blocks"].arr ?: emptyList()).mapNotNull { it.str }.filter { it.isNotEmpty() }
+                if (blocks.isEmpty()) tr.k("duty.pr.done")
+                else tr.k("duty.pr.doneBlock", blocks.joinToString(tr.k("duty.list.sep")) { blockName(it, tr) })
+            }
+            "follow" -> {
+                val topic = d["topic"].str ?: ""
+                if (topic.isEmpty()) tr.k("duty.pr.done") else tr.k("duty.pr.doneFollow", topic)
+            }
+            "flow" -> {
+                val name = draftName.ifEmpty { p.title }
+                if (schedule) tr.k("duty.pr.doneFlow", name, proposalFlowTime(p)) else tr.k("duty.pr.doneFlowOnly", name)
+            }
+            else -> {
+                val trig = trigger(DutyTrigger.parse(d["trigger"]), tr)
+                val what = listOf(trig, draftName).filter { it.isNotEmpty() }.joinToString(" ")
+                tr.k("duty.pr.doneNew", what.ifEmpty { p.title })
+            }
+        }
+    }
+
+    /** 提议区一次最多摊开几张（批次 261 §一：超过 3 条折叠成「还有 N 条」）。 */
+    const val PROPOSAL_FOLD = 3
+
+    /** 摊开几张、折起几张。 */
+    data class Shown(val shown: Int, val more: Int)
+
+    /** [showAll] = 点过「还有 N 条」。 */
+    fun proposalShown(count: Int, showAll: Boolean): Shown {
+        val n = maxOf(0, count)
+        if (showAll || n <= PROPOSAL_FOLD) return Shown(n, 0)
+        return Shown(PROPOSAL_FOLD, n - PROPOSAL_FOLD)
+    }
+
+    // MARK: 聊天早报卡末尾（批次 261 §四 末行）
+
+    /** 预报那句 + 建议条数（null = 不出「看建议」）。 */
+    data class ForecastTail(val forecast: String, val proposals: Int?)
+
+    /**
+     * 早报卡末尾：预报那句 + 建议条数。新服务端带 `proposals_n`（0 = 没有）就用它；老消息没这个字段（null）退回认那句话。
+     * 那句话两种情况都从预报格里拿掉（服务端照旧把它接在 `forecast_note` 里）。iOS DutyKit.swift:309
+     */
+    fun forecastTail(note: String, proposalsN: Int?): ForecastTail {
+        val split = splitForecast(note)
+        proposalsN ?: return split
+        return ForecastTail(split.forecast, if (proposalsN > 0) proposalsN else null)
+    }
+
+    private val FIRST_INT = Regex("[0-9]+")
+
+    /**
+     * 早报卡末尾那一格（`meta.duty.forecast_note`）拆开：额度预报一句、「另外，我有 N 条建议…」一句。
+     * 服务端把两句用换行接在同一格里（`duty_worker._proposal_note`）—— 稿上要分开画（建议那句不是预报，单起一行 + 「看建议」）。
+     * 认的是「条建议」+「秘书的提议」两个片段同时在一行里，条数取那一行里第一个整数；
+     * 认不出就当没有建议、整格照旧当预报画（宁可少一颗钮，不把预报吞掉）。
+     */
+    fun splitForecast(note: String): ForecastTail {
+        val keep = mutableListOf<String>()
+        var n: Int? = null
+        for (raw in note.split("\n")) {
+            // Swift `.whitespaces` = 制表符 + Unicode 空格类（Zs），不含换行
+            val line = raw.trim { it == '\t' || Character.getType(it) == Character.SPACE_SEPARATOR.toInt() }
+            if (line.isEmpty()) continue
+            if (n == null && "条建议" in line && "秘书的提议" in line) {
+                val v = FIRST_INT.find(line)?.value?.toIntOrNull()
+                if (v != null && v > 0) {
+                    n = v
+                    continue
+                }
+            }
+            keep += line
+        }
+        return ForecastTail(keep.joinToString("\n"), n)
     }
 
     // MARK: 关注

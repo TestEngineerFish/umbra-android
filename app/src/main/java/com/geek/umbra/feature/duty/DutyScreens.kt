@@ -21,14 +21,32 @@ fun DutyLogScreen() {
     DutyLogView()
 }
 
-/** 一个流程（只读 + 一键跑，iOS DutyFlowView）。 */
+/** 一个例程（只读 + 一键跑，iOS DutyFlowView；批次 263 起界面上叫「例程」，代码标识仍是 flow）。 */
 @Composable
 fun DutyFlowScreen(id: String) {
     DutyFlowView(id)
 }
 
-/** 一次流程运行的详情（iOS DutyFlowRunView）。 */
+/** 一次例程运行的详情（iOS DutyFlowRunView）。 */
 @Composable
 fun DutyFlowRunScreen(id: String) {
     DutyFlowRunView(id)
+}
+
+/** 例程列表（执勤页「例程」那一行推进来，iOS DutyFlowsView）。 */
+@Composable
+fun DutyFlowsScreen() {
+    DutyFlowsView()
+}
+
+/** 关注列表（执勤页「关注」那一行推进来，iOS DutyFollowsView）。 */
+@Composable
+fun DutyFollowsScreen() {
+    DutyFollowsView()
+}
+
+/** 规矩（执勤页「规矩」那一行推进来，iOS DutyRulesView）。 */
+@Composable
+fun DutyRulesScreen() {
+    DutyRulesView()
 }

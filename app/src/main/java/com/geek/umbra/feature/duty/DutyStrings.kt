@@ -1,6 +1,6 @@
 // 执勤文案 key → 资源 id。iOS 的执勤文案大半是**拼出来的 key**（`duty.wd.\(n)`、`duty.edit.trigger.\(type)`、
 // DutyKit 里 `tr("duty.trig.week", …)`），Android 没有按字符串取资源的安全写法（getIdentifier 会被资源压缩误删、也慢），
-// 所以把全部 398 个 `duty.*` key 展开成一张 when（对应 iOS swiftcheck `_DUTY_KEY_FAMILIES` 钉住的那几族 + 字面 key）。
+// 所以把全部 439 个 `duty.*` key 展开成一张 when（对应 iOS swiftcheck `_DUTY_KEY_FAMILIES` 钉住的那几族 + 字面 key）。
 //
 // 由 xcstrings 的 key 生成（资源名规则同 tools/gen_strings.py：`.` → `_`）；iOS 加了 duty.* 文案、重跑 gen_strings 后这张表跟着补。
 // 表里没有的 key 在 [dutyTr] 里原样吐出 key 本身 —— 同 iOS 缺翻译时的表现，界面上一眼看得出漏了哪个。
@@ -48,6 +48,8 @@ internal fun dutyStringRes(key: String): Int? = when (key) {
         "duty.budget" -> R.string.duty_budget
         "duty.budget.sub" -> R.string.duty_budget_sub
         "duty.budget.value" -> R.string.duty_budget_value
+        "duty.budgetToday" -> R.string.duty_budgetToday
+        "duty.budgetToday.value" -> R.string.duty_budgetToday_value
         "duty.cancel" -> R.string.duty_cancel
         "duty.cap.n" -> R.string.duty_cap_n
         "duty.cap.none" -> R.string.duty_cap_none
@@ -57,10 +59,12 @@ internal fun dutyStringRes(key: String): Int? = when (key) {
         "duty.card.followKept" -> R.string.duty_card_followKept
         "duty.card.followToast" -> R.string.duty_card_followToast
         "duty.card.followed" -> R.string.duty_card_followed
+        "duty.card.forecastMore" -> R.string.duty_card_forecastMore
         "duty.card.keep" -> R.string.duty_card_keep
         "duty.card.notInterested" -> R.string.duty_card_notInterested
         "duty.card.notInterestedDone" -> R.string.duty_card_notInterestedDone
         "duty.card.prev" -> R.string.duty_card_prev
+        "duty.card.seeProposals" -> R.string.duty_card_seeProposals
         "duty.card.update" -> R.string.duty_card_update
         "duty.consent.body" -> R.string.duty_consent_body
         "duty.consent.ok" -> R.string.duty_consent_ok
@@ -176,7 +180,6 @@ internal fun dutyStringRes(key: String): Int? = when (key) {
         "duty.edit.when" -> R.string.duty_edit_when
         "duty.edit.windowEnd" -> R.string.duty_edit_windowEnd
         "duty.edit.windowStart" -> R.string.duty_edit_windowStart
-        "duty.estimate" -> R.string.duty_estimate
         "duty.fb.mute" -> R.string.duty_fb_mute
         "duty.fb.mute.once" -> R.string.duty_fb_mute_once
         "duty.fb.mute.stop" -> R.string.duty_fb_mute_stop
@@ -256,31 +259,42 @@ internal fun dutyStringRes(key: String): Int? = when (key) {
         "duty.follow.importanceSub" -> R.string.duty_follow_importanceSub
         "duty.follow.quiet" -> R.string.duty_follow_quiet
         "duty.follow.quietNote" -> R.string.duty_follow_quietNote
+        "duty.follow.quietShort" -> R.string.duty_follow_quietShort
         "duty.follow.restart" -> R.string.duty_follow_restart
         "duty.follow.state.active" -> R.string.duty_follow_state_active
         "duty.follow.state.ended" -> R.string.duty_follow_state_ended
         "duty.follow.state.quiet" -> R.string.duty_follow_state_quiet
         "duty.follow.sub" -> R.string.duty_follow_sub
         "duty.follow.unquiet" -> R.string.duty_follow_unquiet
-        "duty.intro" -> R.string.duty_intro
+        "duty.head.off" -> R.string.duty_head_off
+        "duty.head.on" -> R.string.duty_head_on
+        "duty.head.paused" -> R.string.duty_head_paused
+        "duty.head.pausedForever" -> R.string.duty_head_pausedForever
         "duty.items" -> R.string.duty_items
         "duty.items.help" -> R.string.duty_items_help
         "duty.items.last" -> R.string.duty_items_last
+        "duty.items.lastFailed" -> R.string.duty_items_lastFailed
+        "duty.items.lastFailedPlain" -> R.string.duty_items_lastFailedPlain
         "duty.list.sep" -> R.string.duty_list_sep
         "duty.loadFailed" -> R.string.duty_loadFailed
         "duty.loading" -> R.string.duty_loading
         "duty.log" -> R.string.duty_log
-        "duty.log.all" -> R.string.duty_log_all
         "duty.log.deferred" -> R.string.duty_log_deferred
-        "duty.log.empty" -> R.string.duty_log_empty
         "duty.log.emptyAll" -> R.string.duty_log_emptyAll
         "duty.log.filter" -> R.string.duty_log_filter
         "duty.log.filterAll" -> R.string.duty_log_filterAll
         "duty.log.help" -> R.string.duty_log_help
         "duty.log.merged" -> R.string.duty_log_merged
         "duty.log.mergedAny" -> R.string.duty_log_mergedAny
+        "duty.main.help" -> R.string.duty_main_help
         "duty.mode.always" -> R.string.duty_mode_always
         "duty.mode.judge" -> R.string.duty_mode_judge
+        "duty.nav.flows" -> R.string.duty_nav_flows
+        "duty.nav.follows" -> R.string.duty_nav_follows
+        "duty.nav.log" -> R.string.duty_nav_log
+        "duty.nav.logToday" -> R.string.duty_nav_logToday
+        "duty.nav.quiet" -> R.string.duty_nav_quiet
+        "duty.nav.rules" -> R.string.duty_nav_rules
         "duty.new" -> R.string.duty_new
         "duty.new.created" -> R.string.duty_new_created
         "duty.new.custom" -> R.string.duty_new_custom
@@ -306,38 +320,54 @@ internal fun dutyStringRes(key: String): Int? = when (key) {
         "duty.outcome.waiting" -> R.string.duty_outcome_waiting
         "duty.pause" -> R.string.duty_pause
         "duty.pause.forever" -> R.string.duty_pause_forever
+        "duty.pause.foreverResume" -> R.string.duty_pause_foreverResume
         "duty.pause.hour" -> R.string.duty_pause_hour
         "duty.pause.none" -> R.string.duty_pause_none
         "duty.pause.sub" -> R.string.duty_pause_sub
         "duty.pause.today" -> R.string.duty_pause_today
+        "duty.pause.untilResume" -> R.string.duty_pause_untilResume
         "duty.pause.week" -> R.string.duty_pause_week
-        "duty.pausedForever" -> R.string.duty_pausedForever
-        "duty.pausedUntil" -> R.string.duty_pausedUntil
-        "duty.pr.detailArrow" -> R.string.duty_pr_detailArrow
-        "duty.pr.detailBlock" -> R.string.duty_pr_detailBlock
         "duty.pr.detailFollow" -> R.string.duty_pr_detailFollow
         "duty.pr.detailFollowTopic" -> R.string.duty_pr_detailFollowTopic
         "duty.pr.detailPoints" -> R.string.duty_pr_detailPoints
         "duty.pr.detailStop" -> R.string.duty_pr_detailStop
+        "duty.pr.diffQuiet" -> R.string.duty_pr_diffQuiet
+        "duty.pr.diffTime" -> R.string.duty_pr_diffTime
+        "duty.pr.diffTimeOf" -> R.string.duty_pr_diffTimeOf
         "duty.pr.done" -> R.string.duty_pr_done
+        "duty.pr.doneBlock" -> R.string.duty_pr_doneBlock
+        "duty.pr.doneFlow" -> R.string.duty_pr_doneFlow
+        "duty.pr.doneFlowOnly" -> R.string.duty_pr_doneFlowOnly
+        "duty.pr.doneFollow" -> R.string.duty_pr_doneFollow
+        "duty.pr.doneNew" -> R.string.duty_pr_doneNew
+        "duty.pr.doneQuiet" -> R.string.duty_pr_doneQuiet
+        "duty.pr.doneStop" -> R.string.duty_pr_doneStop
+        "duty.pr.doneStopPlain" -> R.string.duty_pr_doneStopPlain
+        "duty.pr.doneTime" -> R.string.duty_pr_doneTime
+        "duty.pr.doneTimePlain" -> R.string.duty_pr_doneTimePlain
         "duty.pr.empty" -> R.string.duty_pr_empty
+        "duty.pr.flowNote" -> R.string.duty_pr_flowNote
         "duty.pr.flowOnly" -> R.string.duty_pr_flowOnly
         "duty.pr.flowSchedule" -> R.string.duty_pr_flowSchedule
-        "duty.pr.hint" -> R.string.duty_pr_hint
         "duty.pr.kind.block" -> R.string.duty_pr_kind_block
         "duty.pr.kind.flow" -> R.string.duty_pr_kind_flow
         "duty.pr.kind.follow" -> R.string.duty_pr_kind_follow
         "duty.pr.kind.new" -> R.string.duty_pr_kind_new
         "duty.pr.kind.quiet" -> R.string.duty_pr_kind_quiet
         "duty.pr.kind.tune" -> R.string.duty_pr_kind_tune
+        "duty.pr.more" -> R.string.duty_pr_more
         "duty.pr.no" -> R.string.duty_pr_no
+        "duty.pr.quietTo" -> R.string.duty_pr_quietTo
         "duty.pr.rejected" -> R.string.duty_pr_rejected
         "duty.pr.scan" -> R.string.duty_pr_scan
         "duty.pr.scanNone" -> R.string.duty_pr_scanNone
         "duty.pr.scanSome" -> R.string.duty_pr_scanSome
         "duty.pr.scanning" -> R.string.duty_pr_scanning
         "duty.pr.title" -> R.string.duty_pr_title
-        "duty.pr.yes" -> R.string.duty_pr_yes
+        "duty.pr.yes.add" -> R.string.duty_pr_yes_add
+        "duty.pr.yes.apply" -> R.string.duty_pr_yes_apply
+        "duty.pr.yes.follow" -> R.string.duty_pr_yes_follow
+        "duty.pr.yes.stop" -> R.string.duty_pr_yes_stop
         "duty.prio.1" -> R.string.duty_prio_1
         "duty.prio.2" -> R.string.duty_prio_2
         "duty.prio.3" -> R.string.duty_prio_3
@@ -347,7 +377,7 @@ internal fun dutyStringRes(key: String): Int? = when (key) {
         "duty.push.open" -> R.string.duty_push_open
         "duty.quietEnd" -> R.string.duty_quietEnd
         "duty.quietStart" -> R.string.duty_quietStart
-        "duty.resume" -> R.string.duty_resume
+        "duty.resumed" -> R.string.duty_resumed
         "duty.retry" -> R.string.duty_retry
         "duty.rules" -> R.string.duty_rules
         "duty.rules.help" -> R.string.duty_rules_help
@@ -370,10 +400,21 @@ internal fun dutyStringRes(key: String): Int? = when (key) {
         "duty.tag.manual" -> R.string.duty_tag_manual
         "duty.tag.simple" -> R.string.duty_tag_simple
         "duty.tier.essential" -> R.string.duty_tier_essential
+        "duty.tier.essentialText" -> R.string.duty_tier_essentialText
+        "duty.tier.join" -> R.string.duty_tier_join
         "duty.tier.other" -> R.string.duty_tier_other
+        "duty.tier.raise" -> R.string.duty_tier_raise
         "duty.tier.save" -> R.string.duty_tier_save
+        "duty.tier.saveBudget" -> R.string.duty_tier_saveBudget
+        "duty.tier.saveWeek" -> R.string.duty_tier_saveWeek
+        "duty.tier.stopBudget" -> R.string.duty_tier_stopBudget
+        "duty.tier.stopMember" -> R.string.duty_tier_stopMember
+        "duty.tier.stopQuota" -> R.string.duty_tier_stopQuota
+        "duty.tier.stopQuotaPlain" -> R.string.duty_tier_stopQuotaPlain
         "duty.tier.stopped" -> R.string.duty_tier_stopped
+        "duty.tier.untilDay" -> R.string.duty_tier_untilDay
         "duty.title" -> R.string.duty_title
+        "duty.today.at" -> R.string.duty_today_at
         "duty.trig.at" -> R.string.duty_trig_at
         "duty.trig.atUnset" -> R.string.duty_trig_atUnset
         "duty.trig.auto" -> R.string.duty_trig_auto

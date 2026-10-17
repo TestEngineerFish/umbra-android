@@ -35,8 +35,8 @@ class DutyFlowKitTest {
         "duty.why.secs" to "%@ 秒",
         "duty.why.points" to "%@ 点",
         "duty.edit.unnamed" to "没起名字",
-        "duty.act.flow" to "跑执勤流程",
-        "duty.act.flowNamed" to "跑流程：%@",
+        "duty.act.flow" to "跑例程",
+        "duty.act.flowNamed" to "跑例程：%@",
     )
     private val tr = trOf(zh) { "<$it>" }
 
@@ -244,7 +244,7 @@ class DutyFlowKitTest {
         assertEquals("回写 action.type", "flow", a["type"].strictString())
         assertEquals("回写 action.flow_id", "u1", a["flow_id"].strictString())
         assertEquals("回写只带 flow 自己的键", listOf("flow_id", "type"), a.keys.sorted())
-        assertEquals("动作摘要带流程名", "跑流程：盯新闻", DutyKit.action(d.action, tr, flowName = "盯新闻"))
-        assertEquals("找不到流程名 → 不带名字的那句", "跑执勤流程", DutyKit.action(d.action, tr))
+        assertEquals("动作摘要带例程名（批次 263 定名）", "跑例程：盯新闻", DutyKit.action(d.action, tr, flowName = "盯新闻"))
+        assertEquals("找不到例程名 → 不带名字的那句", "跑例程", DutyKit.action(d.action, tr))
     }
 }

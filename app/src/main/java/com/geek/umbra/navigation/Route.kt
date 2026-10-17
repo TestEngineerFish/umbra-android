@@ -43,6 +43,10 @@ sealed interface Route {
     data object MeDutyLog : Route
     data class MeDutyFlow(val id: String) : Route
     data class MeDutyFlowRun(val id: String) : Route
+    /** 执勤页收成推入行之后的三页（设计侧批次 261 §四，iOS RouteRules.swift:77）：例程列表 / 关注列表 / 规矩。日志那一行推的是原有的 MeDutyLog。 */
+    data object MeDutyFlows : Route
+    data object MeDutyFollows : Route
+    data object MeDutyRules : Route
     data object SetAccount : Route
     data object SetShop : Route
     data object SetShopHistory : Route
@@ -101,7 +105,8 @@ val Route.area: RouteArea
         Route.MeHome, Route.MePhrases, is Route.MePhraseEdit, Route.MeDevices, is Route.DeviceDetail,
         Route.MeCaps, Route.MeMemory, is Route.MeMemoryItem, is Route.MeMemoryEdit, Route.KbList,
         is Route.KbDocs, Route.MeDuty, is Route.MeDutyEdit, Route.MeDutyLog, is Route.MeDutyFlow,
-        is Route.MeDutyFlowRun, Route.SetAccount, Route.SetShop, Route.SetShopHistory, Route.SetStorage,
+        is Route.MeDutyFlowRun, Route.MeDutyFlows, Route.MeDutyFollows, Route.MeDutyRules,
+        Route.SetAccount, Route.SetShop, Route.SetShopHistory, Route.SetStorage,
         Route.SetPassword, Route.SetSessions, Route.SetDeactivate, Route.SetConn, Route.SetNotify,
         Route.SetGeneral, Route.SetAbout -> RouteArea.Me
     }
@@ -115,7 +120,8 @@ val Route.needsLogin: Boolean
         Route.ChatContacts, is Route.ChatThread, Route.TaskList, is Route.TaskDetail,
         Route.KbList, is Route.KbDocs, Route.MeDevices, is Route.DeviceDetail, Route.MeCaps,
         Route.MeMemory, is Route.MeMemoryItem, is Route.MeMemoryEdit, Route.MeDuty, is Route.MeDutyEdit,
-        Route.MeDutyLog, is Route.MeDutyFlow, is Route.MeDutyFlowRun, Route.SetPassword, Route.SetSessions,
+        Route.MeDutyLog, is Route.MeDutyFlow, is Route.MeDutyFlowRun, Route.MeDutyFlows, Route.MeDutyFollows,
+        Route.MeDutyRules, Route.SetPassword, Route.SetSessions,
         Route.SetDeactivate, Route.SetShop, Route.SetShopHistory, Route.SetStorage -> true
         Route.RemList, is Route.RemDetail, is Route.RemEdit, Route.MoneyHome, Route.MoneyList,
         is Route.MoneyAdd, Route.MoneyCats, is Route.MoneyCat, Route.MoneySettings, Route.MoneyRecur,
@@ -153,7 +159,8 @@ val Route.isEditor: Boolean
         Route.MoneyHome, Route.MoneyList, Route.MoneyCats, is Route.MoneyCat, Route.MoneySettings,
         Route.MoneyRecur, Route.MeHome, Route.MePhrases, Route.MeDevices, is Route.DeviceDetail, Route.MeCaps,
         Route.MeMemory, is Route.MeMemoryItem, Route.KbList, is Route.KbDocs, Route.MeDuty, Route.MeDutyLog,
-        is Route.MeDutyFlow, is Route.MeDutyFlowRun, Route.SetSessions, Route.SetDeactivate, Route.SetShop,
+        is Route.MeDutyFlow, is Route.MeDutyFlowRun, Route.MeDutyFlows, Route.MeDutyFollows, Route.MeDutyRules,
+        Route.SetSessions, Route.SetDeactivate, Route.SetShop,
         Route.SetShopHistory, Route.SetStorage, Route.SetNotify, Route.SetGeneral, Route.SetAbout,
         Route.VaultHome, Route.VaultCreate, Route.VaultKey, is Route.VaultRecord, Route.VaultGen,
         Route.VaultCheck, Route.VaultGroups, Route.VaultProfiles, Route.VaultTrash, Route.VaultImport,
