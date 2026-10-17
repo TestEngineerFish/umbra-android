@@ -10,8 +10,5 @@ import com.geek.umbra.app.SessionGuard
 object TaskModule {
     fun register(guard: SessionGuard) {
         guard.register("tasks", onLock = { TasksStore.sessionLocked() }, onUnlock = { TasksStore.sessionUnlocked() })
-        // 使用记录的 ping 也登记在这里：FeatureGraph（app/，不归本模块改）里还没有 PresenceModule 那一行。
-        // 合并时把 `PresenceModule.register(guard)` 挪进 FeatureGraph.registerGuards，并删掉这一行（见交回报告）。
-        com.geek.umbra.feature.presence.PresenceModule.register(guard)
     }
 }
