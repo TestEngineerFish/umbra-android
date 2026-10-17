@@ -35,6 +35,17 @@
             </intent-filter>
         </activity>
 
+        <!-- 把缓存里的文件交给别的 App 打开（知识库原文预览：iOS QuickLook → ACTION_VIEW + content://） -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.files"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
         <!-- App 内切语言：Android 12 及以下由 AppCompat 记住选择 -->
         <service
             android:name="androidx.appcompat.app.AppLocalesMetadataHolderService"

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- FileProvider（authority ${applicationId}.files）放出去的目录。知识库原文预览下到 cacheDir/kb-preview/ 后交系统打开。 -->
+<paths>
+    <cache-path name="cache" path="." />
+</paths>
