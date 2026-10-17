@@ -124,6 +124,9 @@ class UmbraHttp(
         authed: Boolean = true,
     ): HttpResult {
         val full = url(path, query)
+        // 地址不是合法的 http(s)（空串、手抖填错）时 OkHttp 会抛 IllegalArgumentException —— 那不是 IOException，
+        // 没人接就整个崩。这里当作一次失败返回，文案同 iOS NetworkError.invalidURL。
+        if (full.toHttpUrlOrNull() == null) return HttpResult.Fail(0, "invalid_url", "服务端地址填得不对（在「我 › 连接」里看）。")
         val basePath = server.toHttpUrlOrNull()?.encodedPath ?: ""
         val reqPath = full.toHttpUrlOrNull()?.encodedPath ?: path
         if (SessionRequestGate.blocks(prefs.signedOut, reqPath, basePath)) return HttpResult.Blocked(path)

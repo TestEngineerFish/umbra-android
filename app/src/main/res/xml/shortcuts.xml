@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 桌面快捷方式（长按 Umbra 图标）。对应 iOS 的 App Shortcuts（AppShortcuts.swift，Siri 短语「用 Umbra 记个灵感」）
+     与轻点背面记一笔 —— ⛔ Siri 短语与轻点背面 Android 没有对等物，改成静态快捷方式。
+     点了就是带 umbra:// 深链打开 MainActivity（singleTask，onNewIntent → DeepLinks.receive）。
+     ⚠️ umbra://inspiration/new 需要 navigation/Route.kt 的 DeepLinkRules 加一条 → Route.InspEdit(null)，没加之前点了只是打开 App。 -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="money_add"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_money"
+        android:shortcutShortLabel="@string/shortcut_money_add"
+        android:shortcutLongLabel="@string/shortcut_money_add">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="umbra://money/add"
+            android:targetClass="com.geek.umbra.app.MainActivity"
+            android:targetPackage="com.geek.umbra" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="insp_new"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_insp"
+        android:shortcutShortLabel="@string/shortcut_insp_new"
+        android:shortcutLongLabel="@string/shortcut_insp_new">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="umbra://inspiration/new"
+            android:targetClass="com.geek.umbra.app.MainActivity"
+            android:targetPackage="com.geek.umbra" />
+    </shortcut>
+</shortcuts>

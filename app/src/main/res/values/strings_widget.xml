@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 小组件 / 进行中通知 / 桌面快捷方式（feature/widget、feature/shortcut）的文案。
+     小组件名与说明照抄 iOS UmbraWidgets（configurationDisplayName / description，iOS 写死中文）。 -->
+<resources>
+    <string name="widget_task_name">任务</string>
+    <string name="widget_task_desc">执行中任务的进度；没有时显示今天完成数。</string>
+    <string name="widget_reminder_name">提醒 · 今天</string>
+    <string name="widget_reminder_desc">今天到点和已过期的提醒。勾选要进 App。</string>
+    <!-- 进行中通知的渠道（替代 iOS 灵动岛 / 锁屏实况） -->
+    <string name="task_progress_channel">任务进度</string>
+    <string name="task_progress_channel_desc">任务执行中的进度，以及跑完 / 失败时的那一条。</string>
+    <!-- 桌面快捷方式（长按图标） -->
+    <string name="shortcut_money_add">记一笔</string>
+    <string name="shortcut_insp_new">记灵感</string>
+</resources>

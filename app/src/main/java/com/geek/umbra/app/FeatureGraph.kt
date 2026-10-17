@@ -34,5 +34,6 @@ object FeatureGraph {
         VaultModule.register(guard)
         RemoteModule.register(guard)
         PresenceModule.register(guard)
+        com.geek.umbra.feature.widget.WidgetModule.register(guard)
     }
 }
