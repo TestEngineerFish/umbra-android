@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 任务小组件（2×2）。数据驱动的刷新靠主 App（WidgetBridge）+ 到点闹钟（WidgetRefresh）；updatePeriodMillis 30 分钟只是兜底。 -->
+<!-- 任务小组件（第 199 封 #10）：最小 = 默认 2×2，可横向拉到 4×2，不往高拉（resizeMode 只给 horizontal）。
+     数据驱动的刷新靠主 App（WidgetBridge）+ 到点闹钟（WidgetRefresh）；updatePeriodMillis 30 分钟只是兜底。
+     maxResizeWidth 按 4 格估（各家桌面格宽不一，留一点余量）；Android 12 以下桌面不认 max*，由启动器自己限。 -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:description="@string/widget_task_desc"
     android:initialLayout="@layout/glance_default_loading_layout"
@@ -7,8 +9,10 @@
     android:minHeight="110dp"
     android:minResizeWidth="110dp"
     android:minResizeHeight="110dp"
+    android:maxResizeWidth="320dp"
+    android:maxResizeHeight="110dp"
     android:targetCellWidth="2"
     android:targetCellHeight="2"
-    android:resizeMode="horizontal|vertical"
+    android:resizeMode="horizontal"
     android:updatePeriodMillis="1800000"
     android:widgetCategory="home_screen" />

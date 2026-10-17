@@ -345,6 +345,13 @@ fun TaskDetailView(id: String) {
     // 条件又满足了（not_ready 之后服务端再次标就绪）：上一次「接着跑」那一行作废，钮回来。
     val ready = detail?.task?.resume_ready
     LaunchedEffect(ready) { if (ready == true) { ui.resumeOutcome.value = null; ui.resumeFailText.value = null } }
+    // 进行中通知上按了「停止」（第 199 封 #9）：等详情到手、确认任务还在跑，再弹同一个停止确认；只弹一次。
+    val stopReq by TaskStopRequest.pending.collectAsState()
+    LaunchedEffect(stopReq, detail != null) {
+        if (stopReq == id && detail != null && TaskStopRequest.consume(id) && TaskDetailRules.isActive(detail.task.status)) {
+            confirmStop(detail, ui)
+        }
+    }
 
     // 顶栏标题：优先任务短标题，拿不到详情时退回短 ID（完整 ID 在下面的详情表里有一行）。
     val navTitle = detail?.task?.title?.takeIf { it.isNotEmpty() } ?: id.take(8)

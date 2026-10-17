@@ -1,6 +1,8 @@
 // 中号桌面小组件 · 今天的提醒（iOS: UmbraWidgets/UmbraReminderWidget.swift，规范增补 4.3）。
 //
-// 最多 4 行（iOS 稿标 ×3、实机多一行余量放 4 行，用户实测点名）；勾选圈只作展示（小组件不做写操作），点整卡进提醒列表。
+// 行数（设计侧第 199 封答复第 10 条，出图 #10）：最小 = 默认 4×2，放 2 行 +「还有 N 条」（正好 3 条时直接显示第三行）；
+// 可拉高到 4×4，按可用高度逐行加，最多 6 行，超出仍「还有 N 条」收尾（TaskNotifyRules.reminderSlots / reminderRows）。
+// 勾选圈只作展示（小组件不做写操作），点整卡进提醒列表。
 // 已过期的圈转 danger、时间转 dangerText 并标「已过期」。**每一帧按这一刻现算**「已过期 + 今天」（umbra-ios#85）。
 // 提醒是本地功能（2026-10-10）：不看登录，未登录照画。
 //
@@ -23,6 +25,8 @@ import androidx.glance.ImageProvider
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
+import androidx.glance.appwidget.SizeMode
+import androidx.glance.LocalSize
 import androidx.glance.appwidget.provideContent
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Column
@@ -43,6 +47,9 @@ import com.geek.umbra.feature.reminder.ReminderWire
 
 /** 提醒小组件。 */
 class ReminderWidget : GlanceAppWidget() {
+    /** 按实际尺寸排：行数要按高度现算（Responsive 只能给几个固定档，各家桌面格高不一）。 */
+    override val sizeMode = SizeMode.Exact
+
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         WidgetBridge.ensureObserving()
         provideContent {
@@ -91,24 +98,42 @@ internal object ReminderWidgetData {
 
 @Composable
 private fun ReminderWidgetContent(context: Context, shown: List<WidgetTimeRules.Shown>) {
-    // 超过 4 条时右上角的「N 条」负责说明还有没露出来的。
-    val rows = shown.take(4)
-    Column(GlanceModifier.widgetCard().padding(14.dp).clickable(deepLinkAction(context, "umbra://reminders"))) {
+    // 出图：4×2 行距 9、拉高后行距 11；一行按 18dp 高（17 的圈 / 13.5sp 的字）。
+    val height = LocalSize.current.height.value
+    val tight = TaskNotifyRules.reminderSlots(height, PAD_V * 2, HEADER, ROW + 9f)
+    val gap = if (tight <= TaskNotifyRules.REMINDER_MIN_SLOTS) 9 else 11
+    val slots = TaskNotifyRules.reminderSlots(height, PAD_V * 2, HEADER, ROW + gap)
+    val (n, more) = TaskNotifyRules.reminderRows(shown.size, slots)
+    Column(GlanceModifier.widgetCard().padding(horizontal = 16.dp, vertical = PAD_V.dp).clickable(deepLinkAction(context, "umbra://reminders"))) {
         WHeader("提醒 · 今天", trailing = if (shown.isNotEmpty()) "${shown.size} 条" else null)
-        Spacer(GlanceModifier.height(9.dp))
-        if (rows.isEmpty()) {
+        if (shown.isEmpty()) {
             Spacer(GlanceModifier.defaultWeight())
             Text("今天没有到点的提醒。", style = TextStyle(color = WTheme.muted, fontSize = 12.5.sp))
             Spacer(GlanceModifier.defaultWeight())
         } else {
-            rows.forEach { r ->
+            shown.take(n).forEach { r ->
+                Spacer(GlanceModifier.height(gap.dp))
                 ReminderRow(r)
-                Spacer(GlanceModifier.height(9.dp))
+            }
+            if (more > 0) {
+                Spacer(GlanceModifier.height(gap.dp))
+                // 「还有 N 条」：与正文对齐（左边空出圈的位置），12 faint。
+                Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Spacer(GlanceModifier.width(26.dp))
+                    Text("还有 $more 条", style = TextStyle(color = WTheme.faint, fontSize = 12.sp), maxLines = 1)
+                }
             }
             Spacer(GlanceModifier.defaultWeight())
         }
     }
 }
+
+/** 上下内边距（出图 14）。 */
+private const val PAD_V = 14f
+/** 顶行高（16 的字标）。 */
+private const val HEADER = 16f
+/** 一行的高度。 */
+private const val ROW = 18f
 
 @Composable
 private fun ReminderRow(r: WidgetTimeRules.Shown) {

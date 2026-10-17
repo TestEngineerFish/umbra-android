@@ -7,7 +7,7 @@
     <shortcut
         android:shortcutId="money_add"
         android:enabled="true"
-        android:icon="@drawable/ic_shortcut_money"
+        android:icon="@drawable/ic_shortcut_money_add"
         android:shortcutShortLabel="@string/shortcut_money_add"
         android:shortcutLongLabel="@string/shortcut_money_add">
         <intent
@@ -19,7 +19,7 @@
     <shortcut
         android:shortcutId="insp_new"
         android:enabled="true"
-        android:icon="@drawable/ic_shortcut_insp"
+        android:icon="@drawable/ic_shortcut_insp_new"
         android:shortcutShortLabel="@string/shortcut_insp_new"
         android:shortcutLongLabel="@string/shortcut_insp_new">
         <intent

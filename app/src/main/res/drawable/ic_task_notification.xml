@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 任务进行中通知的小图标：与 App 内 UmbraIconPaths.task 同一份 Lucide 描边（状态栏要单色剪影）。 -->
+<!-- 任务通知的小图标：单色字标「U」（第 199 封 #9：状态栏要求单色剪影；accent 色由 setColor(#E8590C) 上）。 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
     <path
-        android:pathData="M9,6L20,6M9,12L20,12M9,18L20,18M4,6L5.2,7.2L7.5,4.8M4,12L5.2,13.2L7.5,10.8M4,18L5.2,19.2L7.5,16.8"
-        android:strokeWidth="2"
+        android:pathData="M6.5,4L6.5,13A5.5,5.5 0,0 0,17.5 13L17.5,4"
+        android:strokeWidth="3.2"
         android:strokeColor="#FFFFFFFF"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"

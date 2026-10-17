@@ -21,6 +21,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
 
@@ -55,21 +57,32 @@ object WidgetBridge {
     fun syncTasks(items: List<TaskItem>) {
         ensureObserving()
         if (AppGraph.guard.locked.value) return
-        val snap = WidgetTaskRules.snapshot(items, System.currentTimeMillis())
-        // 任务页开着时每 3.5 秒轮询一次：内容没变、上一份又不到一分钟，就不重写文件、不重画
-        // （「更新于」只在 10 分钟后才出，一分钟的粒度足够）。
-        val prev = taskSnapshot.value
-        val unchanged = prev != null && prev.copy(savedAtMs = 0) == snap.copy(savedAtMs = 0) && snap.savedAtMs - prev.savedAtMs < 60_000
-        if (!unchanged) _task.value = snap
         AppGraph.scope.launch {
-            if (!unchanged) {
-                withContext(Dispatchers.IO) { runCatching { taskFile.writeText(UmbraJson.encodeToString(TaskWidgetSnapshot.serializer(), snap)) } }
-                redraw(task = true, reminder = false)
+            // 一把锁串起来：当前步名要拉详情（挂起点），两轮轮询的回包不能交错写快照 / 发通知。
+            syncLock.withLock {
+                if (AppGraph.guard.locked.value) return@withLock
+                // 当前步名与开始时刻：小组件 4×2 与通知正文 / 计时器同一份（第 199 封 #9 / #10）。
+                val running = items.firstOrNull { it.status == "running" }
+                val step = running?.let { TaskProgressNotifier.stepTitle(it) }
+                val started = running?.let { TaskProgressNotifier.startedAt(it) }
+                val snap = WidgetTaskRules.snapshot(items, System.currentTimeMillis(), stepTitle = step, startedAtMs = started)
+                // 任务页开着时每 3.5 秒轮询一次：内容没变、上一份又不到一分钟，就不重写文件、不重画
+                // （「更新于」只在 10 分钟后才出，一分钟的粒度足够）。
+                val prev = taskSnapshot.value
+                val unchanged = prev != null && prev.copy(savedAtMs = 0) == snap.copy(savedAtMs = 0) && snap.savedAtMs - prev.savedAtMs < 60_000
+                if (!unchanged) {
+                    _task.value = snap
+                    withContext(Dispatchers.IO) { runCatching { taskFile.writeText(UmbraJson.encodeToString(TaskWidgetSnapshot.serializer(), snap)) } }
+                    redraw(task = true, reminder = false)
+                }
+                // 与小组件同一份列表、同一次调用 —— 同源同 tick。
+                TaskProgressNotifier.sync(ctx, items)
             }
-            // 与小组件同一份列表、同一次调用 —— 同源同 tick。
-            TaskProgressNotifier.sync(ctx, items)
         }
     }
+
+    /** syncTasks 的串行锁。 */
+    private val syncLock = Mutex()
 
     // MARK: 提醒
 

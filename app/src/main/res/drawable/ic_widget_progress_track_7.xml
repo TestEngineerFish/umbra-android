@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 任务小组件进度环的底圈（出图 #10：viewBox 62、r 26、描边 7）。颜色由 Glance ColorFilter.tint 上 chip（随系统深浅色）。
+     弧那一段 Glance 画不了，用 Bitmap 画（TaskWidget.ringBitmap）；底圈用矢量是为了让 chip 色跟着系统深浅色切。 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="62dp"
+    android:height="62dp"
+    android:viewportWidth="62"
+    android:viewportHeight="62">
+    <path
+        android:pathData="M31,5A26,26 0,1 1,31 57A26,26 0,1 1,31 5Z"
+        android:strokeWidth="7"
+        android:strokeColor="#FFFFFFFF"
+        android:fillColor="#00000000" />
+</vector>

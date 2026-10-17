@@ -1,12 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 今日提醒小组件（4×2）。到点 / 零点由 WidgetRefresh 排闹钟换帧（iOS 时间线的替代）；updatePeriodMillis 30 分钟只是兜底。 -->
+<!-- 今日提醒小组件（第 199 封 #10）：最小 = 默认 4×2，可往高拉到 4×4（行数按高度现算，最多 6 行）。
+     到点 / 零点由 WidgetRefresh 排闹钟换帧（iOS 时间线的替代）；updatePeriodMillis 30 分钟只是兜底。
+     maxResizeHeight 按 4 格估（各家桌面格高不一，留一点余量）。 -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:description="@string/widget_reminder_desc"
     android:initialLayout="@layout/glance_default_loading_layout"
     android:minWidth="250dp"
     android:minHeight="110dp"
-    android:minResizeWidth="180dp"
+    android:minResizeWidth="250dp"
     android:minResizeHeight="110dp"
+    android:maxResizeHeight="320dp"
     android:targetCellWidth="4"
     android:targetCellHeight="2"
     android:resizeMode="horizontal|vertical"
