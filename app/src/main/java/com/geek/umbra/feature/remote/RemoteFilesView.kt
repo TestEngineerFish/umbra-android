@@ -1,4 +1,4 @@
-// 远程会话的文件面板（M2，RC-6.1 / 6.2 / §14.3）—— 照搬 iOS `Features/Remote/RemoteFilesView.swift`：
+// 远程会话的文件面板（M2，RC-6.1 / 6.2 / §14.3；形制照设计侧批次 262 iOS 稿 06）—— 照搬 iOS `Features/Remote/RemoteFilesView.swift`：
 // 列被控端「下载」「桌面」两个目录、拉文件回来、从系统文件选择器（OpenDocument）选一个推过去。
 //
 // 只开放这两个目录（被控端那边也只认这两个，不做任意路径浏览）。拉回来的先落 App 缓存目录；
@@ -53,7 +53,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.geek.umbra.designsystem.UmbraRemoteDimens
 import androidx.core.content.FileProvider
 import com.geek.umbra.R
 import com.geek.umbra.designsystem.UmbraDimens
@@ -73,6 +76,12 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 
+/**
+ * 文件面板（iOS: RemoteFilesView.swift:13）。形制照设计侧批次 262 iOS 稿 06：「X 的文件」+ 完成 → 下载 / 桌面分段
+ * → 文件卡（每行名字 +「今天 13:52 · 412 KB」+ 行尾下载钮；超过这条路的上限时副行写为什么拉不了、钮置灰；末行「从手机推一个过去」）
+ * → 传输卡（进度条 / 拉下来了 +［存储］/ 断了 +［接着传］）+ 一句组脚。
+ * 超限原来是点了才吐一句 —— 而那句吐司画在面板背后的会话页上，看不见；现在写在行上。
+ */
 @Composable
 internal fun RemoteFilesView(client: RemoteClient, onDone: () -> Unit) {
     val c = UmbraTheme.colors
@@ -84,17 +93,18 @@ internal fun RemoteFilesView(client: RemoteClient, onDone: () -> Unit) {
     LaunchedEffect(dir) { client.listFiles(dir) }
 
     Column(Modifier.fillMaxWidth().fillMaxHeight(0.9f)) {
-        Row(Modifier.fillMaxWidth().padding(start = UmbraDimens.pagePadX, end = 8.dp, top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(stringResource(R.string.remote_files_title), color = c.text, style = UmbraRemoteType.panelTitle, modifier = Modifier.weight(1f))
-            Box(Modifier.defaultMinSize(UmbraDimens.tapMin, UmbraDimens.tapMin).clickable(onClick = onDone).padding(horizontal = 8.dp), contentAlignment = Alignment.Center) {
-                Text(stringResource(R.string.remote_files_done), color = c.orangeText, style = UmbraRemoteType.veilState)
+        // 头（iOS 稿 06）：「X 的文件」17/600 + 完成。
+        Row(Modifier.fillMaxWidth().padding(start = UmbraDimens.pagePadX, end = 8.dp, top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(stringResource(R.string.remote_files_titleOf, client.hostName), color = c.text, style = UmbraRemoteType.panelTitle, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+            Box(Modifier.defaultMinSize(UmbraDimens.tapMin, UmbraDimens.tapMin).clickable(role = Role.Button, onClick = onDone).padding(horizontal = 8.dp), contentAlignment = Alignment.Center) {
+                Text(stringResource(R.string.remote_files_done), color = c.orangeText, style = UmbraRemoteType.panelDone)
             }
         }
         UmbraSegmentedControl(
             listOf(UmbraSegment(stringResource(R.string.remote_files_downloads)), UmbraSegment(stringResource(R.string.remote_files_desktop))),
             if (dir == "desktop") 1 else 0,
             { dir = if (it == 1) "desktop" else "downloads" },
-            Modifier.padding(horizontal = UmbraDimens.pagePadX, vertical = 8.dp),
+            Modifier.padding(horizontal = UmbraDimens.pagePadX).padding(bottom = 10.dp),
         )
         PullToRefreshBox(
             isRefreshing = refreshing,
@@ -111,30 +121,10 @@ internal fun RemoteFilesView(client: RemoteClient, onDone: () -> Unit) {
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = UmbraDimens.pagePadX, vertical = 4.dp),
                 verticalArrangement = Arrangement.spacedBy(UmbraDimens.groupGap),
             ) {
-                item(key = "push") {
+                item(key = "files-$dir") { FileCard(client, dir) { picker.launch(arrayOf("*/*")) } }
+                item(key = "transfers") {
                     Column {
-                        UmbraGroupCard {
-                            Row(
-                                Modifier.fillMaxWidth().defaultMinSize(minHeight = UmbraDimens.rowMinH).clickable { picker.launch(arrayOf("*/*")) }
-                                    .padding(horizontal = 14.dp, vertical = 11.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                UmbraIcon(RemoteIcons.upload, c.orangeText, size = 18.dp)
-                                Spacer(Modifier.width(10.dp))
-                                Text(stringResource(R.string.remote_files_push), color = c.orangeText, style = UmbraRemoteType.fileName)
-                            }
-                        }
-                        Spacer(Modifier.height(6.dp))
-                        Text(
-                            stringResource(if (client.relayPath) R.string.remote_files_relayNote else R.string.remote_files_directNote),
-                            color = if (client.relayPath) c.warningText else c.muted, style = UmbraRemoteType.small,
-                            modifier = Modifier.padding(horizontal = 4.dp),
-                        )
-                    }
-                }
-                if (client.transfers.isNotEmpty()) {
-                    item(key = "transfers") {
-                        Column {
+                        if (client.transfers.isNotEmpty()) {
                             UmbraSectionLabel(stringResource(R.string.remote_files_transfers))
                             Spacer(Modifier.height(6.dp))
                             UmbraGroupCard {
@@ -143,85 +133,130 @@ internal fun RemoteFilesView(client: RemoteClient, onDone: () -> Unit) {
                                     TransferRow(client, t)
                                 }
                             }
+                            Spacer(Modifier.height(6.dp))
                         }
+                        // 组脚：中继时 warning 色说会计入流量（单个最多 100 MB），直连 muted。
+                        Text(
+                            stringResource(if (client.relayPath) R.string.remote_files_relayNote else R.string.remote_files_directNote),
+                            color = if (client.relayPath) c.warningText else c.muted, style = UmbraRemoteType.filesNote,
+                            modifier = Modifier.padding(horizontal = 4.dp),
+                        )
                     }
                 }
-                fileSection(client, dir)
             }
         }
     }
 }
 
-private fun LazyListScope.fileSection(client: RemoteClient, dir: String) {
-    item(key = "files-$dir") {
-        val c = UmbraTheme.colors
-        Column {
-            UmbraSectionLabel(stringResource(if (dir == "desktop") R.string.remote_files_desktop else R.string.remote_files_downloads))
-            Spacer(Modifier.height(6.dp))
-            UmbraGroupCard {
-                val items = client.fileLists[dir]
-                if (items == null) {
-                    Row(Modifier.fillMaxWidth().defaultMinSize(minHeight = UmbraDimens.rowMinH).padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-                        CircularProgressIndicator(color = c.muted, strokeWidth = 2.dp, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text(stringResource(R.string.remote_files_loading), color = c.muted, style = UmbraRemoteType.fileName)
-                    }
-                } else {
-                    if (items.isEmpty()) {
-                        Box(Modifier.fillMaxWidth().defaultMinSize(minHeight = UmbraDimens.rowMinH).padding(horizontal = 14.dp), contentAlignment = Alignment.CenterStart) {
-                            Text(stringResource(R.string.remote_files_empty), color = c.faint, style = UmbraRemoteType.fileName)
-                        }
-                    }
-                    items.forEachIndexed { i, f ->
-                        if (i > 0) UmbraRowDivider(Modifier.padding(start = 14.dp))
-                        val a11y = stringResource(R.string.remote_files_pullA11y, f.name)
-                        Row(
-                            Modifier.fillMaxWidth().defaultMinSize(minHeight = UmbraDimens.rowMinH).clickable { client.pull(f, dir) }
-                                .semantics { contentDescription = a11y }.padding(horizontal = 14.dp, vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            UmbraIcon(UmbraIconPaths.file, c.muted, size = 18.dp)
-                            Spacer(Modifier.width(10.dp))
-                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                Text(f.name, color = c.text, style = UmbraRemoteType.fileName, maxLines = 2)
-                                Text(RemoteBytes.format(f.size, binary = false), color = c.muted, style = UmbraRemoteType.small)
-                            }
-                            Spacer(Modifier.width(6.dp))
-                            UmbraIcon(RemoteIcons.download, c.orangeText, size = 20.dp)
-                        }
-                    }
+/** 这个目录的文件（行尾下载钮）+ 末行「从手机推一个过去 · 推到对方「下载」」。 */
+@Composable
+private fun FileCard(client: RemoteClient, dir: String, onPush: () -> Unit) {
+    val c = UmbraTheme.colors
+    UmbraGroupCard {
+        val items = client.fileLists[dir]
+        if (items == null) {
+            Row(Modifier.fillMaxWidth().defaultMinSize(minHeight = UmbraDimens.rowMinH).padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                CircularProgressIndicator(color = c.muted, strokeWidth = 2.dp, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.remote_files_loading), color = c.muted, style = UmbraRemoteType.filesEmpty)
+            }
+        } else {
+            if (items.isEmpty()) {
+                Box(Modifier.fillMaxWidth().defaultMinSize(minHeight = UmbraDimens.rowMinH).padding(horizontal = 14.dp), contentAlignment = Alignment.CenterStart) {
+                    Text(stringResource(R.string.remote_files_empty), color = c.muted, style = UmbraRemoteType.filesEmpty)
                 }
             }
+            items.forEachIndexed { i, f ->
+                if (i > 0) UmbraRowDivider(Modifier.padding(start = 14.dp))
+                FileRow(client, f, dir)
+            }
+        }
+        UmbraRowDivider(Modifier.padding(start = 14.dp))
+        Row(
+            Modifier.fillMaxWidth().defaultMinSize(minHeight = UmbraDimens.rowMinH).clickable(role = Role.Button, onClick = onPush)
+                .padding(horizontal = 14.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            UmbraIcon(RemoteIcons.upload, c.orangeText, size = 16.dp)
+            Spacer(Modifier.width(8.dp))
+            // iOS 写「从 iPhone 推一个过去」：Android 换成「手机」（res/values/strings_remote_android.xml）。
+            Text(stringResource(R.string.remote_android_files_push), color = c.orangeText, style = UmbraRemoteType.pushLabel, modifier = Modifier.weight(1f))
+            Spacer(Modifier.width(6.dp))
+            // 推过去的固定落在对方「下载」（被控端只收这一个目录）：不跟着分段切到「桌面」就改口（批次 265）。
+            Text(stringResource(R.string.remote_files_pushTo), color = c.muted, style = UmbraRemoteType.pushTo)
         }
     }
+}
+
+/** 一个文件：名字 + 「今天 13:52 · 412 KB」；超过这条路的上限时副行写为什么拉不了、下载钮置灰（iOS: RemoteFilesView.swift:128）。 */
+@Composable
+private fun FileRow(client: RemoteClient, f: RemoteFileItem, dir: String) {
+    val c = UmbraTheme.colors
+    val tooBig = f.size > RemoteFileCodec.limit(client.relayPath)
+    val a11y = stringResource(R.string.remote_files_pullA11y, f.name)
+    Row(
+        Modifier.fillMaxWidth().defaultMinSize(minHeight = UmbraRemoteDimens.fileRowMinH).padding(start = 14.dp, end = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(f.name, color = c.text, style = UmbraRemoteType.fileName, maxLines = 1, overflow = TextOverflow.MiddleEllipsis)
+            Text(fileMeta(client, f, tooBig), color = c.muted, style = UmbraRemoteType.fileMeta)
+        }
+        Spacer(Modifier.width(11.dp))
+        Box(
+            Modifier.size(UmbraDimens.tapMin).clickable(enabled = !tooBig, role = Role.Button) { client.pull(f, dir) }
+                .semantics { contentDescription = a11y },
+            contentAlignment = Alignment.Center,
+        ) { UmbraIcon(RemoteIcons.downloadLine, if (tooBig) c.faint else c.orangeText, size = 18.dp) }
+    }
+}
+
+/** 副行：超限写原因；有修改时间写「今天 HH:mm」或「10月17日 14:05」；再接大小（十进制，同 iOS ByteCountFormatter .file）。 */
+@Composable
+private fun fileMeta(client: RemoteClient, f: RemoteFileItem, tooBig: Boolean): String {
+    val size = RemoteBytes.format(f.size, binary = false)
+    if (tooBig) return stringResource(if (client.relayPath) R.string.remote_files_tooBigRelayRow else R.string.remote_files_tooBigRow, size)
+    if (f.mtimeMs <= 0) return size
+    val ctx = LocalContext.current
+    val d = java.util.Date(f.mtimeMs)
+    val today = android.text.format.DateUtils.isToday(f.mtimeMs)
+    val whenText = if (today) stringResource(R.string.remote_files_today, android.text.format.DateFormat.getTimeFormat(ctx).format(d))
+    else java.text.SimpleDateFormat(android.text.format.DateFormat.getBestDateTimePattern(java.util.Locale.getDefault(), "MMMdHHmm"), java.util.Locale.getDefault()).format(d)
+    return "$whenText · $size"
 }
 
 /** 拉回来的文件已经存进「下载」的那几条（键 = 会话 id / 传输 id：传输 id 每次会话从 1 数起）。面板是独立窗口，吐司会被它盖住 —— 结果就地写在那一行上。 */
 private val savedToDownloads = mutableStateMapOf<String, Boolean>()
 
+/**
+ * 一条传输（iOS: RemoteFilesView.swift:164）：名字 + 状态行；在传的行尾百分比 + 4 高橙色进度条；拉下来了 +［存储］；断了 +［接着传］。
+ * Android 的［存储］给两条路（分享 / 存到「下载」，见文件头），iOS 是系统分享面板一条。
+ */
 @Composable
 private fun TransferRow(client: RemoteClient, t: RemoteTransfer) {
     val c = UmbraTheme.colors
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     var menu by remember { mutableStateOf(false) }
-    Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(
+        Modifier.fillMaxWidth().defaultMinSize(minHeight = UmbraRemoteDimens.fileRowMinH).padding(start = 14.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(7.dp),
+    ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            UmbraIcon(if (t.pull) RemoteIcons.arrowDown else RemoteIcons.arrowUp, c.muted, size = 16.dp)
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(t.name, color = c.text, style = UmbraRemoteType.fileName, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                StatusLine(t)
+            }
             Spacer(Modifier.width(8.dp))
-            Text(t.name, color = c.text, style = UmbraRemoteType.transferName, maxLines = 1, modifier = Modifier.weight(1f))
-            Spacer(Modifier.width(6.dp))
             when {
-                t.running -> Text(percent(t), color = c.muted, style = UmbraRemoteType.mono12)
+                t.running -> Text(percent(t), color = c.muted, style = UmbraRemoteType.transferPercent, modifier = Modifier.padding(end = 10.dp))
                 t.finished -> {
                     val file = t.localFile
                     if (t.pull && file != null) {
                         if (savedToDownloads[client.id + "/" + t.id] == true) {
-                            Text("已存到「下载」", color = c.muted, style = UmbraRemoteType.small)
+                            Text("已存到「下载」", color = c.muted, style = UmbraRemoteType.small, modifier = Modifier.padding(end = 10.dp))
                         } else Box {
-                            Box(Modifier.defaultMinSize(UmbraDimens.tapMin, UmbraDimens.tapMin).clickable { menu = true }, contentAlignment = Alignment.Center) {
-                                Text(stringResource(R.string.remote_files_save), color = c.orangeText, style = UmbraRemoteType.transferAction)
-                            }
+                            RowAction(stringResource(R.string.remote_files_save)) { menu = true }
                             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }, containerColor = c.card, modifier = Modifier.widthIn(min = 180.dp)) {
                                 DropdownMenuItem(
                                     text = { Text("分享…", color = c.text) },
@@ -243,27 +278,52 @@ private fun TransferRow(client: RemoteClient, t: RemoteTransfer) {
                                 }
                             }
                         }
-                    } else {
-                        Text(stringResource(R.string.remote_files_sent), color = c.muted, style = UmbraRemoteType.small)
                     }
                 }
-                else -> if (t.pull) {
-                    // 失败可续传：从已经写下的字节数接着拉（file_get.offset）。
-                    Box(
-                        Modifier.defaultMinSize(UmbraDimens.tapMin, UmbraDimens.tapMin)
-                            .clickable { client.pull(RemoteFileItem(t.name, t.size, 0), t.remoteDir, t) },
-                        contentAlignment = Alignment.Center,
-                    ) { Text(stringResource(R.string.remote_files_resume), color = c.orangeText, style = UmbraRemoteType.transferAction) }
-                }
+                // 失败可续传：从已经写下的字节数接着拉（file_get.offset）。推的没有续传（被控端不收 offset）。
+                t.pull -> RowAction(stringResource(R.string.remote_files_resume)) { client.pull(RemoteFileItem(t.name, t.size, 0), t.remoteDir, t) }
             }
         }
-        if (t.running) UmbraProgressBar(if (t.size > 0) (t.done.toDouble() / t.size).toFloat() else 0f, c.orange)
-        t.failure?.let { Text(it, color = c.dangerText, style = UmbraRemoteType.small) }
+        if (t.running) Box(Modifier.padding(end = 10.dp)) { UmbraProgressBar(fraction(t), c.orange) }
     }
 }
 
+/** 传输行的第二行：拉下来了 / 推过去了（成功绿 + 对勾）、断了（warning + 三角，写传到几成、原因）。在传的不写（进度条就是它）。 */
+@Composable
+private fun StatusLine(t: RemoteTransfer) {
+    val c = UmbraTheme.colors
+    val failure = t.failure
+    when {
+        t.finished -> Row(verticalAlignment = Alignment.CenterVertically) {
+            UmbraIcon(UmbraIconPaths.check, c.success, size = 12.dp, strokeWidth = 2.4f)
+            Spacer(Modifier.width(4.dp))
+            Text(stringResource(if (t.pull) R.string.remote_files_pulled else R.string.remote_files_sent), color = c.success, style = UmbraRemoteType.transferStatus)
+        }
+        failure != null -> Row(verticalAlignment = Alignment.Top) {
+            UmbraIcon(UmbraIconPaths.alertTriangle, c.warningText, size = 12.dp, strokeWidth = 2.2f, modifier = Modifier.padding(top = 2.dp))
+            Spacer(Modifier.width(4.dp))
+            Text(
+                stringResource(R.string.remote_files_brokeAt, (fraction(t) * 100).toInt().toString(), failure),
+                color = c.warningText, style = UmbraRemoteType.transferStatus, maxLines = 2, overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+/** 行尾文字动作（存储 / 接着传）：15 orangeText，热区 48。 */
+@Composable
+private fun RowAction(title: String, onClick: () -> Unit) {
+    Box(
+        Modifier.defaultMinSize(minHeight = UmbraDimens.tapMin).clickable(role = Role.Button, onClick = onClick).padding(horizontal = 10.dp),
+        contentAlignment = Alignment.Center,
+    ) { Text(title, color = UmbraTheme.colors.orangeText, style = UmbraRemoteType.rowAction) }
+}
+
+private fun fraction(t: RemoteTransfer): Float =
+    if (t.size <= 0) 0f else (t.done.toDouble() / t.size).coerceIn(0.0, 1.0).toFloat()
+
 private fun percent(t: RemoteTransfer): String =
-    if (t.size <= 0) RemoteBytes.format(t.done, binary = false) else "${(t.done.toDouble() / t.size * 100).toInt()}%"
+    if (t.size <= 0) RemoteBytes.format(t.done, binary = false) else "${(fraction(t) * 100).toInt()}%"
 
 private fun mimeOf(file: File): String =
     MimeTypeMap.getSingleton().getMimeTypeFromExtension(file.extension.lowercase()) ?: "application/octet-stream"

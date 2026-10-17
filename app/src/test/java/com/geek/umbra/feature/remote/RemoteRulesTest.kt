@@ -240,6 +240,63 @@ class RemoteRulesTest {
             assertEquals("服务端拒绝码 $c 有文案", "remote.err.$c", RemoteCopy.errorKey(c))
         }
         assertEquals("认不得的拒绝码落兜底", "remote.err.bad_request", RemoteCopy.errorKey("zzz"))
+        // 批次 264 §五：对方忙分两种「没连上」。
+        val C = RemoteCopy
+        val close = RemoteCopy.EndButton.Close
+        val retry = RemoteCopy.EndButton.Retry
+        val toView = RemoteCopy.EndButton.ToView
+        assertEquals("可控被占：关闭 + 改成只看", listOf(close, toView), C.endButtons("busy", "control", null))
+        assertEquals("只看已满：关闭 + 重新连接", listOf(close, retry), C.endButtons("busy", "view", null))
+        assertEquals("老服务端没带 busy_kind：按只看已满给", listOf(close, retry), C.endButtons("busy", null, null))
+        assertEquals("可控被占那句", "remote.busy.control", C.busyKey("busy", "control"))
+        assertEquals("没带 busy_kind 的那句", "remote.busy.view", C.busyKey("busy", null))
+        assertNull("不是 busy 不走这两句", C.busyKey("offline", null))
+        assertEquals("要会员：重来也是同一句，只给关闭", listOf(close), C.endButtons("need_membership", null, null))
+        assertEquals("没连上服务器可以重来", listOf(close, retry), C.endButtons("not_connected", null, null))
+        assertEquals("对方睡眠：只有关闭", listOf(close), C.endButtons(null, null, "host_sleep"))
+        assertEquals("关掉远程访问：只有关闭", listOf(close), C.endButtons(null, null, "access_off"))
+        assertEquals("PIN 锁定：只有关闭", listOf(close), C.endButtons(null, null, "pin_locked"))
+        assertEquals("被顶替：只有关闭", listOf(close), C.endButtons(null, null, "replaced"))
+        assertEquals("空闲结束：可以重新连接", listOf(close, retry), C.endButtons(null, null, "idle"))
+        // 被控端的 bye（PC logic.ts › byeOf）+ 服务端原因 → 结束卡那一句。
+        fun copy(server: String?, bye: RemoteBye?, consent: Boolean = false): String {
+            val c = C.endCopy(server, bye, consent)
+            return c.key + c.args.joinToString("") { a ->
+                when (a) { is RemoteCopy.EndArg.Text -> "|" + a.text; is RemoteCopy.EndArg.Time -> "|@${a.ms}" }
+            }
+        }
+        assertEquals("hotkey：Mac 画符号，按 ⌃⌥⇧⌘ 排", "remote.end.shortcut|⌃⌥⌘R",
+            copy("by_host", RemoteBye("hotkey", key = "Control+Alt+Command+R", mac = true)))
+        assertEquals("hotkey：非 Mac 加号连", "remote.end.shortcut|Win+Ctrl+Alt+R",
+            copy("by_host", RemoteBye("hotkey", key = "Control+Alt+Command+R", mac = false)))
+        assertEquals("hotkey 没带键：写缺省", "remote.end.shortcut|⌃⌥⌘R", copy("by_host", RemoteBye("hotkey")))
+        assertEquals("idle：N 用 bye.min", "remote.end.idle|45", copy("by_host", RemoteBye("idle", min = 45)))
+        assertEquals("没收到 bye 的 idle：退回缺省 30", "remote.end.idle|30", copy("idle", null))
+        assertEquals("关掉了远程访问", "remote.end.access_off", copy("by_host", RemoteBye("access_off")))
+        assertEquals("PIN 锁定：锁到几点用 until_ms", "remote.end.pin_locked|@1792110600000",
+            copy("by_host", RemoteBye("pin_locked", untilMs = 1_792_110_600_000)))
+        assertEquals("PIN 锁定没带时刻：退回 by_host", "remote.end.by_host", copy("by_host", RemoteBye("pin_locked")))
+        assertEquals("bye error：照 by_host", "remote.end.by_host", copy("by_host", RemoteBye("error")))
+        assertEquals("bye peer：照 by_host", "remote.end.by_host", copy("by_host", RemoteBye("peer")))
+        assertEquals("没收到 bye：原逻辑", "remote.end.by_host", copy("by_host", null))
+        assertEquals("控制端自己结束的：bye 不改写", "remote.end.by_controller", copy("by_controller", RemoteBye("hotkey")))
+        assertEquals("同意阶段 no_permission = 对方去开权限了", "remote.end.granting", copy("no_permission", null, consent = true))
+        assertEquals("会话中途的 no_permission 照旧", "remote.end.no_permission", copy("no_permission", null, consent = false))
+        assertEquals("钮也跟着推出来的原因走", "access_off", C.effectiveEndReason("by_host", RemoteBye("access_off"), false))
+        assertEquals("关掉了远程访问：只有关闭", listOf(close),
+            C.endButtons(null, null, C.effectiveEndReason("by_host", RemoteBye("access_off"), false)))
+        assertEquals("bye idle 解析", RemoteHostMessage.Bye(RemoteBye("idle", min = 30)), RemoteHostMessage.parse("""{"t":"bye","why":"idle","min":30}"""))
+        assertEquals("bye hotkey 解析", RemoteHostMessage.Bye(RemoteBye("hotkey", key = "Control+Alt+Command+R", mac = false)),
+            RemoteHostMessage.parse("""{"t":"bye","why":"hotkey","key":"Control+Alt+Command+R","mac":false}"""))
+        assertEquals("bye pin_locked 解析", RemoteHostMessage.Bye(RemoteBye("pin_locked", untilMs = 1_792_110_600_000)),
+            RemoteHostMessage.parse("""{"t":"bye","why":"pin_locked","until_ms":1792110600000}"""))
+        assertNull("bye 没 why：丢掉", RemoteHostMessage.parse("""{"t":"bye"}"""))
+        assertEquals("accelerator 别名与 Mac 主键符号", "⇧⌘↩", RemoteKeys.accelText("CmdOrCtrl+Shift+Return", true))
+        assertEquals("同意卡刚弹出：还剩 10 秒", 10, RemoteFallback.consentLeft(100.0, 100.0))
+        assertEquals("过了 3.7 秒：还剩 7 秒（向下取整的已过秒数）", 7, RemoteFallback.consentLeft(100.0, 103.7))
+        assertEquals("过了点：停在 0，不出负数", 0, RemoteFallback.consentLeft(100.0, 130.0))
+        assertEquals("控制时空闲降档缺省 15 分钟（批次 264）", 15, RemoteFallback.CONTROL_IDLE_MIN)
+        assertEquals("只看时空闲结束缺省 30 分钟（批次 264）", 30, RemoteFallback.VIEW_IDLE_MIN)
         assertEquals("升档被拒", "remote.notice.upgrade_declined", RemoteCopy.noticeKey("upgrade_declined"))
         assertNull("认不得的提示码不提示", RemoteCopy.noticeKey("zzz"))
         assertEquals("黑名单拒绝", "remote.denied.blacklist", RemoteCopy.deniedKey("blacklist"))
@@ -292,6 +349,14 @@ class RemoteRulesTest {
         assertEquals("非会员：跳会员页", RemoteGate.NeedMembership, RemoteEntryRules.gate(RemoteEntry.View, true, ok, false))
         assertEquals("对方没开时先说对方，不先让人去买会员", RemoteGate.Disabled("remote.gate.no_screen_permission", null), RemoteEntryRules.gate(RemoteEntry.View, true, off, false))
         assertEquals("会员还没问到：不挡", RemoteGate.Ok, RemoteEntryRules.gate(RemoteEntry.View, true, ok, null))
+        // 批次 264 §四：看一眼也要会员 —— 三颗全灰，原因在整台那一层。
+        assertEquals("看一眼也校验会员", RemoteGate.NeedMembership, RemoteEntryRules.gate(RemoteEntry.Peek, true, ok, false))
+        assertEquals("整台：非会员三颗全灰", RemoteGate.NeedMembership, RemoteEntryRules.deviceGate(true, ok, false))
+        assertEquals("非会员又缺辅助功能：先说会员（全灰），不只灰控制那一颗", RemoteGate.NeedMembership,
+            RemoteEntryRules.gate(RemoteEntry.Control, true, viewOnly, false))
+        assertEquals("缺辅助功能不算整台连不了（只灰「远程控制」）", RemoteGate.Ok, RemoteEntryRules.deviceGate(true, viewOnly, true))
+        assertEquals("离线先于会员", RemoteGate.Disabled("remote.gate.offline", null), RemoteEntryRules.deviceGate(false, ok, false))
+        assertEquals("离线那句带设备名", listOf("remote.gate.offline"), RemoteCopy.gateKeysWithName)
         assertEquals("看一眼 = source snapshot", "snapshot", RemoteEntryRules.request(RemoteEntry.Peek).source)
         assertEquals("看一眼 = 只看", "view", RemoteEntryRules.request(RemoteEntry.Peek).mode)
         assertEquals("远程控制 = control", "control", RemoteEntryRules.request(RemoteEntry.Control).mode)
@@ -376,6 +441,14 @@ class RemoteRulesTest {
         assertEquals("pin_result 带锁定到何时", RemoteHostMessage.PinResult(false, 1_700_000_000_000),
             RemoteHostMessage.parse("""{"t":"pin_result","ok":false,"locked_until_ms":1700000000000}"""))
         assertNull("ok 不是 bool 丢", RemoteHostMessage.parse("""{"t":"pin_result","ok":"yes"}"""))
+        assertEquals("pin_result 带还能试几次", RemoteHostMessage.PinResult(false, null, 3),
+            RemoteHostMessage.parse("""{"t":"pin_result","ok":false,"left":3}"""))
+        assertEquals("PIN 点：至少 6 个、最多 8 个", listOf(6, 6, 7, 8),
+            listOf(RemoteCommand.pinDots(0), RemoteCommand.pinDots(6), RemoteCommand.pinDots(7), RemoteCommand.pinDots(12)))
+        assertEquals("满 8 位不再收", "12345678", RemoteCommand.pinTyped("12345678", "9"))
+        assertEquals("⌫ 删一位", "1", RemoteCommand.pinTyped("12", "⌫"))
+        assertEquals("非数字不收", "12", RemoteCommand.pinTyped("12", "a"))
+        assertEquals("空的再删还是空", "", RemoteCommand.pinTyped("", "⌫"))
         assertEquals("protected", RemoteHostMessage.Protected("1Password"), RemoteHostMessage.parse("""{"t":"protected","app":"1Password"}"""))
         assertEquals("denied", RemoteHostMessage.Denied("blacklist", "1Password"), RemoteHostMessage.parse("""{"t":"denied","reason":"blacklist","app":"1Password"}"""))
         assertEquals("pong", RemoteHostMessage.Pong(12.5), RemoteHostMessage.parse("""{"t":"pong","ts":12.5}"""))
@@ -384,7 +457,9 @@ class RemoteRulesTest {
         assertEquals("file_begin", RemoteHostMessage.FileBegin("android-1", "a.txt", 70000), RemoteHostMessage.parse("""{"t":"file_begin","id":"android-1","name":"a.txt","size":70000}"""))
         assertEquals("file_end", RemoteHostMessage.FileEnd("android-1", false, "gone"), RemoteHostMessage.parse("""{"t":"file_end","id":"android-1","ok":false,"error":"gone"}"""))
         assertEquals("file_put_result", RemoteHostMessage.FilePutResult("android-2", true, null), RemoteHostMessage.parse("""{"t":"file_put_result","id":"android-2","ok":true}"""))
-        assertEquals("idle_downgrade", RemoteHostMessage.IdleDowngrade, RemoteHostMessage.parse("""{"t":"idle_downgrade"}"""))
+        assertEquals("idle_downgrade（今天的 PC 不带分钟数）", RemoteHostMessage.IdleDowngrade(null), RemoteHostMessage.parse("""{"t":"idle_downgrade"}"""))
+        assertEquals("idle_downgrade 带了 min 就照它", RemoteHostMessage.IdleDowngrade(20), RemoteHostMessage.parse("""{"t":"idle_downgrade","min":20}"""))
+        assertEquals("min = 0 当没带（0 = 不限，不会降档）", RemoteHostMessage.IdleDowngrade(null), RemoteHostMessage.parse("""{"t":"idle_downgrade","min":0}"""))
         assertNull("认不得的新消息丢、不崩", RemoteHostMessage.parse("""{"t":"brand_new_thing"}"""))
         assertNull("不是 JSON 丢", RemoteHostMessage.parse("not json"))
         assertNull("顶层不是对象丢", RemoteHostMessage.parse("""["t"]"""))

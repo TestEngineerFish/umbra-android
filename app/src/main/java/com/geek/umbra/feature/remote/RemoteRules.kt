@@ -367,6 +367,38 @@ object RemoteKeys {
         }
     }
 
+    /**
+     * Electron accelerator → 给人看的写法（iOS: RemoteRules.swift:354 `accelText`，照 PC `components/hotkey.ts › displayAccel`）：
+     * Mac 修饰键按 ⌃⌥⇧⌘ 排、符号连写（⌃⌥⌘R）；其余平台 Win+Ctrl+Alt+Shift 排、加号连。
+     * 结束卡「对方按了 X，会话结束。」的 X 就是它 —— 照被控端那台机器的键盘画，不照这台手机。
+     */
+    fun accelText(acc: String, mac: Boolean): String {
+        val alias = mapOf(
+            "command" to "Command", "cmd" to "Command", "meta" to "Command", "super" to "Command",
+            "commandorcontrol" to "Command", "cmdorctrl" to "Command",
+            "control" to "Control", "ctrl" to "Control",
+            "alt" to "Alt", "option" to "Alt", "opt" to "Alt", "shift" to "Shift",
+        )
+        val mods = mutableListOf<String>()
+        val rest = mutableListOf<String>()
+        for (raw in acc.split("+")) {
+            val part = raw.trim()
+            if (part.isEmpty()) continue
+            val m = alias[part.lowercase()]
+            if (m != null) { if (m !in mods) mods += m } else rest += part
+        }
+        val order = if (mac) listOf("Control", "Alt", "Shift", "Command") else listOf("Command", "Control", "Alt", "Shift")
+        val table = if (mac) mapOf("Command" to "⌘", "Control" to "⌃", "Alt" to "⌥", "Shift" to "⇧")
+        else mapOf("Command" to "Win", "Control" to "Ctrl", "Alt" to "Alt", "Shift" to "Shift")
+        val macKey = mapOf(
+            "Return" to "↩", "Escape" to "⎋", "Tab" to "⇥", "Backspace" to "⌫", "Delete" to "⌦",
+            "Up" to "↑", "Down" to "↓", "Left" to "←", "Right" to "→",
+        )
+        val head = order.filter { it in mods }.mapNotNull { table[it] }
+        val tail = rest.map { if (mac) macKey[it] ?: it else it }
+        return if (mac) (head + tail).joinToString("") else (head + tail).joinToString("+")
+    }
+
     /** 一个键「按下 + 抬起」。修饰键跟着这一次一起带。 */
     fun press(code: String, mods: List<String>): List<RemoteInput> =
         listOf(RemoteInput.Key(code, true, mods), RemoteInput.Key(code, false, mods))
@@ -460,6 +492,19 @@ object RemoteFallback {
     const val RECONNECT_GRACE = 30.0
     /** 切后台之后保留多久（RC-8.4）。 */
     const val BACKGROUND_KEEP = 30.0
+    /** 同意卡自动拒绝的秒数（批次 262「10 秒后自动拒绝」；服务端 30 s 才判 no_answer，被控端 10 s 就按拒绝回）。 */
+    const val CONSENT_SECONDS = 10
+
+    /** 等待页「还剩 N 秒」：从同意卡弹出那一刻倒数，到 0 停住（不出负数；真到点由被控端回拒绝）。iOS: RemoteRules.swift:461。 */
+    fun consentLeft(since: Double, now: Double): Int = max(0, CONSENT_SECONDS - floor(now - since).toInt())
+
+    /**
+     * 被控端「控制时空闲降档」的缺省分钟数（设计侧批次 264 §二 / PC 设置 › 远程访问）。`{t:"idle_downgrade"}` 今天不带分钟数，
+     * 控制端提示里的 N 只能写缺省值；被控端以后带上 `min` 就照它（[RemoteHostMessage.IdleDowngrade.minutes]）。
+     */
+    const val CONTROL_IDLE_MIN = 15
+    /** 被控端「只看时空闲结束」的缺省分钟数（批次 264 §二）。结束原因 `idle` 不带分钟数，同上只能写缺省值。 */
+    const val VIEW_IDLE_MIN = 30
 
     /** `source=snapshot` 的「看一眼」从头到尾不建 WebRTC（§14.5）。 */
     fun usesWebRTC(source: String) = source != "snapshot"
@@ -484,12 +529,101 @@ object RemoteFallback {
  * [remoteString]（key 里的 `.` 换成 `_` 就是 strings_ios.xml 里的资源名）。认不得的码一律落兜底那一句。
  */
 object RemoteCopy {
-    /** 服务端 `END_REASONS` + 控制端本地的三种（ICE 断了没回来 / 本机认证没过 / 切后台太久）。 */
+    /**
+     * 服务端 `END_REASONS` + 控制端本地的三种（ICE 断了没回来 / 本机认证没过 / 切后台太久）。
+     * 末尾五种是端上**自己推出来**的结束原因（服务端那边一律只记 `by_host`，分不出来；见 [endCopy]）：
+     * `shortcut` / `idle` / `access_off` / `pin_locked` 来自被控端结束前经 rc 通道发的 `{t:"bye"}`；
+     * `granting` = 同意阶段服务端回 `no_permission`（对方在同意卡上点了「去系统设置」）；
+     * `host_sleep` 今天没人发（PC 不检测睡眠），字面先留着。iOS: RemoteRules.swift:486。
+     */
     val endReasons = listOf(
         "by_controller", "by_host", "declined", "no_answer", "host_offline", "controller_gone",
         "revoked", "signed_out", "no_membership", "idle", "error", "no_permission", "replaced",
         "ice_lost", "auth_failed", "background",
+        "shortcut", "granting", "host_sleep", "access_off", "pin_locked",
     )
+
+    /** 结束卡上给哪几颗钮（批次 262 结束原因表括号里那几颗 + 264 §五「对方忙」）。 */
+    enum class EndButton { Close, Retry, ToView }
+
+    /** 「重新连接」也是同一个答案的几种：只给「关闭」（给了就是让人重试一个必然失败的动作）。 */
+    val closeOnlyReasons = listOf("replaced", "host_sleep", "access_off", "pin_locked", "no_membership", "revoked", "signed_out")
+
+    /** 发起被拒时哪些码值得重来一次：没连上服务器 / 对方离线 / 对方忙。要会员、对方没开、缺权限重来也是同一句。 */
+    val retryableErrors = listOf("not_connected", "offline", "busy")
+
+    /**
+     * 结束卡的钮（iOS: RemoteRules.swift:505）。`busyKind`（服务端 `rc_error.busy_kind`，只在 busy 时有）：
+     * control = 可控名额被占 →［关闭］［改成只看］（主钮，重发一次查看请求）；view = 只看也满了 →［关闭］［重新连接］；
+     * 老服务端没带 busy_kind → 照 view 那一种给（重新连接总是安全的）。
+     */
+    fun endButtons(errorCode: String?, busyKind: String?, endReason: String?): List<EndButton> {
+        if (errorCode != null) {
+            if (errorCode == "busy" && busyKind == "control") return listOf(EndButton.Close, EndButton.ToView)
+            return if (errorCode in retryableErrors) listOf(EndButton.Close, EndButton.Retry) else listOf(EndButton.Close)
+        }
+        if (endReason != null && endReason in closeOnlyReasons) return listOf(EndButton.Close)
+        return listOf(EndButton.Close, EndButton.Retry)
+    }
+
+    /** 结束卡那一句的一个参数：现成的字（键名、分钟数）或一个时刻（毫秒，界面按本机时区格式化成 HH:MM）。 */
+    sealed interface EndArg {
+        data class Text(val text: String) : EndArg
+        data class Time(val ms: Long) : EndArg
+    }
+
+    /** 结束卡那一句：key + 参数。 */
+    data class EndCopy(val key: String, val args: List<EndArg>)
+
+    /**
+     * 被控端 bye 能接管的服务端原因：服务端只知道「对方那边结束了」（by_host）或干脆没说 / 归成了 error。
+     * 别的原因（你结束了、登出、被顶替……）是控制端这一侧的事实，bye 不该改写它们。
+     */
+    val byeOverridable = setOf("by_host", "error", "idle", "host_offline")
+
+    /**
+     * 端上真正用来选字面和钮的结束原因：服务端原因 + 被控端的 bye + 是否还在同意阶段（iOS: RemoteRules.swift:528）。
+     * - bye.hotkey → shortcut；idle → idle；access_off → access_off；pin_locked → pin_locked；error / peer → 照服务端原因。
+     * - 同意阶段（还没进 connecting）服务端回 `no_permission` = 对方在同意卡上点了「去系统设置」→ granting。
+     * - 没收到 bye 就照服务端原因（原逻辑）。
+     */
+    fun effectiveEndReason(server: String?, bye: RemoteBye?, duringConsent: Boolean): String? {
+        if (server == "no_permission" && duringConsent) return "granting"
+        if (bye != null && (server ?: "by_host") in byeOverridable) {
+            when (bye.why) {
+                "hotkey" -> return "shortcut"
+                "idle" -> return "idle"
+                "access_off" -> return "access_off"
+                "pin_locked" -> return "pin_locked"
+            }
+        }
+        return server
+    }
+
+    /**
+     * 结束卡那一句（iOS: RemoteRules.swift:545）。快捷键照 bye.key 画（Mac 画 ⌃⌥⌘R，其余 Ctrl+Alt+…；没带键时写缺省 ⌃⌥⌘R）；
+     * 空闲的 N 用 bye.min（没收到 bye 才退回缺省 30）；PIN 锁到几点用 bye.until_ms（没有就不带时刻那一句退回 by_host）。
+     */
+    fun endCopy(server: String?, bye: RemoteBye?, duringConsent: Boolean): EndCopy =
+        when (val r = effectiveEndReason(server, bye, duringConsent)) {
+            "shortcut" -> {
+                val k = bye?.key?.takeIf { it.isNotEmpty() }?.let { RemoteKeys.accelText(it, bye.mac) } ?: "⌃⌥⌘R"
+                EndCopy("remote.end.shortcut", listOf(EndArg.Text(k)))
+            }
+            "idle" -> EndCopy("remote.end.idle", listOf(EndArg.Text((bye?.min ?: RemoteFallback.VIEW_IDLE_MIN).toString())))
+            "pin_locked" -> {
+                val t = bye?.untilMs
+                if (t == null || t <= 0) EndCopy(endReasonKey("by_host"), emptyList())
+                else EndCopy("remote.end.pin_locked", listOf(EndArg.Time(t)))
+            }
+            else -> EndCopy(endReasonKey(r), emptyList())
+        }
+
+    /** 「没连上」那一句的 key（批次 264 §五）。不是 busy → null（走结束原因 / 拒绝码那一套）。 */
+    fun busyKey(errorCode: String?, busyKind: String?): String? {
+        if (errorCode != "busy") return null
+        return if (busyKind == "control") "remote.busy.control" else "remote.busy.view"
+    }
 
     fun endReasonKey(r: String?): String = if (r != null && r in endReasons) "remote.end.$r" else "remote.end.error"
 
@@ -520,6 +654,9 @@ object RemoteCopy {
     /** 本地判出来的「不能点」的原因（入口置灰那一句）。 */
     val gateKeys = listOf("remote.gate.offline", "remote.gate.no_remote", "remote.gate.no_control", "remote.gate.no_snapshot", "remote.gate.need_membership")
 
+    /** 带设备名参数的那几句（`getString(key, 名字)`；别的 gate key 不带参数）。 */
+    val gateKeysWithName = listOf("remote.gate.offline")
+
     /** 文案 key → Android 资源名（strings_ios.xml 由脚本生成，`.` 一律换 `_`）。 */
     fun resName(key: String) = key.replace('.', '_')
 }
@@ -530,8 +667,9 @@ object RemoteCopy {
 data class RemoteDisplayInfo(val id: String, val name: String, val primary: Boolean, val width: Int, val height: Int)
 
 /**
- * 设备 providers 里 `remote` 那一项里控制端要看的几样（iOS: RemoteRules.swift:517）。服务端 `/devices/all` 今天只透传
- * `available / unavailable_reason / skills`，`features` / `displays` / `unavailable_text` 不透传 —— 拿不到就**不在本地挡**。
+ * 设备 providers 里 `remote` 那一项里控制端要看的几样（iOS: RemoteRules.swift:517）。服务端 824a61d 起 `/devices/all`
+ * 在设备报了时透传 `features` / `displays` / `unavailable_text`（`model/Models.kt` 的 ProviderInfo 已收）；老服务端 / 老被控端
+ * 没带时拿不到就**不在本地挡**（交给服务端判）。
  */
 data class RemoteManifest(
     val available: Boolean,
@@ -558,21 +696,33 @@ data class RemoteRequestKind(val mode: String, val source: String)
 
 object RemoteEntryRules {
     /**
-     * 顺序就是「先说最根本的那一条」：不在线 → 没装 / 没开 → 缺权限 → 只能看 → 看一眼要的技能 → 会员。
-     * 会员放最后：对方电脑根本没开，告诉人「去开会员」是让他花钱买一个用不了的东西。`member` null = 还没问到（不挡）。
+     * 整台连不连得上（设计侧批次 262 / 264 置灰原因表里「全灰」的那几种；iOS: RemoteRules.swift:620）：
+     * 不在线 → 没装 / 没开 → 缺屏幕录制 → 会员。不是 [RemoteGate.Ok] 时「看一眼」「远程连接」两颗一起灰，原因写在 hero 卡下。
+     * 会员排在被控端那几条之后：对方电脑根本没开，告诉人「去开会员」是让他花钱买一个用不了的东西。
+     * 批次 264 §四：**看一眼也要会员** —— 所以会员在这一层判、不分入口。`member` null = 还没问到（不挡，服务端发起时判）。
      */
-    fun gate(entry: RemoteEntry, online: Boolean, manifest: RemoteManifest?, member: Boolean?): RemoteGate {
+    fun deviceGate(online: Boolean, manifest: RemoteManifest?, member: Boolean?): RemoteGate {
         if (!online) return RemoteGate.Disabled("remote.gate.offline", null)
         val m = manifest ?: return RemoteGate.Disabled("remote.gate.no_remote", null)
         if (!m.available) {
             val t = m.text.trim()
             return RemoteGate.Disabled(RemoteCopy.unavailableKey(m.reason.ifEmpty { null }), t.ifEmpty { null })
         }
-        if (entry == RemoteEntry.Control && m.control == false) return RemoteGate.Disabled("remote.gate.no_control", null)
-        if (entry == RemoteEntry.Peek && m.skills.isNotEmpty() && "snapshot" !in m.skills) {
+        if (member == false) return RemoteGate.NeedMembership
+        return RemoteGate.Ok
+    }
+
+    /**
+     * 一个入口能不能点：先过整台那一层，再看入口自己的 —— 缺辅助功能只灰「远程控制」；被控端版本太旧不支持看一眼。
+     * 批次 264 §三：「对方设成了只能看」那条删了（被控端没有这个设置），`control == false` 只表示缺辅助功能权限。
+     */
+    fun gate(entry: RemoteEntry, online: Boolean, manifest: RemoteManifest?, member: Boolean?): RemoteGate {
+        val whole = deviceGate(online, manifest, member)
+        if (whole != RemoteGate.Ok || manifest == null) return whole
+        if (entry == RemoteEntry.Control && manifest.control == false) return RemoteGate.Disabled("remote.gate.no_control", null)
+        if (entry == RemoteEntry.Peek && manifest.skills.isNotEmpty() && "snapshot" !in manifest.skills) {
             return RemoteGate.Disabled("remote.gate.no_snapshot", null)
         }
-        if (member == false) return RemoteGate.NeedMembership
         return RemoteGate.Ok
     }
 
@@ -749,6 +899,18 @@ object RemoteJson {
 
 // MARK: - DataChannel `rc`（被控端 → 控制端，§14.3）
 
+/**
+ * 被控端的 `{t:"bye", why, min?, until_ms?, key?, mac?}`（iOS: RemoteRules.swift:862）。why：hotkey / idle / access_off / pin_locked / error / peer。
+ * `key` 是 Electron accelerator 原文（"Control+Alt+Command+R"），`mac` = 被控端是不是 Mac（没带当是，同 PC 控制端的接法）。
+ */
+data class RemoteBye(
+    val why: String,
+    val min: Int? = null,
+    val untilMs: Long? = null,
+    val key: String? = null,
+    val mac: Boolean = true,
+)
+
 data class RemoteFileItem(val name: String, val size: Long, val mtimeMs: Long) {
     val id: String get() = name
 }
@@ -758,11 +920,15 @@ sealed interface RemoteHostMessage {
     data class Clip(val text: String) : RemoteHostMessage
     data class Pong(val ts: Double) : RemoteHostMessage
     data object NeedPin : RemoteHostMessage
-    data class PinResult(val ok: Boolean, val lockedUntilMs: Long?) : RemoteHostMessage
+    /** `left`：还能试几次（被控端带了才有，PC 已带；无人值守页「PIN 不对，还能试 N 次」）。 */
+    data class PinResult(val ok: Boolean, val lockedUntilMs: Long?, val left: Int? = null) : RemoteHostMessage
     data class Protected(val app: String) : RemoteHostMessage
     data object Unprotected : RemoteHostMessage
     data class Denied(val reason: String, val app: String?) : RemoteHostMessage
-    data object IdleDowngrade : RemoteHostMessage
+    /** 被控端本地结束会话前说的「为什么」（PC `logic.ts › byeOf`）。随后到的 `rc_state ended` 用它选字面（[RemoteCopy.endCopy]）。 */
+    data class Bye(val bye: RemoteBye) : RemoteHostMessage
+    /** 可控档空闲降为只看（批次 264 §二）。`minutes`：被控端带了 `min` 就是它，没带（今天的 PC）null，提示里写缺省 15。 */
+    data class IdleDowngrade(val minutes: Int? = null) : RemoteHostMessage
     data class Files(val dir: String, val items: List<RemoteFileItem>) : RemoteHostMessage
     data class FileBegin(val id: String, val name: String, val size: Long) : RemoteHostMessage
     data class FileEnd(val id: String, val ok: Boolean, val error: String?) : RemoteHostMessage
@@ -781,11 +947,25 @@ sealed interface RemoteHostMessage {
                 "clip" -> Clip(RemoteJson.str(j["text"]) ?: return null)
                 "pong" -> Pong(RemoteJson.double(j["ts"]) ?: return null)
                 "need_pin" -> NeedPin
-                "pin_result" -> PinResult(RemoteJson.bool(j["ok"]) ?: return null, RemoteJson.int64(j["locked_until_ms"]))
+                "pin_result" -> PinResult(
+                    RemoteJson.bool(j["ok"]) ?: return null, RemoteJson.int64(j["locked_until_ms"]),
+                    RemoteJson.int64(j["left"])?.let { max(0L, it).toInt() },
+                )
                 "protected" -> Protected(RemoteJson.str(j["app"]) ?: "")
                 "unprotected" -> Unprotected
                 "denied" -> Denied(RemoteJson.str(j["reason"]) ?: return null, RemoteJson.str(j["app"]))
-                "idle_downgrade" -> IdleDowngrade
+                "bye" -> {
+                    val why = RemoteJson.str(j["why"])?.takeIf { it.isNotEmpty() } ?: return null
+                    Bye(RemoteBye(
+                        why = why,
+                        min = RemoteJson.int64(j["min"])?.toInt()?.takeIf { it > 0 },
+                        untilMs = RemoteJson.int64(j["until_ms"])?.takeIf { it > 0 },
+                        key = RemoteJson.str(j["key"]),
+                        mac = RemoteJson.bool(j["mac"]) ?: true,
+                    ))
+                }
+                // min = 0 当没带（0 = 不限，不会降档）。
+                "idle_downgrade" -> IdleDowngrade(RemoteJson.int64(j["min"])?.toInt()?.takeIf { it > 0 })
                 "files" -> {
                     val dir = RemoteJson.str(j["dir"]) ?: return null
                     val arr = j["items"] as? JsonArray ?: return null
@@ -838,6 +1018,16 @@ object RemoteCommand {
     }
 
     fun filePutEnd(id: String) = buildJsonObject { put("t", "file_put_end"); put("id", id) }
+
+    /** 无人值守页的 PIN 点：至少画 6 个、输到第 7、8 位再长出来（PIN 是 6–8 位，画 8 个会让人以为一定要输 8 位）。iOS: RemoteRules.swift:992。 */
+    fun pinDots(count: Int): Int = min(8, max(6, count))
+
+    /** 无人值守页数字键盘按一下之后的 PIN：只收 ASCII 数字、最多 8 位；⌫ 删最后一位。 */
+    fun pinTyped(pin: String, key: String): String {
+        if (key == "⌫") return pin.dropLast(1)
+        if (key.length != 1 || key[0] !in '0'..'9' || pin.length >= 8) return pin
+        return pin + key
+    }
 
     /** 无人值守 PIN：6–8 位 ASCII 数字（RC-11.2）。不合格的不发 —— 发了只是白白吃掉一次「错 5 次锁 30 分钟」的机会。 */
     fun validPin(s: String): Boolean = s.length in 6..8 && s.all { it in '0'..'9' }
