@@ -189,8 +189,13 @@ private fun TaskCardAction(j: ChatBlock.Task, conv: String) {
     // 上一次重试被服务端说死就不再给钮；operate 那一档不算说死（它换成「重新发起」）
     val blocked = j.retryOutcome?.let { !it.keepsRetry && it != TaskRetryOutcome.Operate } ?: false
     val action = ChatTaskKit.cardAction(j.status, if (j.status == "failed") j.failAction else TaskFailAction.AsBefore, blocked, j.operate, j.gone)
+    // 补救类失败（批次 278，同 PC 聊天任务卡）：额度用完先给［用重置卡］，原来那颗（去买 / 查看结果）照旧，再加一颗「重试任务」——
+    // 用完卡人要有地方接着跑。顺序同 PC failCardActions：重置 · 去买 · 重试。
+    val failed = j.status == "failed" && !j.gone
+    val fixRetry = ChatTaskKit.cardFixRetry(j.status, j.failReasonKind, blocked, j.gone, action)
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         if (j.gone) GoneNote(TaskRetryCopy.MISSING)
+        if (failed && j.failReasonKind == "quota_exhausted") UseResetCardButton(j.quotaWindow)
         when (action) {
             TaskCardAction.Retry -> UmbraButton(if (j.retrying) TaskRetryCopy.RETRYING else TaskRetryCopy.RETRY, {
                 if (!j.retrying) scope.launch { ChatStore.retryTaskCard(j.taskId) }
@@ -207,6 +212,9 @@ private fun TaskCardAction(j: ChatBlock.Task, conv: String) {
                 Modifier.fillMaxWidth(), kind = UmbraButtonKind.Secondary, height = 44.dp)
             null -> Unit
         }
+        if (fixRetry) UmbraButton(if (j.retrying) TaskRetryCopy.RETRYING else TaskRetryCopy.RETRY, {
+            if (!j.retrying) scope.launch { ChatStore.retryTaskCard(j.taskId) }
+        }, Modifier.fillMaxWidth(), kind = UmbraButtonKind.Secondary, height = 44.dp)
         if (!j.gone) j.retryOutcome?.message?.let { FailLine(it) }
     }
 }

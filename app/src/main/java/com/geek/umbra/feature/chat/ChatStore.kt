@@ -1565,6 +1565,8 @@ object ChatStore {
                 j = j.copy(
                     failAction = ChatReasonRules.taskFailAction(msg.str("reason_kind"), msg.str("topup_url")),
                     failTopupKey = ChatReasonRules.topupButtonKey(ChatReasonRules.resolve(msg.str("reason_kind"), null)),
+                    failReasonKind = msg.str("reason_kind"),
+                    quotaWindow = com.geek.umbra.feature.account.ResetCardRules.quotaWindowOf(msg.str("window")),
                 )
             }
             if (status != null) {
@@ -1586,6 +1588,9 @@ object ChatStore {
                 confirmId = if (msg.bool("needs_confirm") == true) msg.str("confirm_id") else null,
                 results = results,
                 failAction = if (status == "failed") ChatReasonRules.taskFailAction(msg.str("reason_kind"), msg.str("topup_url")) else TaskFailAction.AsBefore,
+                failTopupKey = ChatReasonRules.topupButtonKey(ChatReasonRules.resolve(msg.str("reason_kind"), null)),
+                failReasonKind = if (status == "failed") msg.str("reason_kind") else null,
+                quotaWindow = if (status == "failed") com.geek.umbra.feature.account.ResetCardRules.quotaWindowOf(msg.str("window")) else null,
             )
             if (status == "suspended") j = j.copy(suspend = TaskSuspendInfo.of(msg))
             s.taskMap[id] = s.blocks.size

@@ -201,6 +201,10 @@ sealed interface ChatBlock {
         val results: List<Map<String, String>>? = null,
         val failAction: TaskFailAction = TaskFailAction.AsBefore,
         val failTopupKey: String = "vision.topup",
+        /** 失败类别原文（`quota_exhausted` …）：补救类失败要多给「用重置卡」「重试任务」（批次 278，同 PC 聊天任务卡）。 */
+        val failReasonKind: String? = null,
+        /** 额度用完时是哪条窗口（服务端 1980e92）。 */
+        val quotaWindow: String? = null,
         val operate: Boolean = false,
         val retrying: Boolean = false,
         val retryOutcome: TaskRetryOutcome? = null,

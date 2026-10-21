@@ -176,6 +176,15 @@ sealed interface TaskCardAction {
 }
 
 object ChatTaskKit {
+    /**
+     * 聊天任务卡上要不要在原来那颗钮之外**再给一颗「重试任务」**（PC 聊天任务卡 `retryHere`，批次 278）：
+     * 补救类失败（额度用完 / 没会员 / 欠费）原来那颗是「去买」/「查看结果」，人补救完（就地用了重置卡）得有地方点重试。
+     * 原来那颗已经是重试 / 重新发起、上一次重试被说死、任务已经不在了 —— 都不再加。
+     */
+    fun cardFixRetry(status: String, reasonKind: String?, blocked: Boolean, gone: Boolean, base: TaskCardAction?): Boolean =
+        status == "failed" && com.geek.umbra.feature.task.TaskRetryRules.retryAfterFix(reasonKind) && !blocked && !gone && base != TaskCardAction.Retry && base != TaskCardAction.Relaunch
+
+
     /** 任务模型就这三个非终态（iOS: TaskDetailRules.swift:35）。 */
     private val activeStatuses = setOf("running", "pending", "suspended")
     fun isActive(status: String) = status in activeStatuses
