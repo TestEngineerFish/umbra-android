@@ -1,0 +1,476 @@
+{
+  "$comment": "主题键清单与硬门槛的正本（规格 v1.1，2026-10-17；取自设计侧 umbra-tokens.json › themeKit 3.48.0，批次 267）。validate.mjs（Node）、Umbra 服务端上传校验（Python，复制在 private_ai_assistant/theme_spec/，测试钉两边逐字节相同）、三端客户端装包都读这一份，结果必须逐位一致。改这份 = 同时改 sdk/theme-tokens.schema.json（由 scripts/lib/theme.mjs 的键表生成，test-validate 钉着）、sdk/CHANGELOG.md，并把文件拷进服务端。",
+  "specVersion": "1.1",
+  "themeApi": 1,
+  "source": "umbra-tokens.json › themeKit（version 3.48.0）",
+  "modes": [
+    "light",
+    "dark"
+  ],
+  "platforms": [
+    "ios",
+    "android",
+    "pc"
+  ],
+  "colorPattern": "^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$",
+  "keys": [
+    {
+      "key": "bg",
+      "group": "表面",
+      "cssVar": "--bg",
+      "use": "主区底：详情区、页面、设置内容列"
+    },
+    {
+      "key": "card",
+      "group": "表面",
+      "cssVar": "--card",
+      "use": "卡片、面板、输入框；下拉 / 右键菜单 / 模态的底也取它（吐司不取它，见 derived）"
+    },
+    {
+      "key": "titlebar",
+      "group": "表面",
+      "cssVar": "--titlebar",
+      "use": "窗口标题栏、远程控制会话工具条"
+    },
+    {
+      "key": "rail",
+      "group": "表面",
+      "cssVar": "--rail",
+      "use": "列表栏底（三层里最亮的那层）"
+    },
+    {
+      "key": "chip",
+      "group": "表面",
+      "cssVar": "--chip",
+      "use": "胶囊、筛选芯片、分段控件、禁用钮的底"
+    },
+    {
+      "key": "hover",
+      "group": "表面",
+      "cssVar": "--hover",
+      "use": "行与幽灵钮的悬停底、分组头"
+    },
+    {
+      "key": "track",
+      "group": "表面",
+      "cssVar": "--track",
+      "use": "进度条 / 开关轨道、代码与原始返回块的底"
+    },
+    {
+      "key": "nav",
+      "group": "表面",
+      "cssVar": "--nav",
+      "use": "左侧一级导航；两套都必须是深色（导航字写死白）"
+    },
+    {
+      "key": "userBubble",
+      "group": "表面",
+      "cssVar": "--user-bubble",
+      "use": "聊天里用户自己那条消息的气泡"
+    },
+    {
+      "key": "border",
+      "group": "描边",
+      "cssVar": "--border",
+      "use": "卡片、控件、分栏线"
+    },
+    {
+      "key": "borderSoft",
+      "group": "描边",
+      "cssVar": "--border-soft",
+      "use": "卡片内行与行之间的分隔"
+    },
+    {
+      "key": "text",
+      "group": "文字",
+      "cssVar": "--text",
+      "use": "正文与标题"
+    },
+    {
+      "key": "muted",
+      "group": "文字",
+      "cssVar": "--muted",
+      "use": "次要说明；中性底上要读的第二层字"
+    },
+    {
+      "key": "inkQuiet",
+      "group": "文字",
+      "cssVar": "--ink-quiet",
+      "use": "胶囊、徽章、标题栏上的中性字（初稿漏了这一个）"
+    },
+    {
+      "key": "faint",
+      "group": "文字",
+      "cssVar": "--faint",
+      "use": "装饰性元信息、占位符、禁用字、图标描边；不当要读的字"
+    },
+    {
+      "key": "accent",
+      "group": "强调色",
+      "cssVar": "--orange",
+      "use": "主操作钮、当前选中（导航 / 筛选 / 开关开）、进度"
+    },
+    {
+      "key": "accentDeep",
+      "group": "强调色",
+      "cssVar": "--orange-deep",
+      "use": "主操作钮悬停与按下"
+    },
+    {
+      "key": "accentSoft",
+      "group": "强调色",
+      "cssVar": "--orange-soft",
+      "use": "选中底、聚焦环、文字选区"
+    },
+    {
+      "key": "accentText",
+      "group": "强调色",
+      "cssVar": "--orange-text",
+      "use": "强调色的字：链接、选中项文字、软底上的字、次钮悬停字"
+    },
+    {
+      "key": "onAccent",
+      "group": "强调色",
+      "cssVar": "--on-accent",
+      "use": "强调色实底上的字与图标（新键；现在写死 #FFFFFF 的地方全改读它）"
+    }
+  ],
+  "required": "keys 里没标 optional 的键浅、深两套都必填，缺一个就拒（T1），不回落。",
+  "evolution": "回落默认只给以后新增的键：新键进清单时标 \"optional\": true（并记 since），老包里没有它就取 sdk/theme-base.json 的值，补上之后整包再跑一遍对比度。加键不升 themeApi（老客户端忽略不认识的键）；删键、改语义、或把 optional 键改成必填才升到 2。",
+  "derived": {
+    "--ink-strong": "= text",
+    "--ink-mute": "= muted",
+    "弹层 / 菜单 / 模态底": "= card（阴影照 elevation，不开放）",
+    "吐司 / 保险箱提示条": "底 = nav 86%（color-mix(in srgb, nav 86%, transparent)），字与描边钮写死 #F4F1EA；靠 nav ≤0.05 过线（批次 268）",
+    "输入框底": "= card；聚焦描边 = accent",
+    "提示气泡（tooltip）": "底 = text，字 = bg（反相，对比度随 text×bg 自动成立）",
+    "聚焦环": "3px accentSoft",
+    "文字选区": "accentSoft",
+    "滚动条": "滑块 = border，悬停 = faint；轨道透明",
+    "开关": "开 = accent，关 = track，滑块写死 #FFFFFF",
+    "导航字": "写死 rgba(255,255,255,.62)，选中 #FFFFFF + accent 指示，所以 nav 必须深"
+  },
+  "derivedRule": "派生值主题不写，各端按上表从主题键取；写了 derived 里的名字算未知键（T1）。",
+  "locked": {
+    "rule": "主题包里写了也忽略：不报错，作者自查（validate.mjs）给一条 warning（T7）；服务端 / 客户端把这些键当没写，生效值一律取 lockedValues / 各端内置值。",
+    "keys": [
+      "success",
+      "successSoft",
+      "successText",
+      "onSuccess",
+      "warning",
+      "warningSoft",
+      "warningText",
+      "onWarning",
+      "danger",
+      "dangerSoft",
+      "dangerText",
+      "onDanger",
+      "c1",
+      "c2",
+      "c3",
+      "c4",
+      "c5",
+      "c6",
+      "c7",
+      "c8",
+      "c9",
+      "c10",
+      "catTint",
+      "rcView",
+      "rcControl",
+      "viewerBg",
+      "scrim",
+      "shadow",
+      "shadowFloating",
+      "shadowModal",
+      "desk"
+    ],
+    "covers": "success / warning / danger 三族及其 -soft / -text / on-*；分类色槽 c1–c10 与 --cat-tint；远程控制看 / 控两色（rcView / rcControl）；图片预览底 --viewer-bg；遮罩（scrim）；全部阴影；--desk",
+    "checked": "语义色锁死不等于不查：主题换了底，锁死的字落在新底上照样要过线，所以 warningText / dangerText / success 进对子清单，取值见 lockedValues"
+  },
+  "lockedValues": {
+    "light": {
+      "warningText": "#97460A",
+      "dangerText": "#B42318",
+      "success": "#0F766E"
+    },
+    "dark": {
+      "warningText": "#D98A29",
+      "dangerText": "#EE8B80",
+      "success": "#34B5A6"
+    }
+  },
+  "opaque": [
+    "bg",
+    "card"
+  ],
+  "composite": {
+    "base": "card",
+    "rule": "带 alpha 的值先合成再算：作底时合成到同一套的 card 上；作前景时合成到它所在的那张底（已合成）上。逐通道 c = fg × a + bg × (1 − a)，a = AA / 255，不取整。bg / card 必须不透明（T2）。"
+  },
+  "contrastFormula": "WCAG 2.x：相对亮度 L = 0.2126 R + 0.7152 G + 0.0722 B（通道 ≤ 0.03928 时 /12.92，否则 ((c + 0.055) / 1.055)^2.4）；比值 (Lmax + 0.05) / (Lmin + 0.05)，**截断**到两位小数（floor(r × 100) / 100，不四舍五入进线）再与 min 比。",
+  "neutral": [
+    "bg",
+    "card",
+    "titlebar",
+    "rail",
+    "chip",
+    "hover",
+    "track",
+    "userBubble"
+  ],
+  "contrast": [
+    {
+      "fg": "text",
+      "on": [
+        "bg",
+        "card",
+        "titlebar",
+        "rail",
+        "chip",
+        "hover",
+        "track",
+        "userBubble",
+        "accentSoft"
+      ],
+      "min": 4.5,
+      "why": "正文落到的每一张底"
+    },
+    {
+      "fg": "muted",
+      "on": [
+        "bg",
+        "card",
+        "titlebar",
+        "rail",
+        "chip",
+        "hover",
+        "track",
+        "userBubble"
+      ],
+      "min": 4.5,
+      "why": "只压中性底；软底上的字走各族 -text（textTiers）"
+    },
+    {
+      "fg": "inkQuiet",
+      "on": [
+        "chip",
+        "titlebar",
+        "hover",
+        "track"
+      ],
+      "min": 4.5,
+      "why": "它就是为这四张底存在的"
+    },
+    {
+      "fg": "faint",
+      "on": [
+        "bg",
+        "card",
+        "rail"
+      ],
+      "min": 2.2,
+      "why": "不当正文，只保证看得见；默认最低 2.40"
+    },
+    {
+      "fg": "accentText",
+      "on": [
+        "bg",
+        "card",
+        "rail",
+        "hover",
+        "accentSoft"
+      ],
+      "min": 4.5,
+      "why": "链接、选中项文字"
+    },
+    {
+      "fg": "onAccent",
+      "on": [
+        "accent",
+        "accentDeep"
+      ],
+      "min": 3,
+      "why": "强调色实底上的字；端上约束这些字一律 ≥ 600 字重（clientConstraints）。默认白字在 #E8590C 上只有 3.58，定 4.5 会拒掉默认自己"
+    },
+    {
+      "fg": "accent",
+      "on": [
+        "bg",
+        "card",
+        "rail",
+        "track",
+        "nav"
+      ],
+      "min": 3,
+      "why": "非文字指示（WCAG 1.4.11）：选中底线、进度、开关、导航指示"
+    },
+    {
+      "fg": "border",
+      "on": [
+        "bg",
+        "card",
+        "rail"
+      ],
+      "min": 1.15,
+      "why": "分层靠描边，描边看不见层级就塌；默认最低 1.18"
+    },
+    {
+      "fg": "borderSoft",
+      "on": [
+        "card",
+        "rail"
+      ],
+      "min": 1.06,
+      "why": "卡内分隔；默认最低 1.10"
+    },
+    {
+      "fg": "hover",
+      "on": [
+        "card",
+        "rail"
+      ],
+      "min": 1.05,
+      "why": "悬停要看得出；默认最低 1.07"
+    },
+    {
+      "fg": "accentSoft",
+      "on": [
+        "card"
+      ],
+      "min": 1.05,
+      "why": "选中底要看得出"
+    },
+    {
+      "fg": "warningText",
+      "on": [
+        "bg",
+        "card",
+        "chip",
+        "hover"
+      ],
+      "min": 4.5,
+      "why": "锁死色落在主题的底上"
+    },
+    {
+      "fg": "dangerText",
+      "on": [
+        "bg",
+        "card",
+        "chip",
+        "hover"
+      ],
+      "min": 4.5,
+      "why": "同上"
+    },
+    {
+      "fg": "success",
+      "on": [
+        "bg",
+        "card"
+      ],
+      "min": 4.5,
+      "why": "同上（success 本身当字用）"
+    }
+  ],
+  "lightness": {
+    "rule": "认 0.5 分界：light 套 bg / card / rail / titlebar 相对亮度都 ≥ 0.5，dark 套都 < 0.5；nav 两套都 ≤ 0.05（导航字写死白）",
+    "light": {
+      "keys": [
+        "bg",
+        "card",
+        "rail",
+        "titlebar"
+      ],
+      "min": 0.5
+    },
+    "dark": {
+      "keys": [
+        "bg",
+        "card",
+        "rail",
+        "titlebar"
+      ],
+      "maxExclusive": 0.5
+    },
+    "nav": {
+      "keys": [
+        "nav"
+      ],
+      "max": 0.05
+    }
+  },
+  "clientConstraints": [
+    "强调色实底（accent / accentDeep）上的字一律 ≥ 600 字重 —— onAccent 的门槛只有 3.0，靠字重补"
+  ],
+  "selfTest": {
+    "rule": "三处检查器的第一条测试都先量公认常数自校准，再跑一个反例包（themeKit.contrast.selfTest）",
+    "constants": [
+      {
+        "fg": "#FFFFFF",
+        "bg": "#000000",
+        "ratio": 21.0
+      },
+      {
+        "fg": "#777777",
+        "bg": "#FFFFFF",
+        "ratio": 4.47,
+        "passes4_5": false,
+        "note": "原值 4.478…；themeKit 写的 4.48 是四舍五入后的读数，按本规格「截断到两位」登记 4.47（判不过 4.5 这一点两种读法一致）"
+      },
+      {
+        "fg": "#E8590C",
+        "bg": "#FFFFFF",
+        "ratio": 3.58,
+        "note": "原值 3.580…"
+      },
+      {
+        "fg": "#E8590C",
+        "bg": "#EDEBE6",
+        "ratio": 3.0,
+        "note": "默认 accent 在 track 上：原值 3.005…，压线通过 3.0 —— 钉住「截断不进线」不会把它误拒"
+      }
+    ],
+    "counterExample": {
+      "theme": "sea-salt",
+      "mode": "dark",
+      "set": {
+        "muted": "#7A8594"
+      },
+      "mustFail": {
+        "rule": "T3",
+        "fg": "muted",
+        "on": "track"
+      }
+    }
+  },
+  "maxPackageBase64Bytes": 262144,
+  "packageFilesRule": "主题包里只许有 manifest.json 和 manifest.tokens 指的那一份 JSON（一期不收图片、脚本、CSS、preview.json —— 商城色块由服务端从 tokens 里取）。体积按包里所有文件 base64 后的总长算，≤ 256 KiB。",
+  "officialThemes": {
+    "rule": "包 id 与设计侧代号对照（themeKit.themes.<名>.id 是设计侧代号，不是包 id）",
+    "map": [
+      {
+        "design": "umbra.default",
+        "themeKitKey": "default",
+        "packageId": "com.umbra.theme.default",
+        "name": "默认"
+      },
+      {
+        "design": "umbra.sea-salt",
+        "themeKitKey": "sea",
+        "packageId": "com.umbra.theme.sea-salt",
+        "name": "海盐"
+      },
+      {
+        "design": "umbra.graphite",
+        "themeKitKey": "graphite",
+        "packageId": "com.umbra.theme.graphite",
+        "name": "石墨"
+      }
+    ],
+    "notInPhase1": [
+      "sample.rose（蔷薇，稿面演示用）"
+    ]
+  }
+}

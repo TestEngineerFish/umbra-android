@@ -7,6 +7,10 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import androidx.compose.ui.unit.dp
 
 /** 外观设置：与 iOS `umbra.appearance` 同取值。 */
@@ -15,6 +19,23 @@ enum class Appearance(val wire: String) {
 
     companion object {
         fun of(wire: String?) = entries.firstOrNull { it.wire == wire } ?: System
+    }
+}
+
+/**
+ * 当前主题的调色板 —— [UmbraTheme] 换色时先问这里，问不到用内置值（iOS `Utils/ThemeShared.swift` 的同一件事）。
+ * 值的形状同 iOS App Group 里那份：`{"light": {主题键: "#RRGGBB(AA)"}, "dark": {…}}`；null = 默认主题。
+ *
+ * 为什么放在 designsystem、而不是主题模块里：主 App、分享、自动填充三个 Activity 和小组件都要读它，
+ * 而 designsystem 不许反过来依赖 feature。由 `feature/theme/ThemeStore` 写（启动时、换主题、试用、退回）。
+ * iOS 那边小组件和自动填充是独立进程、要经 App Group 读；Android 小组件和自动填充都在同一个进程里，内存里这一份就够。
+ */
+object UmbraThemePalette {
+    private val _current = MutableStateFlow<Map<String, Map<String, String>>?>(null)
+    val current: StateFlow<Map<String, Map<String, String>>?> = _current
+
+    fun set(palette: Map<String, Map<String, String>>?) {
+        _current.value = palette
     }
 }
 
@@ -36,10 +57,11 @@ fun UmbraTheme(appearance: Appearance = Appearance.System, content: @Composable 
         Appearance.Light -> false
         Appearance.Dark -> true
     }
-    val c = if (dark) UmbraDark else UmbraLight
+    val palette by UmbraThemePalette.current.collectAsState()
+    val c = androidx.compose.runtime.remember(palette, dark) { (if (dark) UmbraDark else UmbraLight).themed(palette?.get(if (dark) "dark" else "light")) }
     val m3 = if (dark) {
         darkColorScheme(
-            primary = c.orange, onPrimary = UmbraLight.card, primaryContainer = c.orangeSoft,
+            primary = c.orange, onPrimary = c.onAccent, primaryContainer = c.orangeSoft,
             onPrimaryContainer = c.orangeText, secondary = c.orange, background = c.bg,
             onBackground = c.text, surface = c.card, onSurface = c.text, surfaceVariant = c.chip,
             onSurfaceVariant = c.muted, surfaceContainer = c.card, surfaceContainerHigh = c.card,
@@ -48,7 +70,7 @@ fun UmbraTheme(appearance: Appearance = Appearance.System, content: @Composable 
         )
     } else {
         lightColorScheme(
-            primary = c.orange, onPrimary = UmbraLight.card, primaryContainer = c.orangeSoft,
+            primary = c.orange, onPrimary = c.onAccent, primaryContainer = c.orangeSoft,
             onPrimaryContainer = c.orangeText, secondary = c.orange, background = c.bg,
             onBackground = c.text, surface = c.card, onSurface = c.text, surfaceVariant = c.chip,
             onSurfaceVariant = c.muted, surfaceContainer = c.card, surfaceContainerHigh = c.card,

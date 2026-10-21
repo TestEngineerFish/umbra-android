@@ -1,0 +1,1387 @@
+{
+  "$comment": "主题 tokens 判据（规格 v1.1）的跨语言用例：Node scripts/lib/theme.mjs 与 Umbra 服务端 private_ai_assistant/theme_tokens.py 都要逐条对上。expect = 该红在哪几条规则上（去重排序，空 = 过）；paths = 出问题的位置（T1 的路径写法各家 schema 校验器不同，不比）；pairs = T3 不过的「套|字|底」；warnings = 作者自查给 T7 提示的位置（锁死键）。改判据后用 node scripts/test-validate.mjs 看哪条变了，**想清楚再改 expect**。",
+  "cases": [
+    {
+      "name": "默认主题（sdk/theme-base.json，20 键全量）",
+      "tokens": {
+        "light": {
+          "bg": "#F6F5F2",
+          "card": "#FFFFFF",
+          "titlebar": "#EFEDE8",
+          "rail": "#FBFAF8",
+          "chip": "#F2F0EC",
+          "hover": "#F1EFEA",
+          "track": "#EDEBE6",
+          "nav": "#15110E",
+          "userBubble": "#EAF1F7",
+          "border": "#E6E3DC",
+          "borderSoft": "#EEEBE4",
+          "text": "#1F2320",
+          "muted": "#656B65",
+          "inkQuiet": "#5B615B",
+          "faint": "#9A9992",
+          "accent": "#E8590C",
+          "accentDeep": "#C2410C",
+          "accentSoft": "#FFF1E6",
+          "accentText": "#9A3412",
+          "onAccent": "#FFFFFF"
+        },
+        "dark": {
+          "bg": "#1C1A17",
+          "card": "#232019",
+          "titlebar": "#1C1A17",
+          "rail": "#1F1C18",
+          "chip": "#2A251F",
+          "hover": "#2A251F",
+          "track": "#302B24",
+          "nav": "#15110E",
+          "userBubble": "#2B2620",
+          "border": "#332E26",
+          "borderSoft": "#2B2721",
+          "text": "#EDEAE3",
+          "muted": "#9A938A",
+          "inkQuiet": "#A79E92",
+          "faint": "#6E675E",
+          "accent": "#E8590C",
+          "accentDeep": "#C2410C",
+          "accentSoft": "#E8590C29",
+          "accentText": "#F0A878",
+          "onAccent": "#FFFFFF"
+        }
+      },
+      "expect": []
+    },
+    {
+      "name": "官方主题 · 海盐",
+      "tokens": {
+        "light": {
+          "bg": "#F2F5F8",
+          "card": "#FFFFFF",
+          "titlebar": "#E9EEF3",
+          "rail": "#F8FAFC",
+          "chip": "#EBF0F5",
+          "hover": "#E9EEF4",
+          "track": "#E3E9F0",
+          "nav": "#0E1620",
+          "userBubble": "#E8EEFC",
+          "border": "#DAE2EA",
+          "borderSoft": "#E6ECF2",
+          "text": "#1A2230",
+          "muted": "#566273",
+          "inkQuiet": "#4D5868",
+          "faint": "#8F9AA8",
+          "accent": "#3B5BDB",
+          "accentDeep": "#2E48B5",
+          "accentSoft": "#EAEFFD",
+          "accentText": "#2C45AC",
+          "onAccent": "#FFFFFF"
+        },
+        "dark": {
+          "bg": "#12171E",
+          "card": "#182029",
+          "titlebar": "#12171E",
+          "rail": "#151B23",
+          "chip": "#1F2833",
+          "hover": "#1F2833",
+          "track": "#26303C",
+          "nav": "#0A0F15",
+          "userBubble": "#1D2940",
+          "border": "#2A3542",
+          "borderSoft": "#222C37",
+          "text": "#E6EBF1",
+          "muted": "#93A0AF",
+          "inkQuiet": "#9DAAB9",
+          "faint": "#5F6B79",
+          "accent": "#5B7BF0",
+          "accentDeep": "#4A67D6",
+          "accentSoft": "#5B7BF033",
+          "accentText": "#A9BCFF",
+          "onAccent": "#FFFFFF"
+        }
+      },
+      "expect": []
+    },
+    {
+      "name": "官方主题 · 石墨（深色强调实底上是深字）",
+      "tokens": {
+        "light": {
+          "bg": "#F4F4F5",
+          "card": "#FFFFFF",
+          "titlebar": "#ECECEE",
+          "rail": "#FAFAFA",
+          "chip": "#EFEFF1",
+          "hover": "#EDEDEF",
+          "track": "#E7E7EA",
+          "nav": "#161618",
+          "userBubble": "#EFEBF0",
+          "border": "#E2E2E5",
+          "borderSoft": "#ECECEE",
+          "text": "#1E1E21",
+          "muted": "#606067",
+          "inkQuiet": "#57575E",
+          "faint": "#9A9AA1",
+          "accent": "#7E5D77",
+          "accentDeep": "#684B62",
+          "accentSoft": "#F4EEF3",
+          "accentText": "#6A4A63",
+          "onAccent": "#FFFFFF"
+        },
+        "dark": {
+          "bg": "#18181A",
+          "card": "#1F1F22",
+          "titlebar": "#18181A",
+          "rail": "#1B1B1D",
+          "chip": "#27272B",
+          "hover": "#27272B",
+          "track": "#2E2E33",
+          "nav": "#111113",
+          "userBubble": "#28252B",
+          "border": "#313136",
+          "borderSoft": "#28282C",
+          "text": "#EAEAEC",
+          "muted": "#9C9CA3",
+          "inkQuiet": "#A6A6AD",
+          "faint": "#6A6A71",
+          "accent": "#B08AA6",
+          "accentDeep": "#C39FB9",
+          "accentSoft": "#B08AA62E",
+          "accentText": "#D4B6CC",
+          "onAccent": "#1A1A1C"
+        }
+      },
+      "expect": []
+    },
+    {
+      "name": "测试向量那份 tokens.json（含 #RRGGBBAA 与平台覆盖）",
+      "tokens": {
+        "light": {
+          "bg": "#F2F5F8",
+          "card": "#FFFFFF",
+          "titlebar": "#E9EEF3",
+          "rail": "#F8FAFC",
+          "chip": "#EBF0F5",
+          "hover": "#E9EEF4",
+          "track": "#E3E9F0",
+          "nav": "#0E1620",
+          "userBubble": "#E8EEFC",
+          "border": "#DAE2EA",
+          "borderSoft": "#E6ECF2",
+          "text": "#1A2230",
+          "muted": "#566273",
+          "inkQuiet": "#4D5868",
+          "faint": "#8F9AA8",
+          "accent": "#3B5BDB",
+          "accentDeep": "#2E48B5",
+          "accentSoft": "#EAEFFD",
+          "accentText": "#2C45AC",
+          "onAccent": "#FFFFFF"
+        },
+        "dark": {
+          "bg": "#12171E",
+          "card": "#182029",
+          "titlebar": "#12171E",
+          "rail": "#151B23",
+          "chip": "#1F2833",
+          "hover": "#1F2833",
+          "track": "#26303C",
+          "nav": "#0A0F15",
+          "userBubble": "#1D2940",
+          "border": "#2A3542",
+          "borderSoft": "#222C37",
+          "text": "#E6EBF1",
+          "muted": "#93A0AF",
+          "inkQuiet": "#9DAAB9",
+          "faint": "#5F6B79",
+          "accent": "#5B7BF0",
+          "accentDeep": "#4A67D6",
+          "accentSoft": "#5B7BF033",
+          "accentText": "#A9BCFF",
+          "onAccent": "#FFFFFF"
+        },
+        "platforms": {
+          "ios": {
+            "light": {
+              "bg": "#F7F9FC"
+            }
+          }
+        }
+      },
+      "expect": []
+    },
+    {
+      "name": "小写十六进制也认",
+      "tokens": {
+        "light": {
+          "bg": "#F6F5F2",
+          "card": "#FFFFFF",
+          "titlebar": "#EFEDE8",
+          "rail": "#FBFAF8",
+          "chip": "#F2F0EC",
+          "hover": "#F1EFEA",
+          "track": "#EDEBE6",
+          "nav": "#15110E",
+          "userBubble": "#EAF1F7",
+          "border": "#E6E3DC",
+          "borderSoft": "#EEEBE4",
+          "text": "#1F2320",
+          "muted": "#656B65",
+          "inkQuiet": "#5B615B",
+          "faint": "#9A9992",
+          "accent": "#e8590c",
+          "accentDeep": "#C2410C",
+          "accentSoft": "#FFF1E6",
+          "accentText": "#9A3412",
+          "onAccent": "#FFFFFF"
+        },
+        "dark": {
+          "bg": "#1C1A17",
+          "card": "#232019",
+          "titlebar": "#1C1A17",
+          "rail": "#1F1C18",
+          "chip": "#2A251F",
+          "hover": "#2A251F",
+          "track": "#302B24",
+          "nav": "#15110E",
+          "userBubble": "#2B2620",
+          "border": "#332E26",
+          "borderSoft": "#2B2721",
+          "text": "#EDEAE3",
+          "muted": "#9A938A",
+          "inkQuiet": "#A79E92",
+          "faint": "#6E675E",
+          "accent": "#E8590C",
+          "accentDeep": "#C2410C",
+          "accentSoft": "#E8590C29",
+          "accentText": "#F0A878",
+          "onAccent": "#FFFFFF"
+        }
+      },
+      "expect": []
+    },
+    {
+      "name": "缺一个必填键（深色少 inkQuiet）不回落、直接拒",
+      "tokens": {
+        "light": {
+          "bg": "#F6F5F2",
+          "card": "#FFFFFF",
+          "titlebar": "#EFEDE8",
+          "rail": "#FBFAF8",
+          "chip": "#F2F0EC",
+          "hover": "#F1EFEA",
+          "track": "#EDEBE6",
+          "nav": "#15110E",
+          "userBubble": "#EAF1F7",
+          "border": "#E6E3DC",
+          "borderSoft": "#EEEBE4",
+          "text": "#1F2320",
+          "muted": "#656B65",
+          "inkQuiet": "#5B615B",
+          "faint": "#9A9992",
+          "accent": "#E8590C",
+          "accentDeep": "#C2410C",
+          "accentSoft": "#FFF1E6",
+          "accentText": "#9A3412",
+          "onAccent": "#FFFFFF"
+        },
+        "dark": {
+          "bg": "#1C1A17",
+          "card": "#232019",
+          "titlebar": "#1C1A17",
+          "rail": "#1F1C18",
+          "chip": "#2A251F",
+          "hover": "#2A251F",
+          "track": "#302B24",
+          "nav": "#15110E",
+          "userBubble": "#2B2620",
+          "border": "#332E26",
+          "borderSoft": "#2B2721",
+          "text": "#EDEAE3",
+          "muted": "#9A938A",
+          "faint": "#6E675E",
+          "accent": "#E8590C",
+          "accentDeep": "#C2410C",
+          "accentSoft": "#E8590C29",
+          "accentText": "#F0A878",
+          "onAccent": "#FFFFFF"
+        }
+      },
+      "expect": [
+        "T1"
+      ]
+    },
+    {
+      "name": "两档都空着不再合法（v1.1 起 20 键必填）",
+      "tokens": {
+        "light": {},
+        "dark": {}
+      },
+      "expect": [
+        "T1"
+      ]
+    },
+    {
+      "name": "三位简写 #FFF 不收",
+      "tokens": {
+        "light": {
+          "bg": "#FFF",
+          "card": "#FFFFFF",
+          "titlebar": "#EFEDE8",
+          "rail": "#FBFAF8",
+          "chip": "#F2F0EC",
+          "hover": "#F1EFEA",
+          "track": "#EDEBE6",
+          "nav": "#15110E",
+          "userBubble": "#EAF1F7",
+          "border": "#E6E3DC",
+          "borderSoft": "#EEEBE4",
+          "text": "#1F2320",
+          "muted": "#656B65",
+          "inkQuiet": "#5B615B",
+          "faint": "#9A9992",
+          "accent": "#E8590C",
+          "accentDeep": "#C2410C",
+          "accentSoft": "#FFF1E6",
+          "accentText": "#9A3412",
+          "onAccent": "#FFFFFF"
+        },
+        "dark": {
+          "bg": "#1C1A17",
+          "card": "#232019",
+          "titlebar": "#1C1A17",
+          "rail": "#1F1C18",
+          "chip": "#2A251F",
+          "hover": "#2A251F",
+          "track": "#302B24",
+          "nav": "#15110E",
+          "userBubble": "#2B2620",
+          "border": "#332E26",
+          "borderSoft": "#2B2721",
+          "text": "#EDEAE3",
+          "muted": "#9A938A",
+          "inkQuiet": "#A79E92",
+          "faint": "#6E675E",
+          "accent": "#E8590C",
+          "accentDeep": "#C2410C",
+          "accentSoft": "#E8590C29",
+          "accentText": "#F0A878",
+          "onAccent": "#FFFFFF"
+        }
+      },
+      "expect": [
+        "T1"
+      ]
+    },
+    {
+      "name": "rgba() 字符串不收",
+      "tokens": {
+        "light": {
+          "bg": "#F6F5F2",
+          "card": "#FFFFFF",
+          "titlebar": "#EFEDE8",
+          "rail": "#FBFAF8",
+          "chip": "#F2F0EC",
+          "hover": "#F1EFEA",
+          "track": "#EDEBE6",
+          "nav": "#15110E",
+          "userBubble": "#EAF1F7",
+          "border": "#E6E3DC",
+          "borderSoft": "#EEEBE4",
+          "text": "#1F2320",
+          "muted": "#656B65",
+          "inkQuiet": "#5B615B",
+          "faint": "#9A9992",
+          "accent": "#E8590C",
+          "accentDeep": "#C2410C",
+          "accentSoft": "#FFF1E6",
+          "accentText": "#9A3412",
+          "onAccent": "#FFFFFF"
+        },
+        "dark": {
+          "bg": "#1C1A17",
+          "card": "#232019",
+          "titlebar": "#1C1A17",
+          "rail": "#1F1C18",
+          "chip": "#2A251F",
+          "hover": "#2A251F",
+          "track": "#302B24",
+          "nav": "#15110E",
+          "userBubble": "#2B2620",
+          "border": "#332E26",
+          "borderSoft": "#2B2721",
+          "text": "#EDEAE3",
+          "muted": "#9A938A",
+          "inkQuiet": "#A79E92",
+          "faint": "#6E675E",
+          "accent": "#E8590C",
+          "accentDeep": "#C2410C",
+          "accentSoft": "rgba(232,89,12,.16)",
+          "accentText": "#F0A878",
+          "onAccent": "#FFFFFF"
+        }
+      },
+      "expect": [
+        "T1"
+      ]
+    },
+    {
+      "name": "值不是字符串",
+      "tokens": {
+        "light": {
+          "bg": 16777215,
+          "card": "#FFFFFF",
+          "titlebar": "#EFEDE8",
+          "rail": "#FBFAF8",
+          "chip": "#F2F0EC",
+          "hover": "#F1EFEA",
+          "track": "#EDEBE6",
+          "nav": "#15110E",
+          "userBubble": "#EAF1F7",
+          "border": "#E6E3DC",
+          "borderSoft": "#EEEBE4",
+          "text": "#1F2320",
+          "muted": "#656B65",
+          "inkQuiet": "#5B615B",
+          "faint": "#9A9992",
+          "accent": "#E8590C",
+          "accentDeep": "#C2410C",
+          "accentSoft": "#FFF1E6",
+          "accentText": "#9A3412",
+          "onAccent": "#FFFFFF"
+        },
+        "dark": {
+          "bg": "#1C1A17",
+          "card": "#232019",
+          "titlebar": "#1C1A17",
+          "rail": "#1F1C18",
+          "chip": "#2A251F",
+          "hover": "#2A251F",
+          "track": "#302B24",
+          "nav": "#15110E",
+          "userBubble": "#2B2620",
+          "border": "#332E26",
+          "borderSoft": "#2B2721",
+          "text": "#EDEAE3",
+          "muted": "#9A938A",
+          "inkQuiet": "#A79E92",
+          "faint": "#6E675E",
+          "accent": "#E8590C",
+          "accentDeep": "#C2410C",
+          "accentSoft": "#E8590C29",
+          "accentText": "#F0A878",
+          "onAccent": "#FFFFFF"
+        }
+      },
+      "expect": [
+        "T1"
+      ]
+    },
+    {
+      "name": "未知键（PC 内部名 orange）",
+      "tokens": {
+        "light": {
+          "bg": "#F6F5F2",
+          "card": "#FFFFFF",
+          "titlebar": "#EFEDE8",
+          "rail": "#FBFAF8",
+          "chip": "#F2F0EC",
+          "hover": "#F1EFEA",
+          "track": "#EDEBE6",
+          "nav": "#15110E",
+          "userBubble": "#EAF1F7",
+          "border": "#E6E3DC",
+          "borderSoft": "#EEEBE4",
+          "text": "#1F2320",
+          "muted": "#656B65",
+          "inkQuiet": "#5B615B",
+          "faint": "#9A9992",
+          "accent": "#E8590C",
+          "accentDeep": "#C2410C",
+          "accentSoft": "#FFF1E6",
+          "accentText": "#9A3412",
+          "onAccent": "#FFFFFF",
+          "orange": "#2F6FEB"
+        },
+        "dark": {
+          "bg": "#1C1A17",
+          "card": "#232019",
+          "titlebar": "#1C1A17",
+          "rail": "#1F1C18",
+          "chip": "#2A251F",
+          "hover": "#2A251F",
+          "track": "#302B24",
+          "nav": "#15110E",
+          "userBubble": "#2B2620",
+          "border": "#332E26",
+          "borderSoft": "#2B2721",
+          "text": "#EDEAE3",
+          "muted": "#9A938A",
+          "inkQuiet": "#A79E92",
+          "faint": "#6E675E",
+          "accent": "#E8590C",
+          "accentDeep": "#C2410C",
+          "accentSoft": "#E8590C29",
+          "accentText": "#F0A878",
+          "onAccent": "#FFFFFF"
+        }
+      },
+      "expect": [
+        "T1"
+      ]
+    },
+    {
+      "name": "派生值不是主题键（inkStrong = text，主题不写）",
+      "tokens": {
+        "light": {
+          "bg": "#F6F5F2",
+          "card": "#FFFFFF",
+          "titlebar": "#EFEDE8",
+          "rail": "#FBFAF8",
+          "chip": "#F2F0EC",
+          "hover": "#F1EFEA",
+          "track": "#EDEBE6",
+          "nav": "#15110E",
+          "userBubble": "#EAF1F7",
+          "border": "#E6E3DC",
+          "borderSoft": "#EEEBE4",
+          "text": "#1F2320",
+          "muted": "#656B65",
+          "inkQuiet": "#5B615B",
+          "faint": "#9A9992",
+          "accent": "#E8590C",
+          "accentDeep": "#C2410C",
+          "accentSoft": "#FFF1E6",
+          "accentText": "#9A3412",
+          "onAccent": "#FFFFFF",
+          "inkStrong": "#1F2320"
+        },
+        "dark": {
+          "bg": "#1C1A17",
+          "card": "#232019",
+          "titlebar": "#1C1A17",
+          "rail": "#1F1C18",
+          "chip": "#2A251F",
+          "hover": "#2A251F",
+          "track": "#302B24",
+          "nav": "#15110E",
+          "userBubble": "#2B2620",
+          "border": "#332E26",
+          "borderSoft": "#2B2721",
+          "text": "#EDEAE3",
+          "muted": "#9A938A",
+          "inkQuiet": "#A79E92",
+          "faint": "#6E675E",
+          "accent": "#E8590C",
+          "accentDeep": "#C2410C",
+          "accentSoft": "#E8590C29",
+          "accentText": "#F0A878",
+          "onAccent": "#FFFFFF"
+        }
+      },
+      "expect": [
+        "T1"
+      ]
+    },
+    {
+      "name": "缺 dark",
+      "tokens": {
+        "light": {
+          "bg": "#F6F5F2",
+          "card": "#FFFFFF",
+          "titlebar": "#EFEDE8",
+          "rail": "#FBFAF8",
+          "chip": "#F2F0EC",
+          "hover": "#F1EFEA",
+          "track": "#EDEBE6",
+          "nav": "#15110E",
+          "userBubble": "#EAF1F7",
+          "border": "#E6E3DC",
+          "borderSoft": "#EEEBE4",
+          "text": "#1F2320",
+          "muted": "#656B65",
+          "inkQuiet": "#5B615B",
+          "faint": "#9A9992",
+          "accent": "#E8590C",
+          "accentDeep": "#C2410C",
+          "accentSoft": "#FFF1E6",
+          "accentText": "#9A3412",
+          "onAccent": "#FFFFFF"
+        }
+      },
+      "expect": [
+        "T1"
+      ]
+    },
+    {
+      "name": "未知平台 web",
+      "tokens": {
+        "light": {
+          "bg": "#F6F5F2",
+          "card": "#FFFFFF",
+          "titlebar": "#EFEDE8",
+          "rail": "#FBFAF8",
+          "chip": "#F2F0EC",
+          "hover": "#F1EFEA",
+          "track": "#EDEBE6",
+          "nav": "#15110E",
+          "userBubble": "#EAF1F7",
+          "border": "#E6E3DC",
+          "borderSoft": "#EEEBE4",
+          "text": "#1F2320",
+          "muted": "#656B65",
+          "inkQuiet": "#5B615B",
+          "faint": "#9A9992",
+          "accent": "#E8590C",
+          "accentDeep": "#C2410C",
+          "accentSoft": "#FFF1E6",
+          "accentText": "#9A3412",
+          "onAccent": "#FFFFFF"
+        },
+        "dark": {
+          "bg": "#1C1A17",
+          "card": "#232019",
+          "titlebar": "#1C1A17",
+          "rail": "#1F1C18",
+          "chip": "#2A251F",
+          "hover": "#2A251F",
+          "track": "#302B24",
+          "nav": "#15110E",
+          "userBubble": "#2B2620",
+          "border": "#332E26",
+          "borderSoft": "#2B2721",
+          "text": "#EDEAE3",
+          "muted": "#9A938A",
+          "inkQuiet": "#A79E92",
+          "faint": "#6E675E",
+          "accent": "#E8590C",
+          "accentDeep": "#C2410C",
+          "accentSoft": "#E8590C29",
+          "accentText": "#F0A878",
+          "onAccent": "#FFFFFF"
+        },
+        "platforms": {
+          "web": {
+            "light": {
+              "bg": "#FFFFFF"
+            }
+          }
+        }
+      },
+      "expect": [
+        "T1"
+      ]
+    },
+    {
+      "name": "顶层多出来的键",
+      "tokens": {
+        "light": {
+          "bg": "#F6F5F2",
+          "card": "#FFFFFF",
+          "titlebar": "#EFEDE8",
+          "rail": "#FBFAF8",
+          "chip": "#F2F0EC",
+          "hover": "#F1EFEA",
+          "track": "#EDEBE6",
+          "nav": "#15110E",
+          "userBubble": "#EAF1F7",
+          "border": "#E6E3DC",
+          "borderSoft": "#EEEBE4",
+          "text": "#1F2320",
+          "muted": "#656B65",
+          "inkQuiet": "#5B615B",
+          "faint": "#9A9992",
+          "accent": "#E8590C",
+          "accentDeep": "#C2410C",
+          "accentSoft": "#FFF1E6",
+          "accentText": "#9A3412",
+          "onAccent": "#FFFFFF"
+        },
+        "dark": {
+          "bg": "#1C1A17",
+          "card": "#232019",
+          "titlebar": "#1C1A17",
+          "rail": "#1F1C18",
+          "chip": "#2A251F",
+          "hover": "#2A251F",
+          "track": "#302B24",
+          "nav": "#15110E",
+          "userBubble": "#2B2620",
+          "border": "#332E26",
+          "borderSoft": "#2B2721",
+          "text": "#EDEAE3",
+          "muted": "#9A938A",
+          "inkQuiet": "#A79E92",
+          "faint": "#6E675E",
+          "accent": "#E8590C",
+          "accentDeep": "#C2410C",
+          "accentSoft": "#E8590C29",
+          "accentText": "#F0A878",
+          "onAccent": "#FFFFFF"
+        },
+        "css": ":root{}"
+      },
+      "expect": [
+        "T1"
+      ]
+    },
+    {
+      "name": "锁死键写了不报错（只给作者一条 T7 提示），也不生效",
+      "tokens": {
+        "light": {
+          "bg": "#F6F5F2",
+          "card": "#FFFFFF",
+          "titlebar": "#EFEDE8",
+          "rail": "#FBFAF8",
+          "chip": "#F2F0EC",
+          "hover": "#F1EFEA",
+          "track": "#EDEBE6",
+          "nav": "#15110E",
+          "userBubble": "#EAF1F7",
+          "border": "#E6E3DC",
+          "borderSoft": "#EEEBE4",
+          "text": "#1F2320",
+          "muted": "#656B65",
+          "inkQuiet": "#5B615B",
+          "faint": "#9A9992",
+          "accent": "#E8590C",
+          "accentDeep": "#C2410C",
+          "accentSoft": "#FFF1E6",
+          "accentText": "#9A3412",
+          "onAccent": "#FFFFFF",
+          "danger": "#7C3AED",
+          "warningText": "#FFFF00"
+        },
+        "dark": {
+          "bg": "#1C1A17",
+          "card": "#232019",
+          "titlebar": "#1C1A17",
+          "rail": "#1F1C18",
+          "chip": "#2A251F",
+          "hover": "#2A251F",
+          "track": "#302B24",
+          "nav": "#15110E",
+          "userBubble": "#2B2620",
+          "border": "#332E26",
+          "borderSoft": "#2B2721",
+          "text": "#EDEAE3",
+          "muted": "#9A938A",
+          "inkQuiet": "#A79E92",
+          "faint": "#6E675E",
+          "accent": "#E8590C",
+          "accentDeep": "#C2410C",
+          "accentSoft": "#E8590C29",
+          "accentText": "#F0A878",
+          "onAccent": "#FFFFFF"
+        }
+      },
+      "expect": [],
+      "warnings": [
+        "$.light.danger",
+        "$.light.warningText"
+      ]
+    },
+    {
+      "name": "锁死色落在新底上也要过线（浅色底压暗，warningText / dangerText / success 不过）",
+      "tokens": {
+        "light": {
+          "bg": "#D6CFC2",
+          "card": "#D9D2C5",
+          "titlebar": "#EFEDE8",
+          "rail": "#DCD5C8",
+          "chip": "#F2F0EC",
+          "hover": "#F1EFEA",
+          "track": "#EDEBE6",
+          "nav": "#15110E",
+          "userBubble": "#EAF1F7",
+          "border": "#E6E3DC",
+          "borderSoft": "#EEEBE4",
+          "text": "#1F2320",
+          "muted": "#656B65",
+          "inkQuiet": "#5B615B",
+          "faint": "#9A9992",
+          "accent": "#E8590C",
+          "accentDeep": "#C2410C",
+          "accentSoft": "#FFF1E6",
+          "accentText": "#9A3412",
+          "onAccent": "#FFFFFF"
+        },
+        "dark": {
+          "bg": "#1C1A17",
+          "card": "#232019",
+          "titlebar": "#1C1A17",
+          "rail": "#1F1C18",
+          "chip": "#2A251F",
+          "hover": "#2A251F",
+          "track": "#302B24",
+          "nav": "#15110E",
+          "userBubble": "#2B2620",
+          "border": "#332E26",
+          "borderSoft": "#2B2721",
+          "text": "#EDEAE3",
+          "muted": "#9A938A",
+          "inkQuiet": "#A79E92",
+          "faint": "#6E675E",
+          "accent": "#E8590C",
+          "accentDeep": "#C2410C",
+          "accentSoft": "#E8590C29",
+          "accentText": "#F0A878",
+          "onAccent": "#FFFFFF"
+        }
+      },
+      "expect": [
+        "T3"
+      ],
+      "paths": [
+        "$.light.accent",
+        "$.light.border",
+        "$.light.dangerText",
+        "$.light.faint",
+        "$.light.muted",
+        "$.light.success",
+        "$.light.warningText"
+      ],
+      "pairs": [
+        "light|accent|bg",
+        "light|accent|card",
+        "light|accent|rail",
+        "light|border|rail",
+        "light|dangerText|bg",
+        "light|dangerText|card",
+        "light|faint|bg",
+        "light|faint|card",
+        "light|faint|rail",
+        "light|muted|bg",
+        "light|muted|card",
+        "light|muted|rail",
+        "light|success|bg",
+        "light|success|card",
+        "light|warningText|bg",
+        "light|warningText|card"
+      ]
+    },
+    {
+      "name": "正文对比度不够（浅色 text 用了 faint 的值）",
+      "tokens": {
+        "light": {
+          "bg": "#F6F5F2",
+          "card": "#FFFFFF",
+          "titlebar": "#EFEDE8",
+          "rail": "#FBFAF8",
+          "chip": "#F2F0EC",
+          "hover": "#F1EFEA",
+          "track": "#EDEBE6",
+          "nav": "#15110E",
+          "userBubble": "#EAF1F7",
+          "border": "#E6E3DC",
+          "borderSoft": "#EEEBE4",
+          "text": "#9A9992",
+          "muted": "#656B65",
+          "inkQuiet": "#5B615B",
+          "faint": "#9A9992",
+          "accent": "#E8590C",
+          "accentDeep": "#C2410C",
+          "accentSoft": "#FFF1E6",
+          "accentText": "#9A3412",
+          "onAccent": "#FFFFFF"
+        },
+        "dark": {
+          "bg": "#1C1A17",
+          "card": "#232019",
+          "titlebar": "#1C1A17",
+          "rail": "#1F1C18",
+          "chip": "#2A251F",
+          "hover": "#2A251F",
+          "track": "#302B24",
+          "nav": "#15110E",
+          "userBubble": "#2B2620",
+          "border": "#332E26",
+          "borderSoft": "#2B2721",
+          "text": "#EDEAE3",
+          "muted": "#9A938A",
+          "inkQuiet": "#A79E92",
+          "faint": "#6E675E",
+          "accent": "#E8590C",
+          "accentDeep": "#C2410C",
+          "accentSoft": "#E8590C29",
+          "accentText": "#F0A878",
+          "onAccent": "#FFFFFF"
+        }
+      },
+      "expect": [
+        "T3"
+      ],
+      "paths": [
+        "$.light.text"
+      ],
+      "pairs": [
+        "light|text|accentSoft",
+        "light|text|bg",
+        "light|text|card",
+        "light|text|chip",
+        "light|text|hover",
+        "light|text|rail",
+        "light|text|titlebar",
+        "light|text|track",
+        "light|text|userBubble"
+      ]
+    },
+    {
+      "name": "强调实底上的字不够（深色 onAccent 用了 accentText 的值）",
+      "tokens": {
+        "light": {
+          "bg": "#F6F5F2",
+          "card": "#FFFFFF",
+          "titlebar": "#EFEDE8",
+          "rail": "#FBFAF8",
+          "chip": "#F2F0EC",
+          "hover": "#F1EFEA",
+          "track": "#EDEBE6",
+          "nav": "#15110E",
+          "userBubble": "#EAF1F7",
+          "border": "#E6E3DC",
+          "borderSoft": "#EEEBE4",
+          "text": "#1F2320",
+          "muted": "#656B65",
+          "inkQuiet": "#5B615B",
+          "faint": "#9A9992",
+          "accent": "#E8590C",
+          "accentDeep": "#C2410C",
+          "accentSoft": "#FFF1E6",
+          "accentText": "#9A3412",
+          "onAccent": "#FFFFFF"
+        },
+        "dark": {
+          "bg": "#1C1A17",
+          "card": "#232019",
+          "titlebar": "#1C1A17",
+          "rail": "#1F1C18",
+          "chip": "#2A251F",
+          "hover": "#2A251F",
+          "track": "#302B24",
+          "nav": "#15110E",
+          "userBubble": "#2B2620",
+          "border": "#332E26",
+          "borderSoft": "#2B2721",
+          "text": "#EDEAE3",
+          "muted": "#9A938A",
+          "inkQuiet": "#A79E92",
+          "faint": "#6E675E",
+          "accent": "#E8590C",
+          "accentDeep": "#C2410C",
+          "accentSoft": "#E8590C29",
+          "accentText": "#F0A878",
+          "onAccent": "#F0A878"
+        }
+      },
+      "expect": [
+        "T3"
+      ],
+      "paths": [
+        "$.dark.onAccent"
+      ],
+      "pairs": [
+        "dark|onAccent|accent",
+        "dark|onAccent|accentDeep"
+      ]
+    },
+    {
+      "name": "半透明软底要先合成再量（深色 accentSoft 不透明度拉到 80%）",
+      "tokens": {
+        "light": {
+          "bg": "#F6F5F2",
+          "card": "#FFFFFF",
+          "titlebar": "#EFEDE8",
+          "rail": "#FBFAF8",
+          "chip": "#F2F0EC",
+          "hover": "#F1EFEA",
+          "track": "#EDEBE6",
+          "nav": "#15110E",
+          "userBubble": "#EAF1F7",
+          "border": "#E6E3DC",
+          "borderSoft": "#EEEBE4",
+          "text": "#1F2320",
+          "muted": "#656B65",
+          "inkQuiet": "#5B615B",
+          "faint": "#9A9992",
+          "accent": "#E8590C",
+          "accentDeep": "#C2410C",
+          "accentSoft": "#FFF1E6",
+          "accentText": "#9A3412",
+          "onAccent": "#FFFFFF"
+        },
+        "dark": {
+          "bg": "#1C1A17",
+          "card": "#232019",
+          "titlebar": "#1C1A17",
+          "rail": "#1F1C18",
+          "chip": "#2A251F",
+          "hover": "#2A251F",
+          "track": "#302B24",
+          "nav": "#15110E",
+          "userBubble": "#2B2620",
+          "border": "#332E26",
+          "borderSoft": "#2B2721",
+          "text": "#EDEAE3",
+          "muted": "#9A938A",
+          "inkQuiet": "#A79E92",
+          "faint": "#6E675E",
+          "accent": "#E8590C",
+          "accentDeep": "#C2410C",
+          "accentSoft": "#E8590CCC",
+          "accentText": "#F0A878",
+          "onAccent": "#FFFFFF"
+        }
+      },
+      "expect": [
+        "T3"
+      ],
+      "paths": [
+        "$.dark.accentText",
+        "$.dark.text"
+      ],
+      "pairs": [
+        "dark|accentText|accentSoft",
+        "dark|text|accentSoft"
+      ]
+    },
+    {
+      "name": "浅深颠倒（两档整套对调）",
+      "tokens": {
+        "light": {
+          "bg": "#1C1A17",
+          "card": "#232019",
+          "titlebar": "#1C1A17",
+          "rail": "#1F1C18",
+          "chip": "#2A251F",
+          "hover": "#2A251F",
+          "track": "#302B24",
+          "nav": "#15110E",
+          "userBubble": "#2B2620",
+          "border": "#332E26",
+          "borderSoft": "#2B2721",
+          "text": "#EDEAE3",
+          "muted": "#9A938A",
+          "inkQuiet": "#A79E92",
+          "faint": "#6E675E",
+          "accent": "#E8590C",
+          "accentDeep": "#C2410C",
+          "accentSoft": "#E8590C29",
+          "accentText": "#F0A878",
+          "onAccent": "#FFFFFF"
+        },
+        "dark": {
+          "bg": "#F6F5F2",
+          "card": "#FFFFFF",
+          "titlebar": "#EFEDE8",
+          "rail": "#FBFAF8",
+          "chip": "#F2F0EC",
+          "hover": "#F1EFEA",
+          "track": "#EDEBE6",
+          "nav": "#15110E",
+          "userBubble": "#EAF1F7",
+          "border": "#E6E3DC",
+          "borderSoft": "#EEEBE4",
+          "text": "#1F2320",
+          "muted": "#656B65",
+          "inkQuiet": "#5B615B",
+          "faint": "#9A9992",
+          "accent": "#E8590C",
+          "accentDeep": "#C2410C",
+          "accentSoft": "#FFF1E6",
+          "accentText": "#9A3412",
+          "onAccent": "#FFFFFF"
+        }
+      },
+      "expect": [
+        "T3",
+        "T4"
+      ],
+      "paths": [
+        "$.dark.bg",
+        "$.dark.card",
+        "$.dark.dangerText",
+        "$.dark.rail",
+        "$.dark.success",
+        "$.dark.titlebar",
+        "$.dark.warningText",
+        "$.light.bg",
+        "$.light.card",
+        "$.light.dangerText",
+        "$.light.rail",
+        "$.light.success",
+        "$.light.titlebar",
+        "$.light.warningText"
+      ],
+      "pairs": [
+        "dark|dangerText|bg",
+        "dark|dangerText|card",
+        "dark|dangerText|chip",
+        "dark|dangerText|hover",
+        "dark|success|bg",
+        "dark|success|card",
+        "dark|warningText|bg",
+        "dark|warningText|card",
+        "dark|warningText|chip",
+        "dark|warningText|hover",
+        "light|dangerText|bg",
+        "light|dangerText|card",
+        "light|dangerText|chip",
+        "light|dangerText|hover",
+        "light|success|bg",
+        "light|success|card",
+        "light|warningText|bg",
+        "light|warningText|card",
+        "light|warningText|chip",
+        "light|warningText|hover"
+      ]
+    },
+    {
+      "name": "nav 不够深（浅色 nav 用了中灰）",
+      "tokens": {
+        "light": {
+          "bg": "#F6F5F2",
+          "card": "#FFFFFF",
+          "titlebar": "#EFEDE8",
+          "rail": "#FBFAF8",
+          "chip": "#F2F0EC",
+          "hover": "#F1EFEA",
+          "track": "#EDEBE6",
+          "nav": "#6B6B6B",
+          "userBubble": "#EAF1F7",
+          "border": "#E6E3DC",
+          "borderSoft": "#EEEBE4",
+          "text": "#1F2320",
+          "muted": "#656B65",
+          "inkQuiet": "#5B615B",
+          "faint": "#9A9992",
+          "accent": "#E8590C",
+          "accentDeep": "#C2410C",
+          "accentSoft": "#FFF1E6",
+          "accentText": "#9A3412",
+          "onAccent": "#FFFFFF"
+        },
+        "dark": {
+          "bg": "#1C1A17",
+          "card": "#232019",
+          "titlebar": "#1C1A17",
+          "rail": "#1F1C18",
+          "chip": "#2A251F",
+          "hover": "#2A251F",
+          "track": "#302B24",
+          "nav": "#15110E",
+          "userBubble": "#2B2620",
+          "border": "#332E26",
+          "borderSoft": "#2B2721",
+          "text": "#EDEAE3",
+          "muted": "#9A938A",
+          "inkQuiet": "#A79E92",
+          "faint": "#6E675E",
+          "accent": "#E8590C",
+          "accentDeep": "#C2410C",
+          "accentSoft": "#E8590C29",
+          "accentText": "#F0A878",
+          "onAccent": "#FFFFFF"
+        }
+      },
+      "expect": [
+        "T3",
+        "T4"
+      ],
+      "paths": [
+        "$.light.accent",
+        "$.light.nav"
+      ],
+      "pairs": [
+        "light|accent|nav"
+      ]
+    },
+    {
+      "name": "bg 半透明",
+      "tokens": {
+        "light": {
+          "bg": "#F6F5F2CC",
+          "card": "#FFFFFF",
+          "titlebar": "#EFEDE8",
+          "rail": "#FBFAF8",
+          "chip": "#F2F0EC",
+          "hover": "#F1EFEA",
+          "track": "#EDEBE6",
+          "nav": "#15110E",
+          "userBubble": "#EAF1F7",
+          "border": "#E6E3DC",
+          "borderSoft": "#EEEBE4",
+          "text": "#1F2320",
+          "muted": "#656B65",
+          "inkQuiet": "#5B615B",
+          "faint": "#9A9992",
+          "accent": "#E8590C",
+          "accentDeep": "#C2410C",
+          "accentSoft": "#FFF1E6",
+          "accentText": "#9A3412",
+          "onAccent": "#FFFFFF"
+        },
+        "dark": {
+          "bg": "#1C1A17",
+          "card": "#232019",
+          "titlebar": "#1C1A17",
+          "rail": "#1F1C18",
+          "chip": "#2A251F",
+          "hover": "#2A251F",
+          "track": "#302B24",
+          "nav": "#15110E",
+          "userBubble": "#2B2620",
+          "border": "#332E26",
+          "borderSoft": "#2B2721",
+          "text": "#EDEAE3",
+          "muted": "#9A938A",
+          "inkQuiet": "#A79E92",
+          "faint": "#6E675E",
+          "accent": "#E8590C",
+          "accentDeep": "#C2410C",
+          "accentSoft": "#E8590C29",
+          "accentText": "#F0A878",
+          "onAccent": "#FFFFFF"
+        }
+      },
+      "expect": [
+        "T2"
+      ],
+      "paths": [
+        "$.light.bg"
+      ]
+    },
+    {
+      "name": "平台覆盖把对比度弄坏（只坏在 android 深色）",
+      "tokens": {
+        "light": {
+          "bg": "#F6F5F2",
+          "card": "#FFFFFF",
+          "titlebar": "#EFEDE8",
+          "rail": "#FBFAF8",
+          "chip": "#F2F0EC",
+          "hover": "#F1EFEA",
+          "track": "#EDEBE6",
+          "nav": "#15110E",
+          "userBubble": "#EAF1F7",
+          "border": "#E6E3DC",
+          "borderSoft": "#EEEBE4",
+          "text": "#1F2320",
+          "muted": "#656B65",
+          "inkQuiet": "#5B615B",
+          "faint": "#9A9992",
+          "accent": "#E8590C",
+          "accentDeep": "#C2410C",
+          "accentSoft": "#FFF1E6",
+          "accentText": "#9A3412",
+          "onAccent": "#FFFFFF"
+        },
+        "dark": {
+          "bg": "#1C1A17",
+          "card": "#232019",
+          "titlebar": "#1C1A17",
+          "rail": "#1F1C18",
+          "chip": "#2A251F",
+          "hover": "#2A251F",
+          "track": "#302B24",
+          "nav": "#15110E",
+          "userBubble": "#2B2620",
+          "border": "#332E26",
+          "borderSoft": "#2B2721",
+          "text": "#EDEAE3",
+          "muted": "#9A938A",
+          "inkQuiet": "#A79E92",
+          "faint": "#6E675E",
+          "accent": "#E8590C",
+          "accentDeep": "#C2410C",
+          "accentSoft": "#E8590C29",
+          "accentText": "#F0A878",
+          "onAccent": "#FFFFFF"
+        },
+        "platforms": {
+          "android": {
+            "dark": {
+              "muted": "#4A453F"
+            }
+          }
+        }
+      },
+      "expect": [
+        "T3"
+      ],
+      "paths": [
+        "$.platforms.android.dark.muted"
+      ],
+      "pairs": [
+        "android · dark|muted|bg",
+        "android · dark|muted|card",
+        "android · dark|muted|chip",
+        "android · dark|muted|hover",
+        "android · dark|muted|rail",
+        "android · dark|muted|titlebar",
+        "android · dark|muted|track",
+        "android · dark|muted|userBubble"
+      ]
+    },
+    {
+      "name": "自校准反例（themeKit.contrast.selfTest）：海盐深色 muted 换成 #7A8594，必须报 dark · muted 在 track 上",
+      "tokens": {
+        "light": {
+          "bg": "#F2F5F8",
+          "card": "#FFFFFF",
+          "titlebar": "#E9EEF3",
+          "rail": "#F8FAFC",
+          "chip": "#EBF0F5",
+          "hover": "#E9EEF4",
+          "track": "#E3E9F0",
+          "nav": "#0E1620",
+          "userBubble": "#E8EEFC",
+          "border": "#DAE2EA",
+          "borderSoft": "#E6ECF2",
+          "text": "#1A2230",
+          "muted": "#566273",
+          "inkQuiet": "#4D5868",
+          "faint": "#8F9AA8",
+          "accent": "#3B5BDB",
+          "accentDeep": "#2E48B5",
+          "accentSoft": "#EAEFFD",
+          "accentText": "#2C45AC",
+          "onAccent": "#FFFFFF"
+        },
+        "dark": {
+          "bg": "#12171E",
+          "card": "#182029",
+          "titlebar": "#12171E",
+          "rail": "#151B23",
+          "chip": "#1F2833",
+          "hover": "#1F2833",
+          "track": "#26303C",
+          "nav": "#0A0F15",
+          "userBubble": "#1D2940",
+          "border": "#2A3542",
+          "borderSoft": "#222C37",
+          "text": "#E6EBF1",
+          "muted": "#7A8594",
+          "inkQuiet": "#9DAAB9",
+          "faint": "#5F6B79",
+          "accent": "#5B7BF0",
+          "accentDeep": "#4A67D6",
+          "accentSoft": "#5B7BF033",
+          "accentText": "#A9BCFF",
+          "onAccent": "#FFFFFF"
+        }
+      },
+      "expect": [
+        "T3"
+      ],
+      "paths": [
+        "$.dark.muted"
+      ],
+      "pairs": [
+        "dark|muted|card",
+        "dark|muted|chip",
+        "dark|muted|hover",
+        "dark|muted|track",
+        "dark|muted|userBubble"
+      ]
+    }
+  ]
+}

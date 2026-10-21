@@ -157,6 +157,7 @@ export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
 | 执勤（含聊天里的早报卡、提议卡撤销、例程 / 关注 / 规则子页、今天预算） | 🟡 | 已对齐 iOS 4bad681；联网部分待真机 |
 | 使用记录（活跃上报 + 方格图） | 🟡 | |
 | 远程控制（WebRTC 控制端、快照降级、文件面板） | 🟡 | 已对齐 iOS 4bad681（规则 15 条用例）；服务端未部署，信令与视频全链路待真机联调；API 28–29 本机认证退到 BIOMETRIC_WEAK；文件面板「分享…」「存到「下载」」是 Android 自有文案 |
+| 主题（插件化：配色引擎、外观页、试用、回落卡、商城「主题」栏、装包验签、许可证、小组件跟随） | 🟡 | 对齐 iOS 02cf7a9 / 32de292；判据 159 条对拍（含 umbra-plugins 25 条跨语言用例与测试向量）；内置只有「默认」，海盐 / 石墨从商城装；**Android 卖付费主题**（积分买断，iOS 不卖）；许可证按账号（登出 / 换号清掉，读取核 sub）；Ed25519 手写（minSdk 28 没有系统实现）；拉目录 / 买 / 装 / 真签名待真机 |
 
 ### 系统集成
 | 功能 | 状态 | 说明 |
@@ -179,6 +180,8 @@ export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
 - 保险箱编辑页新建记录：iOS 每次自动保存都现取新 id，可能产生重复记录；Android 只取一次。
 - 保险箱恢复页 Secret Key 格式提示正则是旧形制，与真实的 `U1-…` 对不上（两端都画红框但不挡按钮）。
 - 单机模式下保险箱把请求闸的调试描述当离线原因显示；Android 改为未登录时安静回落本机。
+- 主题许可证：iOS 本机许可证整机一份、读取时不核账号（同 PC #128）；Android 登出 / 换号即清、读取核 `sub` 与记下的账号。
+- 主题试用到点：iOS 开着编辑页时多等 3 秒再退（SwiftUI 换根视图身份会丢草稿）；Compose 换配色只重组、不丢状态，Android 不用等。
 
 ### 技术债（不影响功能）
 - 聊天包 `ChatTaskKit` 与任务包 `TaskRetryRules` / `TaskSuspendRules` 有一份重复（文案已逐条核对一致），宜合成一份。
@@ -204,7 +207,7 @@ export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
 - 平台交互层按 Android 惯例替换，替换清单见第四节（底栏、返回、底部弹层、对话框、左滑）。
   iOS 稿里的「液态玻璃胶囊底栏」在 Android 上改为不透明的 M3 NavigationBar，色板仍用 Umbra token。
 - 平台差异的取舍已由 Claude Design 裁定：第 199 封 → `docs/design/答复实现侧-Android平台差异.md`（十四条 + 全局热区 48dp、字重映射），
-  2026-10-17 全部落地（e3a016c），回执第 201 封（九处〔判断〕待设计侧认），出图在 Claude Design 项目 `Android 端/Pages/平台差异.dc.html`。
+  2026-10-17 全部落地（e3a016c），回执第 201 封；201 / 202 / 203 设计侧均已答复并落地，出图在 Claude Design 项目 `Android 端/Pages/平台差异.dc.html`。
 
 ## 八、分期
 

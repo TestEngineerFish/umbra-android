@@ -357,7 +357,7 @@ private fun Thumb(label: String, removeLabel: String, onRemove: () -> Unit, fail
                 Modifier.align(Alignment.TopEnd).size(28.dp).clickable(role = Role.Button, onClick = onRemove).semantics { contentDescription = removeLabel },
                 contentAlignment = Alignment.Center,
             ) {
-                Box(Modifier.size(20.dp).clip(CircleShape).background(UmbraFixedColors.toastGlass), contentAlignment = Alignment.Center) {
+                Box(Modifier.size(20.dp).clip(CircleShape).background(UmbraTheme.colors.toastGlass), contentAlignment = Alignment.Center) {
                     UmbraIcon(UmbraIconPaths.x, Color.White, size = 12.dp, strokeWidth = 2.4f)
                 }
             }

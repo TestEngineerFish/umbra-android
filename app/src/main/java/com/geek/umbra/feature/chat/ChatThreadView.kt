@@ -463,7 +463,7 @@ fun ChatThreadPage(conv: String) {
                 // 标题带 26 头像：秘书=橙色圆 + 机器人，设备=圆角方块 + 显示器
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.size(26.dp).clip(RoundedCornerShape(if (isAssistant) 13.dp else 8.dp)).background(if (isAssistant) c.orange else c.chip), contentAlignment = Alignment.Center) {
-                        UmbraIcon(if (isAssistant) UmbraIconPaths.robot else UmbraIconPaths.monitor, if (isAssistant) Color.White else c.muted, size = 14.dp)
+                        UmbraIcon(if (isAssistant) UmbraIconPaths.robot else UmbraIconPaths.monitor, if (isAssistant) c.onAccent else c.muted, size = 14.dp)
                     }
                     Spacer(Modifier.width(7.dp))
                     Text(title, color = c.text, style = TextStyle(fontSize = 17.sp, fontWeight = FontWeight.SemiBold), maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -1025,7 +1025,7 @@ private fun RightButton(voiceMode: Boolean, hasDraft: Boolean, speechOk: Boolean
     val c = UmbraTheme.colors
     val icon = if (voiceMode) UmbraIconPaths.keyboard else if (hasDraft) UmbraIconPaths.send else UmbraIconPaths.mic
     val bg = if (voiceMode) c.orangeSoft else if (hasDraft) c.orange else c.chip
-    val fg = if (voiceMode) c.orangeText else if (hasDraft) Color.White else if (speechOk) c.muted else c.faint
+    val fg = if (voiceMode) c.orangeText else if (hasDraft) c.onAccent else if (speechOk) c.muted else c.faint
     val bc = if (voiceMode || hasDraft) c.orange else c.border
     val label = if (voiceMode) "打字输入" else if (hasDraft) "发送" else "语音输入"
     Box(Modifier.size(UmbraDimens.tapMin).clickable(role = Role.Button, onClick = onClick).semantics { contentDescription = label }, contentAlignment = Alignment.BottomCenter) {

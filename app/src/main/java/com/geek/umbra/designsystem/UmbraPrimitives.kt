@@ -187,7 +187,7 @@ fun UmbraButton(
     val c = UmbraTheme.colors
     val (bg, fg, border) = when {
         !enabled -> Triple(c.chip, c.faint, null)
-        kind == UmbraButtonKind.Primary -> Triple(c.orange, Color.White, null)
+        kind == UmbraButtonKind.Primary -> Triple(c.orange, c.onAccent, null)
         kind == UmbraButtonKind.Secondary -> Triple(c.card, c.text, c.borderSoft)
         kind == UmbraButtonKind.DangerOutline -> Triple(c.card, c.dangerText, c.borderSoft)
         else -> Triple(c.danger, c.onDanger, null)

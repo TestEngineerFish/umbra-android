@@ -176,7 +176,7 @@ private fun AutofillPanel(activity: FragmentActivity, parsed: ParsedFields, onPi
         // 顶栏：字标 + 标题 + 关闭
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(24.dp).clip(RoundedCornerShape(7.dp)).background(c.orange), contentAlignment = Alignment.Center) {
-                Text("U", color = androidx.compose.ui.graphics.Color.White, style = TextStyle(fontSize = 13.sp, fontWeight = UmbraType.weight650))
+                Text("U", color = c.onAccent, style = TextStyle(fontSize = 13.sp, fontWeight = UmbraType.weight650))
             }
             Spacer(Modifier.width(10.dp))
             Text("Umbra · 密码填充", color = c.text, style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.SemiBold), modifier = Modifier.weight(1f))

@@ -242,7 +242,7 @@ internal fun DutyPillButton(title: String, primary: Boolean, modifier: Modifier 
             contentAlignment = Alignment.Center,
         ) {
             Text(
-                title, color = if (primary) Color.White else c.text,
+                title, color = if (primary) c.onAccent else c.text,
                 style = TextStyle(fontSize = 15.sp, fontWeight = if (primary) FontWeight.SemiBold else FontWeight.Normal),
                 maxLines = 1, overflow = TextOverflow.Ellipsis,
             )

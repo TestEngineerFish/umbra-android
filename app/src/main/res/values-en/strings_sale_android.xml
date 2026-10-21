@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 见 values/strings_sale_android.xml。英文照 PC en.json 同名键；shopFoot / priceUnknown 是 Android 自有。 -->
+<resources>
+    <string name="android_quotaShop">Reset card / booster</string>
+    <string name="android_theme_priceN">%d credits</string>
+    <string name="android_theme_buyTitle">Buy “%s”?</string>
+    <string name="android_theme_buyBody">%d credits will be deducted. It\'s yours to keep.</string>
+    <string name="android_theme_buyBtn">Buy · %d credits</string>
+    <string name="android_theme_shopFoot">Get free themes directly, or buy paid ones once with credits. Themes you already own show here too.</string>
+    <string name="android_theme_priceUnknown">The price can\'t be read right now. Try again later.</string>
+</resources>

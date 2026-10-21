@@ -212,7 +212,7 @@ private fun Avatar(isSecretary: Boolean, online: Boolean) {
     Box(Modifier.size(48.dp).clip(shape).background(if (isSecretary) c.orange else c.chip), contentAlignment = Alignment.Center) {
         UmbraIcon(
             if (isSecretary) UmbraIconPaths.robot else UmbraIconPaths.monitor,
-            if (isSecretary) Color.White else if (online) c.muted else c.faint, size = 22.dp,
+            if (isSecretary) c.onAccent else if (online) c.muted else c.faint, size = 22.dp,
         )
     }
 }

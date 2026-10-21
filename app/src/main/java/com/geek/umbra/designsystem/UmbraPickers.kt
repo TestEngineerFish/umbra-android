@@ -248,7 +248,7 @@ fun UmbraDateTimePanel(
                     Modifier.weight(1f).height(UmbraDimens.buttonH).clip(RoundedCornerShape(50)).background(c.orange)
                         .clickable(role = Role.Button) { onConfirm(if (kind == UmbraPickerKind.Time) composeTime(hour, minute) else composeWhen()) },
                     contentAlignment = Alignment.Center,
-                ) { Text(AppGraph.context.getString(R.string.picker_confirm), color = Color.White, style = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.SemiBold)) }
+                ) { Text(AppGraph.context.getString(R.string.picker_confirm), color = c.onAccent, style = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.SemiBold)) }
             }
         }
     }
@@ -294,7 +294,7 @@ private fun CalendarGrid(
                         Text(
                             "${day.dayOfMonth}",
                             Modifier.alpha(if (disabled) 0.34f else 1f),
-                            color = when { disabled -> c.faint; on -> Color.White; other -> c.faint; else -> c.text },
+                            color = when { disabled -> c.faint; on -> c.onAccent; other -> c.faint; else -> c.text },
                             style = TextStyle(
                                 fontSize = 16.sp, fontFeatureSettings = "tnum",
                                 fontWeight = when { on -> FontWeight.SemiBold; isToday -> UmbraType.weight650; else -> FontWeight.Normal },

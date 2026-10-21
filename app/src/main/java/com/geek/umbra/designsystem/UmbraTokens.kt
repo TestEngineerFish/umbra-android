@@ -30,8 +30,17 @@ data class UmbraColorScheme(
     val chip: Color, val hover: Color, val track: Color,
     // 描边与文字
     val border: Color, val borderSoft: Color, val text: Color, val muted: Color, val faint: Color,
-    // 品牌
+    // 品牌。名字沿用 orange*（同 iOS：改名牵涉上千处引用），对应主题键 accent / accentDeep / accentSoft / accentText。
     val nav: Color, val orange: Color, val orangeDeep: Color, val orangeSoft: Color, val orangeText: Color,
+    /**
+     * 强调色**实底**上的字与图标（主题键 `onAccent`，主题插件化二期新加，iOS a95213a）。默认浅深都是白；
+     * 石墨主题深色那套是深字（强调色提亮了，白字压不住）。门槛只有 3.0，所以**用它的字一律 ≥ 600 字重**（规格 clientConstraints）。
+     */
+    val onAccent: Color,
+    /** 胶囊、徽章、标题栏上的中性字（主题键 `inkQuiet`，规格 v1.1）。取值同 PC `--ink-quiet`；只为 chip / titlebar / hover / track 四张底存在。 */
+    val inkQuiet: Color,
+    /** 吐司 / 浮条的深色玻璃底。没装主题是稿上的 #1C1915 88%；装着主题取规格派生值「nav 86%」（`derived`，批次 268）。 */
+    val toastGlass: Color,
     // 语义：实心那支给图标 / 描边 / 实底，**文字一律走 *Text 那支**（iOS swiftcheck「前景色支」）
     val success: Color, val successSoft: Color,
     val warning: Color, val warningSoft: Color,
@@ -50,6 +59,7 @@ val UmbraLight = UmbraColorScheme(
     muted = hex(0x656B65), faint = hex(0x9A9992),
     nav = hex(0x15110E), orange = hex(0xE8590C), orangeDeep = hex(0xC2410C),
     orangeSoft = hex(0xFFF1E6), orangeText = hex(0x9A3412),
+    onAccent = hex(0xFFFFFF), inkQuiet = hex(0x5B615B), toastGlass = hex(0x1C1915, 0.88f),
     success = hex(0x0F766E), successSoft = hex(0xE2F1EF),
     warning = hex(0xB45309), warningSoft = hex(0xFBEEDD),
     danger = hex(0xB42318), dangerSoft = hex(0xFBE9E7),
@@ -67,6 +77,7 @@ val UmbraDark = UmbraColorScheme(
     nav = hex(0x15110E), orange = hex(0xE8590C), orangeDeep = hex(0xC2410C),
     // 深色下软底是半透明：叠在 card 上才是设计稿量出来的那个颜色
     orangeSoft = hex(0xE8590C, 0.16f), orangeText = hex(0xF0A878),
+    onAccent = hex(0xFFFFFF), inkQuiet = hex(0xA79E92), toastGlass = hex(0x1C1915, 0.88f),
     success = hex(0x34B5A6), successSoft = hex(0x0F766E, 0.20f),
     warning = hex(0xD98A29), warningSoft = hex(0xB45309, 0.22f),
     danger = hex(0xE0675C), dangerSoft = hex(0xB42318, 0.22f),
@@ -75,10 +86,42 @@ val UmbraDark = UmbraColorScheme(
     badgeRed = hex(0xFF453A), userBubble = hex(0x1E2A35), deviceBubble = hex(0x2E2A25),
 )
 
+/**
+ * 套上当前主题：标了主题键的 token 先查调色板，查不到用内置值（回落顺序「主题 → 内置」，iOS `UmbraColor.dyn(theme:)` 的同一件事）。
+ * 调用点一个都不用改 —— 组件照旧写 `UmbraTheme.colors.orange`，换主题时整份 scheme 换掉。
+ * 语义四色、分类色、远程控制看 / 控两色、图片预览底**不接**：规格 `locked`，跨主题不变。
+ * `palette`：主题键 → `#RRGGBB(AA)`，就是这一档（浅或深）那一套；null = 默认主题，原样返回。
+ */
+fun UmbraColorScheme.themed(palette: Map<String, String>?): UmbraColorScheme {
+    if (palette == null) return this
+    fun k(key: String, fallback: Color) = palette[key]?.let(::themeColor) ?: fallback
+    val navC = k("nav", nav)
+    return copy(
+        bg = k("bg", bg), card = k("card", card), titlebar = k("titlebar", titlebar), rail = k("rail", rail),
+        chip = k("chip", chip), hover = k("hover", hover), track = k("track", track),
+        border = k("border", border), borderSoft = k("borderSoft", borderSoft),
+        text = k("text", text), muted = k("muted", muted), faint = k("faint", faint), inkQuiet = k("inkQuiet", inkQuiet),
+        nav = navC, orange = k("accent", orange), orangeDeep = k("accentDeep", orangeDeep),
+        orangeSoft = k("accentSoft", orangeSoft), orangeText = k("accentText", orangeText), onAccent = k("onAccent", onAccent),
+        userBubble = k("userBubble", userBubble),
+        toastGlass = if (palette.containsKey("nav")) navC.copy(alpha = 0.86f) else toastGlass,
+    )
+}
+
+/**
+ * `#RRGGBB` / `#RRGGBBAA`（主题包的写法，透明度在**最后**两位 —— 和 Compose `Color(0xAARRGGBB)` 相反）→ Color。形状不对回 null。
+ */
+fun themeColor(s: String): Color? {
+    val h = s.removePrefix("#")
+    if (h.length != 6 && h.length != 8) return null
+    val v = h.toLongOrNull(16) ?: return null
+    return if (h.length == 6) Color(0xFF000000 or v)
+    else Color(red = ((v shr 24) and 0xFF).toInt(), green = ((v shr 16) and 0xFF).toInt(), blue = ((v shr 8) and 0xFF).toInt(), alpha = (v and 0xFF).toInt())
+}
+
 /** 两个主题同值、不随外观变的颜色。 */
 object UmbraFixedColors {
     val viewerBg = hex(0x0B0A09)
-    val toastGlass = hex(0x1C1915, 0.88f)
     val onNavText = Color.White.copy(alpha = 0.92f)
     val onNavAccent = hex(0xF0A878)
     val scrim = Color.Black.copy(alpha = 0.32f)

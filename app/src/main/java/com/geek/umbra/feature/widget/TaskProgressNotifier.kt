@@ -399,7 +399,7 @@ object TaskProgressNotifier {
     private fun topupLabel(ctx: Context, wire: String?): String = ctx.getString(
         when (ReasonKind.of(wire)) {
             ReasonKind.NeedMembership -> R.string.vision_openMembership
-            ReasonKind.QuotaExhausted -> R.string.vision_quotaShop
+            ReasonKind.QuotaExhausted -> R.string.android_quotaShop
             else -> R.string.vision_topup
         },
     )

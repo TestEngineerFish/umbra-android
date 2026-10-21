@@ -70,7 +70,7 @@ fun taskStatus(s: String): UmbraStatus = when (s) {
 fun chatKeyRes(key: String): Int = when (key) {
     "vision.topup" -> R.string.vision_topup
     "vision.openMembership" -> R.string.vision_openMembership
-    "vision.quotaShop" -> R.string.vision_quotaShop
+    "vision.quotaShop" -> R.string.android_quotaShop
     "reason.insufficientBalance" -> R.string.reason_insufficientBalance
     "reason.needMembership" -> R.string.reason_needMembership
     "reason.quotaExhausted" -> R.string.reason_quotaExhausted

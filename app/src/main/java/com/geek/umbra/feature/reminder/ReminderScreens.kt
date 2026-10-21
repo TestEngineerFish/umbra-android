@@ -711,7 +711,7 @@ fun SlideToComplete(onComplete: () -> Unit) {
                     }
                 },
             contentAlignment = Alignment.Center,
-        ) { UmbraIcon(if (done) UmbraIconPaths.check else UmbraIconPaths.arrowRight, Color.White, size = 20.dp, strokeWidth = 2.4f) }
+        ) { UmbraIcon(if (done) UmbraIconPaths.check else UmbraIconPaths.arrowRight, c.onAccent, size = 20.dp, strokeWidth = 2.4f) }
     }
 }
 

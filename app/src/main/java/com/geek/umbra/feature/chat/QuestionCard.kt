@@ -130,7 +130,7 @@ private fun Pending(q: ChatBlock.Question) {
                         else ChatStore.moveQuestion(q.cardId, 1)
                     },
                 contentAlignment = Alignment.Center,
-            ) { Text(if (isLast) "提交答案" else "下一题", color = if (canGo) Color.White else c.faint, style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.SemiBold)) }
+            ) { Text(if (isLast) "提交答案" else "下一题", color = if (canGo) c.onAccent else c.faint, style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.SemiBold)) }
         }
         // 置灰时必须给出原因，就一行，不弹窗
         if (!canGo) Text(if (isLast) "还有必答的题没答，答完才能提交。" else "这题是必答的。", color = c.faint, style = TextStyle(fontSize = 12.sp, lineHeight = 18.6.sp))
@@ -150,7 +150,7 @@ private fun OptionRow(cardId: String, item: QuestionItem, key: String, label: St
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.size(20.dp).clip(markShape).background(if (on) c.orange else Color.Transparent).border(1.5.dp, if (on) c.orange else c.border, markShape), contentAlignment = Alignment.Center) {
-            if (on) UmbraIcon(UmbraIconPaths.check, Color.White, size = 12.dp, strokeWidth = 3.2f)
+            if (on) UmbraIcon(UmbraIconPaths.check, c.onAccent, size = 12.dp, strokeWidth = 3.2f)
         }
         Spacer(Modifier.width(10.dp))
         Text(label, color = if (on) c.orangeText else c.text, style = TextStyle(fontSize = 14.5.sp, lineHeight = 20.3.sp), modifier = Modifier.weight(1f))

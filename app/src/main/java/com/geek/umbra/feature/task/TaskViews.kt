@@ -649,7 +649,7 @@ private fun FailBlock(d: TaskDetail, summary: String) {
     val topupTitle = stringResource(
         when (kind) {
             ReasonKind.NeedMembership -> R.string.vision_openMembership
-            ReasonKind.QuotaExhausted -> R.string.vision_quotaShop
+            ReasonKind.QuotaExhausted -> R.string.android_quotaShop
             else -> R.string.vision_topup
         },
     )

@@ -302,7 +302,7 @@ fun PendingStrip(items: List<PendingImage>, onItems: (List<PendingImage>) -> Uni
             ) {
                 val shape = RoundedCornerShape(4.dp)
                 Box(Modifier.size(14.dp).clip(shape).background(if (origin) c.orange else Color.Transparent).border(UmbraDimens.borderW, if (origin) c.orange else c.border, shape), contentAlignment = Alignment.Center) {
-                    if (origin) UmbraIcon(UmbraIconPaths.check, Color.White, size = 10.dp, strokeWidth = 2.6f)
+                    if (origin) UmbraIcon(UmbraIconPaths.check, c.onAccent, size = 10.dp, strokeWidth = 2.6f)
                 }
                 Spacer(Modifier.width(5.dp))
                 Text(stringResource(R.string.imgQ_tierOrigin), color = if (origin) c.orangeText else c.muted, style = TextStyle(fontSize = 11.sp))
@@ -376,7 +376,7 @@ private fun Thumb(p: PendingImage, onRemove: () -> Unit) {
                 .semantics { contentDescription = AppGraph.context.getString(R.string.chat_img_remove) },
             contentAlignment = Alignment.TopEnd,
         ) {
-            Box(Modifier.padding(4.dp).size(20.dp).clip(CircleShape).background(UmbraFixedColors.toastGlass), contentAlignment = Alignment.Center) {
+            Box(Modifier.padding(4.dp).size(20.dp).clip(CircleShape).background(UmbraTheme.colors.toastGlass), contentAlignment = Alignment.Center) {
                 UmbraIcon(UmbraIconPaths.x, UmbraFixedColors.onNavText, size = 11.dp, strokeWidth = 2.4f)
             }
         }

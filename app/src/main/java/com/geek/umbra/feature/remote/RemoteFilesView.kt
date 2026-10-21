@@ -166,7 +166,7 @@ private fun SaveFailStrip(f: SaveFailure) {
     LaunchedEffect(f) { delay(6_000); if (saveFailure === f) saveFailure = null }
     Box(Modifier.fillMaxWidth().navigationBarsPadding().padding(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 10.dp), contentAlignment = Alignment.Center) {
         Row(
-            Modifier.clip(RoundedCornerShape(50)).background(UmbraFixedColors.toastGlass).padding(start = 16.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
+            Modifier.clip(RoundedCornerShape(50)).background(UmbraTheme.colors.toastGlass).padding(start = 16.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text("没存进「下载」：${f.reason}", color = UmbraRemoteColors.fg, style = UmbraRemoteType.toast, modifier = Modifier.weight(1f, fill = false))

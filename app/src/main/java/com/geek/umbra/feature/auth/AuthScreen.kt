@@ -267,7 +267,7 @@ private fun Wordmark() {
     val c = UmbraTheme.colors
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 4.dp)) {
         Box(Modifier.size(32.dp).clip(RoundedCornerShape(9.dp)).background(c.orange), contentAlignment = Alignment.Center) {
-            Text("U", color = Color.White, style = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.SemiBold))
+            Text("U", color = c.onAccent, style = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.SemiBold))
         }
         Spacer(Modifier.width(10.dp))
         Text("Umbra", color = c.text, style = TextStyle(fontSize = 17.sp, fontWeight = UmbraType.weight560))

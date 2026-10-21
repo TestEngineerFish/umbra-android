@@ -123,6 +123,12 @@ object WidgetBridge {
 
     // MARK: 重画 / 刷新
 
+    /**
+     * 主题换了（iOS `UmbraWidgetBridge.themeChanged`）：小组件的颜色在重画时现取当前主题（WTheme 的 getter），重画一遍就跟上。
+     * 不问会话守卫：主题是本机偏好，没登录也能换。
+     */
+    fun themeChanged() = refreshAll()
+
     /** 到点 / 零点 / 系统周期刷新：两个小组件都按这一刻重算一次（WidgetRefreshReceiver 调）。 */
     fun refreshAll() {
         AppGraph.scope.launch { redraw(task = true, reminder = true) }

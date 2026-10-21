@@ -60,6 +60,7 @@ private val router get() = AppGraph.router
 @Composable
 fun MeHomeScreen() {
     val c = UmbraTheme.colors
+    val look = appearanceValue()
     // 账号那一行要跟着登录状态变：**订阅它**，登出之后不许还显示上一个人（MeViews.swift:22）。
     val login by AppGraph.auth.login.collectAsState()
     val ws by AppGraph.socket.state.collectAsState()
@@ -112,6 +113,8 @@ fun MeHomeScreen() {
             ),
             UmbraSettingRow("通知", chevron = true, action = { router.go(Route.SetNotify) }),
             UmbraSettingRow("通用", chevron = true, action = { router.go(Route.SetGeneral) }),
+            // 外观（主题插件化二期，iOS MeViews.swift:143）：浅 / 深 / 跟随系统 + 主题。值写「跟随系统 · 默认」这种两段，两个独立选项一眼都看得见。
+            UmbraSettingRow("外观", value = look, chevron = true, action = { router.go(Route.SetAppearance) }),
             // 回收站的正门（原来只能从保险箱里进）。
             UmbraSettingRow("回收站", chevron = true, action = { router.go(Route.VaultTrash) }),
             UmbraSettingRow("关于", chevron = true, action = { router.go(Route.SetAbout) }),
@@ -438,8 +441,16 @@ fun applyLanguage(l: AppLanguage) {
     AppCompatDelegate.setApplicationLocales(list)
 }
 
+/** 「外观」那一行的值：外观档 · 主题名（两个独立选项，主题插件化二期；iOS MeViews.swift `appearanceValue`）。 */
+@Composable
+internal fun appearanceValue(): String {
+    val prefs by AppGraph.prefs.snapshot.collectAsState()
+    val applied by com.geek.umbra.feature.theme.ThemeStore.applied.collectAsState()
+    return "${Appearance.of(prefs[Prefs.K.appearance]).label()} · ${com.geek.umbra.feature.theme.ThemeStore.shownName(applied.id, applied.name)}"
+}
+
 /** 外观的显示名（iOS UmbraAppearance.label）。 */
-private fun Appearance.label() = when (this) {
+internal fun Appearance.label() = when (this) {
     Appearance.Light -> "浅色"
     Appearance.Dark -> "深色"
     Appearance.System -> "跟随系统"
@@ -453,7 +464,7 @@ fun GeneralScreen() {
     // 这一页原来不碰设置镜像：**不拉的话那一行永远是「还没拉到」**（MeViews.swift:542）。
     LaunchedEffect(Unit) { if (ServerSettings.settings.value == null) ServerSettings.load() }
     val lang = AppLanguage.of(prefs[Prefs.K.language])
-    val appearance = Appearance.of(prefs[Prefs.K.appearance])
+    val look = appearanceValue()
     // 「跟随系统」要标出实际解析成了哪种 —— 只写「跟随系统」看不出现在到底是中文还是英文（MeViews.swift:549）。
     val langLabel = when (lang) {
         AppLanguage.Chinese -> "中文"
@@ -470,11 +481,8 @@ fun GeneralScreen() {
                     MeSheetItem("跟随系统", checked = lang == AppLanguage.System) { applyLanguage(AppLanguage.System) },
                 ), subtitle = "切换后立即生效。")
             }),
-            UmbraSettingRow("外观", value = appearance.label(), chevron = true, action = {
-                presentChoice("外观", listOf(Appearance.Light, Appearance.Dark, Appearance.System).map { a ->
-                    MeSheetItem(a.label(), checked = appearance == a) { AppGraph.prefs.set(Prefs.K.appearance, a.wire) }
-                })
-            }),
+            // 外观（含主题）挪成了一页（主题插件化二期，iOS MeViews.swift:565）：这一行推过去，不再就地弹三档。
+            UmbraSettingRow("外观", value = look, chevron = true, action = { router.go(Route.SetAppearance) }),
         ), footer = "切换语言后立即生效；跟随系统时会随日夜自动切换。")
         // 发图画质自成一组：组尾那三句只跟它有关，挂在「外观与语言」下面会解释错上面两行（MeViews.swift:532）。
         settingSection("img", AppGraph.context.getString(R.string.imgQ_secSend), listOf(

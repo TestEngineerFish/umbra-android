@@ -50,6 +50,8 @@ sealed interface Route {
     data object SetAccount : Route
     data object SetShop : Route
     data object SetShopHistory : Route
+    /** 商城里一个主题的详情（主题插件化二期）：缩略、说明、试用 / 获取 / 用这个。数据在服务端，要登录（同商城）。 */
+    data class SetShopTheme(val id: String) : Route
     data object SetStorage : Route
     data object SetPassword : Route
     data object SetSessions : Route
@@ -57,6 +59,8 @@ sealed interface Route {
     data object SetConn : Route
     data object SetNotify : Route
     data object SetGeneral : Route
+    /** 「我 › 外观」（主题插件化二期）：浅 / 深 / 跟随系统三档 + 主题卡片（试用、换、卸）。本机偏好，不要登录。 */
+    data object SetAppearance : Route
     data object SetAbout : Route
     data object VaultHome : Route
     data object VaultCreate : Route
@@ -106,9 +110,9 @@ val Route.area: RouteArea
         Route.MeCaps, Route.MeMemory, is Route.MeMemoryItem, is Route.MeMemoryEdit, Route.KbList,
         is Route.KbDocs, Route.MeDuty, is Route.MeDutyEdit, Route.MeDutyLog, is Route.MeDutyFlow,
         is Route.MeDutyFlowRun, Route.MeDutyFlows, Route.MeDutyFollows, Route.MeDutyRules,
-        Route.SetAccount, Route.SetShop, Route.SetShopHistory, Route.SetStorage,
+        Route.SetAccount, Route.SetShop, Route.SetShopHistory, is Route.SetShopTheme, Route.SetStorage,
         Route.SetPassword, Route.SetSessions, Route.SetDeactivate, Route.SetConn, Route.SetNotify,
-        Route.SetGeneral, Route.SetAbout -> RouteArea.Me
+        Route.SetGeneral, Route.SetAppearance, Route.SetAbout -> RouteArea.Me
     }
 
 /**
@@ -122,12 +126,12 @@ val Route.needsLogin: Boolean
         Route.MeMemory, is Route.MeMemoryItem, is Route.MeMemoryEdit, Route.MeDuty, is Route.MeDutyEdit,
         Route.MeDutyLog, is Route.MeDutyFlow, is Route.MeDutyFlowRun, Route.MeDutyFlows, Route.MeDutyFollows,
         Route.MeDutyRules, Route.SetPassword, Route.SetSessions,
-        Route.SetDeactivate, Route.SetShop, Route.SetShopHistory, Route.SetStorage -> true
+        Route.SetDeactivate, Route.SetShop, Route.SetShopHistory, is Route.SetShopTheme, Route.SetStorage -> true
         Route.RemList, is Route.RemDetail, is Route.RemEdit, Route.MoneyHome, Route.MoneyList,
         is Route.MoneyAdd, Route.MoneyCats, is Route.MoneyCat, Route.MoneySettings, Route.MoneyRecur,
         is Route.MoneyRecurEdit, Route.InspList, is Route.InspDetail, is Route.InspEdit, Route.ToolHome,
         Route.ToolWidgets, Route.MeHome, Route.MePhrases, is Route.MePhraseEdit, Route.SetAccount,
-        Route.SetConn, Route.SetNotify, Route.SetGeneral, Route.SetAbout, Route.VaultHome, Route.VaultCreate,
+        Route.SetConn, Route.SetNotify, Route.SetGeneral, Route.SetAppearance, Route.SetAbout, Route.VaultHome, Route.VaultCreate,
         Route.VaultKey, Route.VaultRecover, is Route.VaultRecord, is Route.VaultEdit, Route.VaultGen,
         Route.VaultCheck, Route.VaultGroups, Route.VaultProfiles, Route.VaultTrash, Route.VaultImport,
         Route.VaultSettings, Route.VaultPwd, Route.VaultAutofill -> false
@@ -161,7 +165,7 @@ val Route.isEditor: Boolean
         Route.MeMemory, is Route.MeMemoryItem, Route.KbList, is Route.KbDocs, Route.MeDuty, Route.MeDutyLog,
         is Route.MeDutyFlow, is Route.MeDutyFlowRun, Route.MeDutyFlows, Route.MeDutyFollows, Route.MeDutyRules,
         Route.SetSessions, Route.SetDeactivate, Route.SetShop,
-        Route.SetShopHistory, Route.SetStorage, Route.SetNotify, Route.SetGeneral, Route.SetAbout,
+        Route.SetShopHistory, is Route.SetShopTheme, Route.SetStorage, Route.SetNotify, Route.SetGeneral, Route.SetAppearance, Route.SetAbout,
         Route.VaultHome, Route.VaultCreate, Route.VaultKey, is Route.VaultRecord, Route.VaultGen,
         Route.VaultCheck, Route.VaultGroups, Route.VaultProfiles, Route.VaultTrash, Route.VaultImport,
         Route.VaultSettings, Route.VaultPwd, Route.VaultAutofill -> false

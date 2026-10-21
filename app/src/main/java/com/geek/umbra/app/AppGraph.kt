@@ -75,5 +75,8 @@ object AppGraph {
         FeatureGraph.registerGuards(guard)
         com.geek.umbra.net.ServerSettings.start()
         guard.register("settings", onLock = {}, onUnlock = { scope.launch { com.geek.umbra.net.ServerSettings.load() } })
+        // 主题：第一个 Activity / 小组件画出来之前就把选着的那套套上（读 applied.json），原包验签在后台跑。
+        // 不进会话守卫：主题是本机偏好，没登录也照用默认 / 已授权的；许可证的登录 / 登出处理在 ThemeStore 里盯 auth.login。
+        com.geek.umbra.feature.theme.ThemeStore.start()
     }
 }

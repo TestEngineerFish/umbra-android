@@ -97,7 +97,7 @@ fun markedText(text: String, mark: VaultFindMark?): AnnotatedString {
         append(text)
         for (r in VaultFindRules.ranges(text, mark.query)) {
             addStyle(
-                if (mark.current) SpanStyle(background = c.orange, color = Color.White) else SpanStyle(background = c.orangeSoft),
+                if (mark.current) SpanStyle(background = c.orange, color = c.onAccent) else SpanStyle(background = c.orangeSoft),
                 r.first, r.last + 1,
             )
         }

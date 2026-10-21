@@ -924,8 +924,8 @@ private fun SubChips(form: MoneyAddForm, cats: List<MoneyCatDTO>) {
                         .border(UmbraDimens.borderW, if (on) c.orange else c.border, shape).padding(horizontal = 12.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    // 选中实橙底上的白字，同 UmbraButton Primary 的写法（token 表里没有 onOrange）。
-                    Text(s, color = if (on) Color.White else c.muted, style = TextStyle(fontSize = 12.5.sp, fontWeight = UmbraType.weight560))
+                    // 选中是强调实底，上面的字读 onAccent、字重 ≥ 600（主题规格 clientConstraints：onAccent 门槛只有 3.0，靠字重补；iOS a95213a）。
+                    Text(s, color = if (on) c.onAccent else c.muted, style = TextStyle(fontSize = 12.5.sp, fontWeight = if (on) FontWeight.SemiBold else UmbraType.weight560))
                 }
             }
         }

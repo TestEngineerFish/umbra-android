@@ -2,6 +2,8 @@
 // 三组商品：会员（月 / 年）、积分充值、重置卡与加量包。前两组付钱（M1 收单，支付宝）：`POST /shop/checkout` 拿 `pay_url`
 // 交给系统开（Custom Tab，支付宝 App 接管），本页进「等待支付」态，每 3 秒问一次订单，到账就刷新；收单没接上时这两组灰。
 // 第三组用积分买：先问一句，买完**放进「我的道具」**（sam：「购买只是拥有，并不应该直接使用」）；点一行 → 确认 → 使用。
+// 三栏（设计侧批次 269 §五稿 04，同 PC shopPage.head、iOS 25215d3）：商品 / 主题 / 我的道具 · N。主题不进商品：商品是消耗品，主题是装了一直用的。
+// iOS 32de292 起撤了「商品」一栏（App Store 不许卖数字商品）；Android 照卖，三栏都留（sam 10-21）。
 package com.geek.umbra.feature.account
 
 import androidx.compose.runtime.Composable
@@ -9,7 +11,12 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.res.stringResource
+import com.geek.umbra.R
 import com.geek.umbra.app.AppGraph
+import com.geek.umbra.designsystem.UmbraSegment
+import com.geek.umbra.designsystem.UmbraSegmentedControl
+import com.geek.umbra.feature.theme.shopThemesSection
 import com.geek.umbra.designsystem.UmbraIconPaths
 import com.geek.umbra.designsystem.UmbraScreen
 import com.geek.umbra.designsystem.UmbraSettingRow
@@ -49,6 +56,8 @@ object ShopStore {
     val items = MutableStateFlow<List<ShopItemDTO>?>(null)
     val loaded = MutableStateFlow(false)
     val pending = MutableStateFlow<PendingPay?>(null)
+    /** 商城三栏选着哪一栏：0 商品 / 1 主题 / 2 我的道具。进程级：去支付宝付钱回来不跳回第一栏。 */
+    val tab = MutableStateFlow(0)
     private var buying = false
     private var pollJob: Job? = null
 
@@ -183,7 +192,25 @@ fun ShopPage() {
     DisposableEffect(Unit) { onDispose { ShopStore.stopWaiting() } }
     val now = Instant.now()
 
+    val tab by ShopStore.tab.collectAsState()
+    val usableCount = items?.let { ItemRules.split(it).first.size }
+    val segs = listOf(
+        UmbraSegment(stringResource(R.string.shop_tabGoods)),
+        UmbraSegment(stringResource(R.string.shop_tabThemes)),
+        UmbraSegment(stringResource(R.string.shop_tabMine), count = usableCount),
+    )
+
     UmbraScreen(title = "商城", onBack = { router.back() }) {
+        item(key = "tabs") { UmbraSegmentedControl(segs, tab, { ShopStore.tab.value = it }) }
+        when (tab) {
+            1 -> { shopThemesSection(); return@UmbraScreen }
+            2 -> {
+                val all = items
+                if (all == null) settingSection("items", "我的道具", listOf(UmbraSettingRow(if (loaded) "（这台服务器还没有道具）" else "正在读取…", enabled = false)))
+                else itemsSection(all, membership, now, c.faint, c.orangeText)
+                return@UmbraScreen
+            }
+        }
         introItem("会员和积分充值用支付宝付；重置卡和加量包用积分买，买了先放进「我的道具」，需要时再用。")
         pending?.let { w ->
             settingSection("wait", "等待支付", listOf(
@@ -205,7 +232,6 @@ fun ShopPage() {
             }
         }
         if (mine.isNotEmpty()) settingSection("mine", "我的", mine)
-        items?.let { all -> itemsSection(all, membership, now, c.faint, c.orangeText) }
 
         val s = shop
         if (s == null || s.items.isEmpty()) {

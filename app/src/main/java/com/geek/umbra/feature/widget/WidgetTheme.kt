@@ -38,24 +38,38 @@ import com.geek.umbra.R
 import com.geek.umbra.app.MainActivity
 import com.geek.umbra.designsystem.UmbraDark
 import com.geek.umbra.designsystem.UmbraLight
+import com.geek.umbra.designsystem.UmbraThemePalette
+import com.geek.umbra.designsystem.themeColor
 
-/** 小组件那七八个颜色（iOS: WidgetTheme.swift `WTheme`），按系统深浅色自动切。 */
+/**
+ * 小组件那七八个颜色（iOS: WidgetTheme.swift `WTheme`），按系统深浅色自动切。
+ * 主题（二期，iOS a95213a）：标了主题键的几色先问当前主题（[UmbraThemePalette]），没有就用内置值；语义色锁死、不跟主题。
+ * 做成 getter 而不是 val：换主题后 `WidgetBridge.themeChanged()` 让小组件重画一遍，重画时现取。
+ * 试用中的那套也会被取到 —— 但试用不刷小组件（同 iOS「试用不进 App Group」），它只在别的原因重画时碰巧赶上，30 秒后又会被正式那套盖回。
+ */
 internal object WTheme {
-    /** 品牌橙，跨主题不变。 */
-    val orange = ColorProvider(UmbraLight.orange, UmbraDark.orange)
-    /** 橙色文字：深色下提亮保对比。 */
-    val orangeText = ColorProvider(UmbraLight.orangeText, UmbraDark.orangeText)
-    val card = ColorProvider(UmbraLight.card, UmbraDark.card)
-    val chip = ColorProvider(UmbraLight.chip, UmbraDark.chip)
-    val text = ColorProvider(UmbraLight.text, UmbraDark.text)
-    val muted = ColorProvider(UmbraLight.muted, UmbraDark.muted)
-    val faint = ColorProvider(UmbraLight.faint, UmbraDark.faint)
-    /** 过期的圈（实心那支给描边）。 */
+    private fun themed(key: String, light: androidx.compose.ui.graphics.Color, dark: androidx.compose.ui.graphics.Color): ColorProvider {
+        val p = UmbraThemePalette.current.value
+        val l = p?.get("light")?.get(key)?.let(::themeColor) ?: light
+        val d = p?.get("dark")?.get(key)?.let(::themeColor) ?: dark
+        return ColorProvider(l, d)
+    }
+
+    /** 品牌橙（主题键 accent）。 */
+    val orange get() = themed("accent", UmbraLight.orange, UmbraDark.orange)
+    /** 橙色文字：深色下提亮保对比（主题键 accentText）。 */
+    val orangeText get() = themed("accentText", UmbraLight.orangeText, UmbraDark.orangeText)
+    val card get() = themed("card", UmbraLight.card, UmbraDark.card)
+    val chip get() = themed("chip", UmbraLight.chip, UmbraDark.chip)
+    val text get() = themed("text", UmbraLight.text, UmbraDark.text)
+    val muted get() = themed("muted", UmbraLight.muted, UmbraDark.muted)
+    val faint get() = themed("faint", UmbraLight.faint, UmbraDark.faint)
+    /** 过期的圈（实心那支给描边）。语义色锁死、不跟主题（规格 `locked`）。 */
     val danger = ColorProvider(UmbraLight.danger, UmbraDark.danger)
     /** 过期的时间文字（规则：文字一律走 *Text 那支）。 */
     val dangerText = ColorProvider(UmbraLight.dangerText, UmbraDark.dangerText)
-    /** 字标「U」上的白字：橙底上两个主题都是白（iOS `.white`）。 */
-    val onOrange = ColorProvider(UmbraLight.card)
+    /** 字标「U」：强调实底上的字（主题键 onAccent）。默认是白，石墨深色那套是深字。 */
+    val onOrange get() = themed("onAccent", UmbraLight.onAccent, UmbraDark.onAccent)
 }
 
 /** 点小组件 = 打开 MainActivity 并带上 umbra:// 深链（MainActivity.handle → DeepLinks.receive，门关时要登录的页会被丢弃）。 */

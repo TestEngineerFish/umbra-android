@@ -52,6 +52,8 @@ class Prefs(private val context: Context, private val scope: CoroutineScope) {
         val notifyAsked = booleanPreferencesKey("umbra.notify.asked")
         /** 账号页存储条幅「不再提示」（iOS StorageRules.silenceKey，只收 warn 档那条）。 */
         val storageWarnSilenced = booleanPreferencesKey("storage.warnBannerSilenced")
+        /** 选着的主题 id（iOS `ThemeStore.selectedKey`）。默认主题 = 这个键不存在。 */
+        val themeId = stringPreferencesKey("umbra.themeId")
     }
 
     private val store = context.umbraStore

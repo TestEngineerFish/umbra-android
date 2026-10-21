@@ -256,7 +256,7 @@ fun Overlays() {
             val toast = t ?: return@AnimatedVisibility
             Row(
                 Modifier.navigationBarsPadding().padding(bottom = if (router.stack().isEmpty()) 84.dp else 32.dp, start = 24.dp, end = 24.dp)
-                    .clip(RoundedCornerShape(50)).background(UmbraFixedColors.toastGlass).padding(horizontal = 16.dp, vertical = 10.dp),
+                    .clip(RoundedCornerShape(50)).background(UmbraTheme.colors.toastGlass).padding(horizontal = 16.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(toast.text, color = Color.White, style = TextStyle(fontSize = 13.5.sp))

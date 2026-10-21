@@ -850,7 +850,7 @@ private fun ToolButton(t: Tool, onTouch: () -> Unit) {
             Box(
                 Modifier.size(UmbraRemoteDimens.toolFace).clip(CircleShape).background(if (t.on) c.orange else Color.Transparent),
                 contentAlignment = Alignment.Center,
-            ) { UmbraIcon(t.icon, if (t.on) UmbraRemoteColors.fg else UmbraRemoteColors.fgTool, size = UmbraRemoteDimens.toolIcon) }
+            ) { UmbraIcon(t.icon, if (t.on) c.onAccent else UmbraRemoteColors.fgTool, size = UmbraRemoteDimens.toolIcon) }
         }
         t.menu?.let { items ->
             DropdownMenu(expanded = open, onDismissRequest = { open = false }, containerColor = c.card, modifier = Modifier.widthIn(min = 180.dp)) {
@@ -1066,7 +1066,7 @@ private fun ModKey(input: RemoteInputModel, m: String, glyph: String, onTouch: (
                 color = when (lv) {
                     RemoteModifiers.Level.Off -> UmbraRemoteColors.fgTool
                     RemoteModifiers.Level.Once -> UmbraFixedColors.onNavAccent
-                    RemoteModifiers.Level.Locked -> UmbraRemoteColors.fg
+                    RemoteModifiers.Level.Locked -> c.onAccent
                 },
                 style = if (lv == RemoteModifiers.Level.Off) UmbraRemoteType.modKey else UmbraRemoteType.modKeyOn,
             )
@@ -1106,7 +1106,7 @@ private fun ToastPill(text: String) {
     Box(Modifier.fillMaxWidth().padding(bottom = 10.dp, start = 24.dp, end = 24.dp), contentAlignment = Alignment.Center) {
         Text(
             text, color = UmbraRemoteColors.fg, style = UmbraRemoteType.toast, textAlign = TextAlign.Center,
-            modifier = Modifier.clip(RoundedCornerShape(50)).background(UmbraFixedColors.toastGlass).padding(horizontal = 14.dp, vertical = 9.dp),
+            modifier = Modifier.clip(RoundedCornerShape(50)).background(UmbraTheme.colors.toastGlass).padding(horizontal = 14.dp, vertical = 9.dp),
         )
     }
 }
@@ -1309,7 +1309,7 @@ private fun CardButton(title: String, primary: Boolean, modifier: Modifier = Mod
             .clickable(enabled = enabled, role = Role.Button, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Text(title, color = if (primary) UmbraRemoteColors.fg else c.text, style = if (plain) UmbraRemoteType.bigButtonPlain else UmbraRemoteType.bigButton)
+        Text(title, color = if (primary) c.onAccent else c.text, style = if (plain) UmbraRemoteType.bigButtonPlain else UmbraRemoteType.bigButton)
     }
 }
 

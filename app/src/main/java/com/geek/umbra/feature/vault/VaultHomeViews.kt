@@ -575,7 +575,7 @@ private fun RecordRow(it: VItem, showsGroups: Boolean, typeName: String, query: 
             if (pwd != null) {
                 Box(Modifier.width(btnW).fillMaxHeight().background(c.orange).clickable {
                     close(); VaultClipboard.copySensitive(pwd); router.showToast("已复制密码 · 60 秒后自动清除")
-                }, contentAlignment = Alignment.Center) { Text("复制密码", color = androidx.compose.ui.graphics.Color.White, style = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.SemiBold)) }
+                }, contentAlignment = Alignment.Center) { Text("复制密码", color = c.onAccent, style = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.SemiBold)) }
             }
             Box(Modifier.width(btnW).fillMaxHeight().background(c.danger).clickable { close(); confirmDelete(it) }, contentAlignment = Alignment.Center) {
                 Text("删除", color = c.onDanger, style = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.SemiBold))

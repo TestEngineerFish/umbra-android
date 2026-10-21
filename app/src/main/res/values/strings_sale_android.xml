@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android 照常卖、iOS 不卖（iOS 32de292，App Store 3.1.1）的那几处：iOS 把文案改成了「不卖」的说法，Android 留卖的说法（手写，不由 gen_strings.py 生成）。
+  sam 10-21：Android 卖付费主题，用积分直接买。主题购买那四句照 PC `theme.priceN / buyTitle / buyBody / buyBtn` 逐字；
+  商城「主题」栏底下那句是 Android 自有文案（iOS 那句是「只列免费的和随会员的」），待设计侧认。
+-->
+<resources>
+    <!-- 额度用完那颗钮：Android 去商城买 / 用（iOS 改成了只递已有的重置卡「用重置卡」）。原 iOS vision.quotaShop 旧字面。 -->
+    <string name="android_quotaShop">重置卡 / 加量包</string>
+    <string name="android_theme_priceN">%d 积分</string>
+    <string name="android_theme_buyTitle">购买「%s」？</string>
+    <string name="android_theme_buyBody">将扣 %d 积分，买断后一直可用。</string>
+    <string name="android_theme_buyBtn">购买 · %d 积分</string>
+    <string name="android_theme_shopFoot">免费的直接获取，付费的用积分买断；已经拥有的主题也照常显示。</string>
+    <string name="android_theme_priceUnknown">价格暂时读不出来，稍后再试</string>
+</resources>

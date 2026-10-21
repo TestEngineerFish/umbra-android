@@ -169,7 +169,7 @@ private fun PreviewHeader(label: String, trailing: String? = null) {
     val c = UmbraTheme.colors
     Row(verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.size(16.dp).clip(RoundedCornerShape(5.dp)).background(c.orange), contentAlignment = Alignment.Center) {
-            Text("U", color = Color.White, style = TextStyle(fontSize = 9.sp, fontWeight = FontWeight(650)))
+            Text("U", color = c.onAccent, style = TextStyle(fontSize = 9.sp, fontWeight = FontWeight(650)))
         }
         Spacer(Modifier.width(6.dp))
         Text(label, color = c.faint, style = TextStyle(fontSize = 10.5.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.06.em), modifier = Modifier.weight(1f))

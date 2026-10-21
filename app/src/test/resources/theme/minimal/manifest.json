@@ -1,0 +1,10 @@
+{
+  "id": "com.example.theme",
+  "name": "最小主题（测试向量）",
+  "version": "0.1.0",
+  "type": "theme",
+  "themeApi": "^1",
+  "modes": ["light", "dark"],
+  "tokens": "tokens.json",
+  "author": "Umbra"
+}
