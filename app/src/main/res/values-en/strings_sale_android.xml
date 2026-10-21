@@ -8,4 +8,20 @@
     <string name="android_theme_buyBtn">Buy · %d credits</string>
     <string name="android_theme_shopFoot">Get free themes directly, or buy paid ones once with credits. Themes you already own show here too.</string>
     <string name="android_theme_priceUnknown">The price can\'t be read right now. Try again later.</string>
+    <!-- Reset cards in place: PC en.json quota.* verbatim (Click → Tap for touch). -->
+    <string name="android_quota_reset">Reset</string>
+    <string name="android_quota_resetN">Reset (%d left)</string>
+    <string name="android_quota_resetLeft">%d reset cards available</string>
+    <string name="android_quota_noCardShort">No reset cards left</string>
+    <string name="android_quota_resetDone">Used a reset card. %s usage is back to 0%%.</string>
+    <string name="android_quota_noCardTitle">No Reset Cards Left</string>
+    <string name="android_quota_noCardBody">%1$s is %2$d%% used. Reset cards cost points in the Store. After you buy one, come back and tap Reset.</string>
+    <string name="android_quota_buyCard">Buy One</string>
+    <string name="android_quota_useCard">Use Reset Card</string>
+    <string name="android_quota_useCardDone">Used a reset card. %1$s usage is back to 0%%, %2$d left. Tap Retry Task to continue.</string>
+    <!-- 吐司 / 确认里 {{win}} 那个名字（PC account.quota5h / quotaWeek；英文在句首）。 -->
+    <string name="android_quota_win5h">5-hour quota</string>
+    <string name="android_quota_winWeek">Weekly quota</string>
+    <!-- 「用重置卡」点了之后钮上那几个字（PC 是转圈；这里错误卡的动作钮只能写字，Android 自有，待设计侧认）。 -->
+    <string name="android_quota_using">Using…</string>
 </resources>

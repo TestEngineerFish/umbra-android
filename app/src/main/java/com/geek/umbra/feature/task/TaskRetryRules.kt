@@ -166,11 +166,17 @@ object TaskRetryRules {
      * 详情底部动作条出不出重试类的钮、出哪颗：失败 / 已取消才出；原因类别要 AsBefore；上一次重试已被说死不出；
      * 电脑操作任务换「重新发起」。
      */
-    fun button(status: String, fail: TaskFailAction, blocked: Boolean, operate: Boolean): TaskRetryButton? {
+    fun button(status: String, fail: TaskFailAction, blocked: Boolean, operate: Boolean, fixable: Boolean = false): TaskRetryButton? {
         if (status != "failed" && status != "cancelled") return null
-        if (fail != TaskFailAction.AsBefore || blocked) return null
+        if (blocked) return null
+        // 补救完能接着跑的三类（PC `retryAfterFix`，批次 278）：额度用完（就地用了重置卡）、没会员、欠费 —— 补救之后原样再跑一次就行，
+        // 不给这颗钮的话「用重置卡」成功吐司里那句「点『重试任务』接着跑」就指向一颗不存在的钮。
+        if (fail != TaskFailAction.AsBefore && !(fixable && status == "failed")) return null
         return if (operate) TaskRetryButton.Relaunch else TaskRetryButton.Retry
     }
+
+    /** 补救完能接着跑的类别（PC `retryAfterFix`）：额度用完 / 没会员 / 欠费。 */
+    fun retryAfterFix(reasonKind: String?): Boolean = reasonKind in setOf("quota_exhausted", "need_membership", "insufficient_balance")
 
     /** 钮下的灰色提示。电脑操作任务没有这行：那是从头再来，不是「接着跑」。 */
     fun hint(status: String, button: TaskRetryButton?): String? {

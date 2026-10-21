@@ -58,6 +58,8 @@ object ShopStore {
     val pending = MutableStateFlow<PendingPay?>(null)
     /** 商城三栏选着哪一栏：0 商品 / 1 主题 / 2 我的道具。进程级：去支付宝付钱回来不跳回第一栏。 */
     val tab = MutableStateFlow(0)
+    /** 进商城时要滚到的那一组（「去购买」重置卡落到「重置卡与加量包」）；用一次就清（PC shopNav.takeShopLanding）。 */
+    val landing = MutableStateFlow<String?>(null)
     private var buying = false
     private var pollJob: Job? = null
 
@@ -200,7 +202,21 @@ fun ShopPage() {
         UmbraSegment(stringResource(R.string.shop_tabMine), count = usableCount),
     )
 
-    UmbraScreen(title = "商城", onBack = { router.back() }) {
+    // 「去购买」重置卡：商品栏、那一组滚到顶上。行的顺序在下面写死（tabs、说明、等待支付?、我的?、各组），所以下标算得出来。
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    val landing by ShopStore.landing.collectAsState()
+    LaunchedEffect(landing, shop) {
+        val g = landing ?: return@LaunchedEffect
+        val s = shop ?: return@LaunchedEffect
+        val groups = listOf("会员", "积分充值", ShopRules.RESET_GROUP).filter { gr -> s.items.any { ShopRules.group(it.kind) == gr } }
+        val at = groups.indexOf(g)
+        ShopStore.landing.value = null
+        if (at < 0) return@LaunchedEffect
+        val mineShown = credits != null || membership != null
+        listState.animateScrollToItem(2 + (if (pending != null) 1 else 0) + (if (mineShown) 1 else 0) + at)
+    }
+
+    UmbraScreen(title = "商城", onBack = { router.back() }, listState = listState) {
         item(key = "tabs") { UmbraSegmentedControl(segs, tab, { ShopStore.tab.value = it }) }
         when (tab) {
             1 -> { shopThemesSection(); return@UmbraScreen }

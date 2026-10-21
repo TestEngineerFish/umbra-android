@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
@@ -342,8 +343,12 @@ fun ErrorCard(e: ChatBlock.Error) {
         }
         Text(e.text, color = c.muted, style = TextStyle(fontSize = 13.sp, lineHeight = 20.8.sp))
         when (e.kind) {
-            ReasonKind.InsufficientBalance, ReasonKind.NeedMembership, ReasonKind.QuotaExhausted -> e.topup?.let { url ->
-                UmbraButton(stringResource(chatKeyRes(ChatReasonRules.topupButtonKey(e.kind))), { openExternal(url) }, Modifier.fillMaxWidth(), kind = UmbraButtonKind.Secondary, height = 44.dp, external = true)
+            ReasonKind.InsufficientBalance, ReasonKind.NeedMembership, ReasonKind.QuotaExhausted -> {
+                // 额度用完：手里有对应窗口的卡就出［用重置卡］（不另确认，点了转圈；批次 278，照 PC），0 张不出、只留去买。
+                if (e.kind == ReasonKind.QuotaExhausted) UseResetCardButton(e.window)
+                e.topup?.let { url ->
+                    UmbraButton(stringResource(chatKeyRes(ChatReasonRules.topupButtonKey(e.kind))), { openExternal(url) }, Modifier.fillMaxWidth(), kind = UmbraButtonKind.Secondary, height = 44.dp, external = true)
+                }
             }
             ReasonKind.RateLimited, ReasonKind.UpstreamError -> if (ChatStore.turnToRetry(e.id) != null) {
                 UmbraButton("再试一次", { ChatStore.retryTurn(e.id) }, Modifier.fillMaxWidth(), kind = UmbraButtonKind.Secondary, height = 44.dp)
@@ -355,6 +360,18 @@ fun ErrorCard(e: ChatBlock.Error) {
             }, Modifier.fillMaxWidth(), kind = UmbraButtonKind.Secondary, height = 44.dp)
         }
     }
+}
+
+/** 错误卡上那颗［用重置卡］：0 张不出（批次 278 §二 ②）；没问过张数就出、点了再说。 */
+@Composable
+private fun UseResetCardButton(window: String?) {
+    val offer = com.geek.umbra.feature.account.ResetCardOffer
+    LaunchedEffect(Unit) { offer.maybeRefresh() }
+    if (!com.geek.umbra.feature.account.ResetCardRules.showUseCard(window, offer.counts)) return
+    UmbraButton(
+        stringResource(if (offer.spending) R.string.android_quota_using else R.string.android_quota_useCard),
+        { offer.useFromFailCard(window) }, Modifier.fillMaxWidth(), kind = UmbraButtonKind.Secondary, height = 44.dp, enabled = !offer.spending,
+    )
 }
 
 /** 完成行 / 读图行的统一壳：一行小字 +（可选）一颗行内钮。行撑到真实的 44。 */
@@ -405,6 +422,14 @@ fun VisionErrorCard(v: VisionState, conv: String, blockId: String) {
             else -> stringResource(R.string.vision_resendTimeout, count)
         }
         actions += label to { if (!busy) ChatStore.retryVision(conv, blockId) }
+    }
+    // 额度用完：［用重置卡］排在去买前面（PC failCardActions 的顺序：重置 · 去买 · 重试）。
+    if (v.label == "allFailed" && !v.timedOut && v.reasonKind == ReasonKind.QuotaExhausted) {
+        val offer = com.geek.umbra.feature.account.ResetCardOffer
+        LaunchedEffect(Unit) { offer.maybeRefresh() }
+        if (com.geek.umbra.feature.account.ResetCardRules.showUseCard(v.quotaWindow, offer.counts)) {
+            actions += stringResource(if (offer.spending) R.string.android_quota_using else R.string.android_quota_useCard) to { offer.useFromFailCard(v.quotaWindow) }
+        }
     }
     // 地基 UmbraErrorCard 的动作钮不带外链角标（iOS 次动作带 external-link），这里只给文字
     v.topupLink?.let { url -> actions += stringResource(chatKeyRes(ChatReasonRules.topupButtonKey(v.reasonKind))) to { openExternal(url) } }

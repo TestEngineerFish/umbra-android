@@ -653,7 +653,14 @@ private fun FailBlock(d: TaskDetail, summary: String) {
             else -> R.string.vision_topup
         },
     )
+    // 额度用完：手里有对应窗口的卡就出［用重置卡］（不另确认，点了转圈；批次 278），0 张不出、只留去买。窗口优先用错误里服务端说的那条。
+    val window = com.geek.umbra.feature.account.ResetCardRules.quotaWindowOf(err?.window)
+    val offer = com.geek.umbra.feature.account.ResetCardOffer
+    if (kind == ReasonKind.QuotaExhausted) LaunchedEffect(Unit) { offer.maybeRefresh() }
+    val showCard = kind == ReasonKind.QuotaExhausted && com.geek.umbra.feature.account.ResetCardRules.showUseCard(window, offer.counts)
+    val cardLabel = if (offer.spending) stringResource(R.string.android_quota_using) else stringResource(R.string.android_quota_useCard)
     val actions = buildList<Pair<String, () -> Unit>> {
+        if (showCard) add(cardLabel to { offer.useFromFailCard(window) })
         if (fail == TaskFailAction.AsBefore) add("去看能力" to { AppGraph.router.go(Route.MeCaps) })
         if (fail is TaskFailAction.Topup) add(topupTitle to { openExternal(fail.url) })
     }
@@ -676,7 +683,7 @@ private fun DetailBottomBar(d: TaskDetail, ui: DetailUiState) {
     val operate = TaskRetryRules.isOperate(d.task.executor) || retryOutcome == TaskRetryOutcome.Operate
     val fe = failedStepError(d)
     val fail = TaskReason.taskFailAction(fe?.reason_kind, fe?.topup_url)
-    val button = TaskRetryRules.button(st, fail, blocked, operate)
+    val button = TaskRetryRules.button(st, fail, blocked, operate, fixable = TaskRetryRules.retryAfterFix(fe?.reason_kind))
     val failLine = retryOutcome?.message ?: ui.resumeFailText.value
     val hint = TaskRetryRules.hint(st, button)
     val resume = TaskSuspendRules.showsResume(st, suspendInfoOf(d, ui)) && (ui.resumeOutcome.value?.keepsResume ?: true)

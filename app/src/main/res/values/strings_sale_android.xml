@@ -13,4 +13,20 @@
     <string name="android_theme_buyBtn">购买 · %d 积分</string>
     <string name="android_theme_shopFoot">免费的直接获取，付费的用积分买断；已经拥有的主题也照常显示。</string>
     <string name="android_theme_priceUnknown">价格暂时读不出来，稍后再试</string>
+    <!-- 就地用重置卡（批次 278 定稿，sam 10-21）：字面照 UmbraPC quota.* 逐字；{{win}} 是「5 小时额度」/「本周额度」，{{n}} 是张数。 -->
+    <string name="android_quota_reset">重置</string>
+    <string name="android_quota_resetN">重置（%d 张）</string>
+    <string name="android_quota_resetLeft">有 %d 张重置卡可用</string>
+    <string name="android_quota_noCardShort">没有重置卡了</string>
+    <string name="android_quota_resetDone">已用一张重置卡，%s重新从 0%% 算。</string>
+    <string name="android_quota_noCardTitle">没有重置卡了</string>
+    <string name="android_quota_noCardBody">%1$s已用 %2$d%%。重置卡在商城里用积分买，买好后回到这里点「重置」。</string>
+    <string name="android_quota_buyCard">去购买</string>
+    <string name="android_quota_useCard">用重置卡</string>
+    <string name="android_quota_useCardDone">已用一张重置卡，%1$s重新从 0%% 算，还剩 %2$d 张。点「重试任务」接着跑。</string>
+    <!-- 吐司 / 确认里 {{win}} 那个名字（PC account.quota5h / quotaWeek；英文在句首）。 -->
+    <string name="android_quota_win5h">5 小时额度</string>
+    <string name="android_quota_winWeek">本周额度</string>
+    <!-- 「用重置卡」点了之后钮上那几个字（PC 是转圈；这里错误卡的动作钮只能写字，Android 自有，待设计侧认）。 -->
+    <string name="android_quota_using">正在用…</string>
 </resources>

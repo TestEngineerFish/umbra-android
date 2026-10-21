@@ -102,6 +102,10 @@ fun AccountScreen() {
     // 积分 / 会员 / 存储：null = 还没问到 / 这台服务器没有这项功能（旧服务端），那一格不画。
     var credits by remember { mutableStateOf<CreditsDTO?>(null) }
     var membership by remember { mutableStateOf<MembershipDTO?>(null) }
+    // 在这一页用掉一张重置卡后，用卡接口回的会员状态写进 ShopStore.membership：跟着换，额度那两行当场变回 0%。
+    val shopMembership by ShopStore.membership.collectAsState()
+    LaunchedEffect(shopMembership) { shopMembership?.let { if (it.quota != null) membership = it } }
+    @Suppress("UNUSED_VARIABLE") val cardCounts = ResetCardOffer.counts   // 读一下：张数问到了「重置（N 张）」要跟着重画
     var storage by remember { mutableStateOf<StorageDTO?>(null) }
     // warn 档条幅这一次关掉了没有（「×」）：只活在这一次进账号页里；「不再提示」是另一件事，落在 Prefs。
     var warnClosed by remember { mutableStateOf(false) }
@@ -115,6 +119,8 @@ fun AccountScreen() {
         AppGraph.auth.refresh()
         credits = AccountApi.credits()
         membership = AccountApi.membership()
+        // 有一条够 80% 而服务端没给张数（旧服务端）：问一次背包数一数，「重置（N 张）」才写得出数。
+        if (membership?.quota?.values?.any { ResetCardRules.canShowReset(it) && it.reset_cards == null } == true) ResetCardOffer.refresh()
         // 存储：优先取 /membership 顺带回的那份，没有再问 /storage；都没有 = 旧服务端，不画那一格。
         storage = membership?.storage ?: (AccountApi.storage() as? ApiResult.Ok)?.value
     }
@@ -214,8 +220,17 @@ private fun androidx.compose.foundation.lazy.LazyListScope.beforeSections(
             for ((label, key) in listOf("5 小时额度" to "5h", "本周额度" to "week")) {
                 val w = m.quota?.get(key)
                 val pct = MembershipRules.clampPct(w?.pct ?: 0)
-                rows += UmbraSettingRow(label, value = MembershipRules.windowText(pct, w?.resets_at?.let(::isoMinute)), mono = true,
-                    valueTint = toneTint(MembershipRules.tone(pct)))
+                val text = MembershipRules.windowText(pct, w?.resets_at?.let(::isoMinute))
+                // 用到 80% 以上（窗口开着）行尾出［重置］：张数知道就写「重置（N 张）」（批次 278，照 PC QuotaRows）。
+                // 一行放不下「用量 · 几时重置」和一颗钮：用量挪进副行，值那一格换成那颗钮，整行点了就是它。
+                if (ResetCardRules.canShowReset(w)) {
+                    val left = w?.reset_cards ?: ResetCardOffer.counts?.get(key)
+                    val btn = if (left != null && left > 0) AppGraph.context.getString(R.string.android_quota_resetN, left) else AppGraph.context.getString(R.string.android_quota_reset)
+                    rows += UmbraSettingRow(label, sub = text, subWarn = MembershipRules.tone(pct) != MembershipRules.Tone.Ok,
+                        value = btn, valueTint = orangeTint, chevron = true, action = { ResetCardOffer.askReset(key) })
+                } else {
+                    rows += UmbraSettingRow(label, value = text, mono = true, valueTint = toneTint(MembershipRules.tone(pct)))
+                }
             }
             // 会员购物折扣：有折才出这一行。
             ShopRules.discountText(m.discount_pct)?.let { rows += UmbraSettingRow("会员购物", value = it, mono = true) }

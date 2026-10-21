@@ -1227,6 +1227,7 @@ object ChatStore {
                     // 字段缺失（老服务端）才拿原话兜底
                     reasonKind = ChatReasonRules.resolve(if (msg.containsKey("reason_kind")) msg.str("reason_kind") ?: "" else null, reason),
                     topupUrl = msg.str("topup_url"),
+                    quotaWindow = com.geek.umbra.feature.account.ResetCardRules.quotaWindowOf(msg.str("window")),
                 )
                 if (v.n == 0) v = v.copy(n = v.total)
                 var a = a0
@@ -1432,7 +1433,7 @@ object ChatStore {
                 }
                 // message 在新服务端已经是人话；类别只决定卡上给什么动作
                 val kind = ChatReasonRules.resolve(msg.str("reason_kind"), null)
-                s.blocks += ChatBlock.Error(text = msg.str("message") ?: str(R.string.chat_status_error), kind = kind, topup = ChatReasonRules.topupLink(kind, msg.str("topup_url")))
+                s.blocks += ChatBlock.Error(text = msg.str("message") ?: str(R.string.chat_status_error), kind = kind, topup = ChatReasonRules.topupLink(kind, msg.str("topup_url")), window = com.geek.umbra.feature.account.ResetCardRules.quotaWindowOf(msg.str("window")))
                 reflect(streamConv)
             }
 

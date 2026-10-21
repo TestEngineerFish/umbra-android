@@ -78,6 +78,8 @@ data class VisionState(
     val reason: String = "",
     val reasonKind: ReasonKind? = null,
     val topupUrl: String? = null,
+    /** 额度用完时是哪条窗口（服务端 1980e92）。 */
+    val quotaWindow: String? = null,
     val retried: Boolean = false,
     val retrying: Int = 0,
     val wasAllFailed: Boolean = false,
@@ -247,7 +249,8 @@ sealed interface ChatBlock {
     ) : ChatBlock
 
     /** 一轮没能完成的错误卡。kind 决定卡上的钮；topup 是已过 topupLink 的充值地址。 */
-    data class Error(override val id: String = newBlockId(), val text: String, val kind: ReasonKind? = null, val topup: String? = null) : ChatBlock
+    /** `window`：额度用完时是哪条窗口（`5h` / `week`，服务端 1980e92），「用重置卡」挑对应窗口的卡。 */
+    data class Error(override val id: String = newBlockId(), val text: String, val kind: ReasonKind? = null, val topup: String? = null, val window: String? = null) : ChatBlock
 }
 
 /** 会话列表预览。 */

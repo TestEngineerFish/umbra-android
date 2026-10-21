@@ -59,6 +59,8 @@ data class TaskItem(
 data class StepError(
     val kind: String? = null, val message: String? = null, val detail: String? = null,
     val reason_kind: String? = null, val topup_url: String? = null,
+    /** 额度用完时是哪条窗口（`5h` / `week`，服务端 1980e92）：「用重置卡」挑对应窗口的卡；每日上限那档不带。 */
+    val window: String? = null,
 )
 
 @Serializable

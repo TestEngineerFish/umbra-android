@@ -40,7 +40,11 @@ data class MembershipMember(
 
 /** 一个额度窗口：**只有百分比与重置时间，没有点数**（草案 §3.7）。`resets_at` 为 null = 还没开（没用过）。 */
 @Serializable
-data class QuotaWindowDTO(val pct: Int = 0, val resets_at: String? = null, val exhausted: Boolean = false)
+data class QuotaWindowDTO(
+    val pct: Int = 0, val resets_at: String? = null, val exhausted: Boolean = false,
+    /** 背包里能用在这条窗口上的重置卡张数（服务端 4c22ca9 起带；旧服务端没有 = null，端上数背包）。 */
+    val reset_cards: Int? = null,
+)
 
 /** `GET /membership`。`member` / `quota` 为 null = 没会员；`storage` 是批次 234 起服务端顺带回的那份用量。 */
 @Serializable
@@ -206,8 +210,11 @@ object ShopRules {
     fun group(kind: String): String = when (kind) {
         "membership" -> "会员"
         "credits" -> "积分充值"
-        else -> "重置卡与加量包"
+        else -> RESET_GROUP
     }
+
+    /** 「去购买」重置卡落到的那一组（PC `gotoShop({ cat: "reset_card" })`）。 */
+    const val RESET_GROUP = "重置卡与加量包"
 
     /** 价格那一格：付钱「¥15.00」、付积分「50 积分」、都没有「—」。 */
     fun priceText(cents: Int, points: Int): String {
