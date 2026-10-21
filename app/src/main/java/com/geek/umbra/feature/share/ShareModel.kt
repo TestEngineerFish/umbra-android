@@ -18,6 +18,10 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.geek.umbra.app.AppGraph
+import com.geek.umbra.feature.convert.ConvertInput
+import com.geek.umbra.feature.convert.ConvertModel
+import com.geek.umbra.feature.convert.ConvertSource
+import com.geek.umbra.feature.convert.readConvertInput
 import com.geek.umbra.feature.inspiration.InspCreateOutcome
 import com.geek.umbra.feature.inspiration.InspIntentGate
 import com.geek.umbra.feature.inspiration.InspIntentRules
@@ -47,6 +51,23 @@ class ShareModel : ViewModel() {
     /** 存上了 → 面板该关了。 */
     var finished by mutableStateOf(false); private set
 
+    /**
+     * 「用电脑转换」要转的那一件（iOS ShareModel.convertInput）：分享进来的文件（太大的只记名字大小），没有文件就是第一张图。
+     * null = 这次不能转（只有文字 / 链接）。
+     */
+    var convertInput by mutableStateOf<ConvertInput?>(null); private set
+    /** 分享进来的是**文件**（不是图 / 文字）：这时只能转换，灵感那一页不出（批次 269 §四）。 */
+    var fileOnly by mutableStateOf(false); private set
+    /** 转换面板的状态：放在 ViewModel 上，转屏时面板重建、作业不丢。 */
+    private var convert: ConvertModel? = null
+
+    fun convertModel(): ConvertModel? = convert ?: convertInput?.let { ConvertModel(it).also { m -> convert = m } }
+
+    /** 面板真关（Activity 结束）时才停轮询；转屏 / 切到「记灵感」再切回来都不停。 */
+    override fun onCleared() {
+        convert?.close()
+    }
+
     /** 已经传上去的图：图的 id → file_id。重试时不再传一遍（否则服务端多一个没人引用的孤儿文件）。按 id 不按下标。 */
     private val uploaded = mutableMapOf<Long, String>()
     private var started = false
@@ -66,6 +87,9 @@ class ShareModel : ViewModel() {
             text = ShareInspRules.composeText(got.texts, got.urls)
             images.addAll(got.images)
             dropped = got.dropped
+            val file = got.file?.let { readConvertInput(AppGraph.context, it) }
+            fileOnly = file != null
+            convertInput = file ?: got.images.firstOrNull()?.let { ConvertInput.File(ConvertSource(it.name, it.data)) }
             loading = false
             if (locked) messageKey = ShareInspRules.reply(InspIntentGate.SignedOut).key
         }

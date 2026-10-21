@@ -22,4 +22,7 @@
     <string name="share_insp_tooLarge">没记上：有一张图超过了服务器的单张上限。去掉那张再试。</string>
     <!-- Android 独有：未登录时面板上那颗「打开 Umbra」（iOS 扩展里打不开宿主 App，只有那一句话）。 -->
     <string name="share_insp_openApp">打开 Umbra</string>
+    <!-- 分享进来的是图时底部那个切换（iOS share.conv.modeInsp / modeConvert，扩展表）。 -->
+    <string name="share_conv_modeInsp">记灵感</string>
+    <string name="share_conv_modeConvert">用电脑转换</string>
 </resources>

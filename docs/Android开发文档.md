@@ -157,6 +157,7 @@ export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
 | 执勤（含聊天里的早报卡、提议卡撤销、例程 / 关注 / 规则子页、今天预算） | 🟡 | 已对齐 iOS 4bad681；联网部分待真机 |
 | 使用记录（活跃上报 + 方格图） | 🟡 | |
 | 远程控制（WebRTC 控制端、快照降级、文件面板） | 🟡 | 已对齐 iOS 4bad681（规则 15 条用例）；服务端未部署，信令与视频全链路待真机联调；API 28–29 本机认证退到 BIOMETRIC_WEAK；文件面板「分享…」「存到「下载」」是 Android 自有文案 |
+| 用电脑转换（分享进来的文件 / 图、设备详情页一行、三段进度、结果存文件 / 相册 / 分享、横条续看、「作业没了」两档） | 🟡 | 对齐 iOS 58cf4be / 63bc3c5 / de808df / 5157d4d / 5279537（批次 269 §四、271、272、273）；判据 66 条对拍；转完推送 ⏳（FCM 待服务端，回 App 看横条）；全链路待真机 |
 | 主题（插件化：配色引擎、外观页、试用、回落卡、商城「主题」栏、装包验签、许可证、小组件跟随） | 🟡 | 对齐 iOS 02cf7a9 / 32de292；判据 159 条对拍（含 umbra-plugins 25 条跨语言用例与测试向量）；内置只有「默认」，海盐 / 石墨从商城装；**Android 卖付费主题**（积分买断，iOS 不卖）；许可证按账号（登出 / 换号清掉，读取核 sub）；Ed25519 手写（minSdk 28 没有系统实现）；拉目录 / 买 / 装 / 真签名待真机 |
 
 ### 系统集成
@@ -192,7 +193,7 @@ export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
 
 ## 六、需要服务端配合
 
-1. **推送**：服务端只有 APNs（`/push/apns/register`、`apns.py`）。Android 需要：
+1. **推送**：服务端只有 APNs（执勤推送、有事找你、用电脑转换转完的那一条 `convert_job` 都走它）（`/push/apns/register`、`apns.py`）。Android 需要：
    `/push/fcm/register`（或泛化成带 `platform`）、放宽令牌校验（FCM 令牌含 `: - _`）、FCM 发送器、令牌表。
    **国行设备没有 GMS 时 FCM 不可用**，要么接厂商通道（华为 / 小米 / OPPO / vivo / 荣耀）或统一推送联盟，要么常驻前台服务保活长连接（耗电，不推荐）。
    在服务端接好之前：Android 靠「App 在前台时的 `/ws/chat` + 本地通知」，提醒是本机闹钟，不受影响。

@@ -20,4 +20,7 @@
     <string name="share_insp_title">Save to Umbra</string>
     <string name="share_insp_tooLarge">Not saved: one image is over the server\'s size limit. Remove it and try again.</string>
     <string name="share_insp_openApp">Open Umbra</string>
+    <!-- 分享进来的是图时底部那个切换（iOS share.conv.modeInsp / modeConvert，扩展表）。 -->
+    <string name="share_conv_modeInsp">Save as Idea</string>
+    <string name="share_conv_modeConvert">Convert on Computer</string>
 </resources>

@@ -131,6 +131,8 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="text/plain" />
                 <data android:mimeType="image/*" />
+                <!-- 任何文件：用电脑转换（批次 269 §四；一次只收一个，同 iOS NSExtensionActivationSupportsFileWithMaxCount = 1） -->
+                <data android:mimeType="*/*" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.SEND_MULTIPLE" />

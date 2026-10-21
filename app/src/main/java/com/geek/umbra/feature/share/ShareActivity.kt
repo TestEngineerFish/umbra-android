@@ -1,4 +1,4 @@
-// 系统分享面板里的「记到 Umbra 灵感」入口 —— 对应 iOS ShareExtension/ShareViewController.swift + ShareInspirationView。
+// 系统分享面板里的「记到 Umbra 灵感」与「用电脑转换」入口 —— 对应 iOS ShareExtension/ShareViewController.swift + ShareInspirationView。
 //
 // 在浏览器读到一段、在聊天 App 看到一条、在相册里翻到一张截图 —— 分享里点 Umbra，
 // 一张底部卡片预填好分享进来的东西，点保存就记成一条灵感，人留在原来那个 App 里。
@@ -73,6 +73,13 @@ import com.geek.umbra.designsystem.UmbraTheme
 import com.geek.umbra.designsystem.UmbraTone
 import com.geek.umbra.designsystem.UmbraTopBarText
 import com.geek.umbra.designsystem.UmbraType
+import com.geek.umbra.designsystem.UmbraSegment
+import com.geek.umbra.designsystem.UmbraSegmentedControl
+import com.geek.umbra.feature.convert.ConvertModel
+import com.geek.umbra.feature.convert.ConvertPanel
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import com.geek.umbra.net.Prefs
 
 class ShareActivity : AppCompatActivity() {
@@ -94,11 +101,53 @@ class ShareActivity : AppCompatActivity() {
                     }
                 }
                 BackHandler(enabled = model.saving) { /* 保存中不让返回键关面板：请求还在路上，关了就不知道成没成 */ }
-                ShareSheet(model, onCancel = { finish() }, onOpenApp = {
+                ShareRoot(model, onClose = { finish() }, onOpenApp = {
                     startActivity(Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                     finish()
                 })
             }
+        }
+    }
+}
+
+/**
+ * 面板的根（iOS ShareViewController.ShareRootView，批次 269 §四）：分享进来的是**文件** → 第一屏直接是「用电脑转换」
+ * （Umbra 现有的那几件只收文字、网址、图片，文件进来只有转换这一件事）；有图 → 底部一个切换（记灵感 / 用电脑转换），默认记灵感；
+ * 只有文字 / 链接 → 只有记灵感（和原来一样）。
+ */
+@Composable
+private fun ShareRoot(model: ShareModel, onClose: () -> Unit, onOpenApp: () -> Unit) {
+    var converting by rememberSaveable { mutableStateOf(false) }
+    val canSwitch = !model.loading && !model.fileOnly && model.convertInput != null
+    val switcher: @Composable () -> Unit = {
+        if (canSwitch) {
+            UmbraSegmentedControl(
+                listOf(UmbraSegment(stringResource(R.string.share_conv_modeInsp)), UmbraSegment(stringResource(R.string.share_conv_modeConvert))),
+                if (converting) 1 else 0, { converting = it == 1 },
+                Modifier.padding(horizontal = UmbraDimens.pagePadX, vertical = 8.dp),
+            )
+        }
+    }
+    val cm = if (!model.loading && (model.fileOnly || converting)) model.convertModel() else null
+    if (cm != null) ConvertCard(cm, onClose, switcher) else ShareSheet(model, onCancel = onClose, onOpenApp = onOpenApp, switcher = switcher)
+}
+
+/** 转换面板放进同一张底部卡片（同记灵感那张的外形：scrim + 顶部圆角 card）。「打开远程控制」「选文件」不给（见 ConvertPanel 的参数说明）。 */
+@Composable
+private fun ConvertCard(cm: ConvertModel, onClose: () -> Unit, switcher: @Composable () -> Unit) {
+    val c = UmbraTheme.colors
+    val sheet = RoundedCornerShape(topStart = UmbraDimens.radiusSheet, topEnd = UmbraDimens.radiusSheet)
+    Box(
+        Modifier.fillMaxSize().background(UmbraFixedColors.scrim).clickable(remember { MutableInteractionSource() }, indication = null) {},
+        contentAlignment = Alignment.BottomCenter,
+    ) {
+        Column(
+            Modifier.fillMaxWidth().statusBarsPadding().clip(sheet).background(c.bg)
+                .clickable(remember { MutableInteractionSource() }, indication = null) {}
+                .navigationBarsPadding(),
+        ) {
+            ConvertPanel(cm, onClose, Modifier.fillMaxWidth().weight(1f, fill = false), closeOnDispose = false)
+            switcher()
         }
     }
 }
@@ -122,7 +171,7 @@ private fun shareText(key: String): String = stringResource(
 
 /** 面板本体：标题栏（取消 / 标题 / 保存）、失败那一句、正文、缩略图、「帮我查查」。 */
 @Composable
-private fun ShareSheet(model: ShareModel, onCancel: () -> Unit, onOpenApp: () -> Unit) {
+private fun ShareSheet(model: ShareModel, onCancel: () -> Unit, onOpenApp: () -> Unit, switcher: @Composable () -> Unit = {}) {
     val c = UmbraTheme.colors
     val sheet = RoundedCornerShape(topStart = UmbraDimens.radiusSheet, topEnd = UmbraDimens.radiusSheet)
     Box(
@@ -186,6 +235,7 @@ private fun ShareSheet(model: ShareModel, onCancel: () -> Unit, onOpenApp: () ->
                     UmbraButton(stringResource(R.string.share_insp_openApp), onOpenApp, Modifier.fillMaxWidth(), kind = UmbraButtonKind.Secondary)
                 }
             }
+            switcher()
         }
     }
 }

@@ -1,4 +1,4 @@
-// 从系统分享进来的 Intent 里把**文字 / 链接 / 图片**分别取出来 —— 对应 iOS ShareExtension/ShareIntake.swift。
+// 从系统分享进来的 Intent 里把**文字 / 链接 / 图片 / 文件**分别取出来 —— 对应 iOS ShareExtension/ShareIntake.swift。
 //
 // Android 的形状（和 iOS NSExtensionItem 不同）：
 // · ACTION_SEND + text/plain：EXTRA_TEXT（浏览器分享网页时就是那条链接）；
@@ -36,6 +36,11 @@ data class ShareIntakeResult(
     val images: List<ShareImage> = emptyList(),
     /** 超出上限、没读进来的图的张数。 */
     val dropped: Int = 0,
+    /**
+     * 分享进来的第一个**不是图**的文件（「用电脑转换」，iOS 58cf4be：只收一个）。字节不在这里读 ——
+     * 转换面板按 32 MB 上限先问大小、超了不读（`readConvertInput`）。
+     */
+    val file: Uri? = null,
 )
 
 object ShareIntake {
@@ -51,10 +56,11 @@ object ShareIntake {
         // 整段就是一条链接的认成链接，其余是文字（iOS 分开拿 public.url / public.plain-text，见 ShareInspRules.isLink）。
         for (t in rawTexts) if (ShareInspRules.isLink(t)) urls += t.trim() else texts += t
 
-        val imageUris = streams(intent).filter { isImage(cr, it, intent.type) }.distinct()
+        val all = streams(intent).distinct()
+        val imageUris = all.filter { isImage(cr, it, intent.type) }
         val (kept, dropped) = ShareInspRules.pickImages(imageUris)
         val images = kept.mapNotNull { load(cr, it) }
-        ShareIntakeResult(texts, urls, images, dropped)
+        ShareIntakeResult(texts, urls, images, dropped, file = all.firstOrNull { it !in imageUris })
     }
 
     /** EXTRA_STREAM（单个 / 一串）+ ClipData 里的 Uri，按分享顺序。 */

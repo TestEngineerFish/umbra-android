@@ -189,6 +189,7 @@ private fun deviceSub(d: KnownDevice): String {
 
 @Composable
 fun DeviceDetailScreen(id: String) {
+    val c = UmbraTheme.colors
     val devices by DevicesStore.devices.collectAsState()
     var refreshing by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -204,9 +205,12 @@ fun DeviceDetailScreen(id: String) {
     // 服务端不知道的 per-device 开关，价值不足以换一处新的状态源。
     val prefs by AppGraph.prefs.snapshot.collectAsState()
     val allowSend = prefs[Prefs.K.allowDeviceSend] ?: false
+    // 「用这台电脑转换文件」（批次 269 §四）：先开系统文件选择器，选完弹面板（电脑已选好）；横条续看也走同一张面板。
+    val convert = com.geek.umbra.feature.convert.rememberConvertEntry(d)
+    val banners by com.geek.umbra.feature.convert.ConvertCenter.banners.collectAsState()
     UmbraScreen(
         title = d.device_name, onBack = { router.back() }, refreshing = refreshing,
-        onRefresh = { scope.launch { refreshing = true; DevicesStore.reload(); refreshing = false } },
+        onRefresh = { scope.launch { refreshing = true; DevicesStore.reload(); com.geek.umbra.feature.convert.ConvertCenter.refresh(); refreshing = false } },
         actions = {
             // 破坏性动作收在右上 ⋯（iosShell.toolbar.noDestructiveAtBottom）；点了仍要再过确认弹窗。
             UmbraMoreMenu(listOf(UmbraMenuItem("从联系人列表移除", danger = true) {
@@ -222,6 +226,15 @@ fun DeviceDetailScreen(id: String) {
             }))
         },
     ) {
+        // 顶上那一条「X 转好了」+［去看看］：这台手机发起的、在这台电脑上转完还没看过的那件（批次 269 §四）。
+        banners[d.device_id]?.let { b ->
+            item(key = "convert-banner") {
+                com.geek.umbra.feature.convert.ConvertBannerView(b) {
+                    com.geek.umbra.feature.convert.ConvertCenter.seen(b.jobId)
+                    convert.present(null, resumeJob = b.jobId)
+                }
+            }
+        }
         item(key = "hero") {
             UmbraHeroCard(
                 UmbraIconPaths.monitor, d.device_name,
@@ -231,6 +244,15 @@ fun DeviceDetailScreen(id: String) {
         }
         // 远程那一组放最前（§11.2：hero 卡下方就是入口）。远程模块的桩把入口、会话记录、中继用量画在一起。
         item(key = "remote") { com.geek.umbra.feature.remote.RemoteDeviceSections(d) }
+        // 「用这台电脑转换文件」：离线时整行置灰、点不动，副行说为什么（转换要那台电脑在线）。
+        settingSection("convert", null, listOf(
+            UmbraSettingRow(
+                AppGraph.context.getString(R.string.convert_entry),
+                sub = if (d.online) null else AppGraph.context.getString(R.string.convert_entryOffline),
+                tint = if (d.online) null else c.faint, chevron = d.online,
+                action = if (d.online) ({ convert.pickFile() }) else null,
+            ),
+        ))
         settingSection("info", "信息", listOf(
             UmbraSettingRow("平台", value = d.platform),
             UmbraSettingRow("设备 ID", value = d.device_id, mono = true, action = {
