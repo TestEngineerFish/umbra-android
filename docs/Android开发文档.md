@@ -1,6 +1,6 @@
 # Umbra Android 开发文档
 
-最后更新：2026-10-22（技术债五项收口）· 参照 iOS 端 `UmbraiOS` 0464ea7（逐功能对齐到的 iOS 提交写在第五节各行）
+最后更新：2026-10-22（技术债五项及三条余项收口）· 参照 iOS 端 `UmbraiOS` 0464ea7（逐功能对齐到的 iOS 提交写在第五节各行）
 
 **这一份是 Android 端的总入口。** 技术选型、工程约定、iOS→Android 平台映射、功能清单与实现状态都在这里；
 逐模块的接口字段、业务规则、页面细节在 `docs/reference/` 下四份盘点里（从 iOS 源码逐文件读出来的）：
@@ -75,6 +75,7 @@ UmbraAndroid/
    iOS 写死中文的，Kotlin 里也写中文字面量；Android 独有的句子放手写的 `strings.xml` / `strings_*_android.xml` / `strings_share.xml` / `strings_widget.xml`。
    与 PC / iOS 逐字一致的句子（附件失败、reasonKind、任务重试、删除后果、CSV 列头）不许意译。
 8. **通用件先找 designsystem / net**：页面三态 `umbraScreenPhase`、左滑 `UmbraRevealSwipeRow`、一格输入 `UmbraPrompt`、单钮说明 `UmbraNotice`、
+   选择列表 `UmbraChoice`、「附件已删除」`UmbraAttGonePlaceholder`、
    取二进制 `UmbraHttp.bytes`、带鉴权的图 `UmbraImages.loader`、`reason_kind` 判定 `ReasonRules`、设备列表 `DevicesStore` —— 都只有一份，别在模块里再抄。
 
 ### 构建与验证
@@ -209,10 +210,13 @@ R8 的问题只在运行时暴露（序列化类被裁、反射找不到），�
 | 设备列表聊天与「我」各存一份 | 80ad58d | `feature/me` 的 `DevicesStore` |
 | 各模块自补的组件 | 65e066f / 983c459 / b9d11b9 / a80fde3 | 三态 `designsystem/UmbraStates.kt`、取图 `net/UmbraImages.kt`、弹层 `designsystem/UmbraSheets.kt`、左滑 `designsystem/UmbraRevealSwipeRow.kt` |
 
-**还剩的**（盘点时顺带发现，不影响功能）：
-- 「附件已删除」占位在聊天图片格、提醒附件、记账凭证三处各画一份（灰度、字号已分叉）；iOS 是一份 `UmbraAttGonePlaceholder`。
-- 「标题 + 选项行 + 取消」的选择弹层有四份：`presentChoice`（我）、记账分类页、执勤、保险箱 `VaultSheetBody`。
-- 几页还是自己写的三态（提醒列表、任务详情、记忆、记账设置、存储用量），没走 `umbraScreenPhase`；`UmbraCardNoData` 只在记账包里。
+**同日又收口的三条余项**：
+
+| 项 | 提交 | 现在在哪 |
+|---|---|---|
+| 「附件已删除」占位聊天、提醒、记账各一份 | c5d5e6c | `designsystem/UmbraAttGone.kt`（照 iOS `UmbraAttGonePlaceholder`） |
+| 选择弹层四份（我 / 记账 / 执勤 / 保险箱） | 87aada8 | `designsystem/UmbraSheets.kt` 的 `UmbraChoice`（照 iOS `UmbraSheetLayer`） |
+| 提醒列表、任务详情、记忆、记账设置、存储用量自写三态 | 173e4c0 | 都走 `UmbraScreenPhase` / `UmbraPhaseFailedCard`；任务详情的四档判据仍在 `TaskDetailRules`（多「不存在」一档，同 iOS） |
 
 ## 六、需要服务端配合
 
