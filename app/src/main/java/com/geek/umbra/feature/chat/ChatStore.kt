@@ -7,6 +7,14 @@ package com.geek.umbra.feature.chat
 
 import com.geek.umbra.R
 import com.geek.umbra.app.AppGraph
+import com.geek.umbra.feature.task.TaskDetailRules
+import com.geek.umbra.feature.task.TaskResumeOutcome
+import com.geek.umbra.feature.task.TaskRetryOutcome
+import com.geek.umbra.feature.task.TaskRetryResponse
+import com.geek.umbra.feature.task.TaskRetryRules
+import com.geek.umbra.feature.task.TaskSuspendInfo
+import com.geek.umbra.feature.task.TaskSuspendRules
+import com.geek.umbra.feature.task.suspendInfo
 import com.geek.umbra.model.KnownDevice
 import com.geek.umbra.model.TaskDetail
 import com.geek.umbra.navigation.Tab
@@ -1572,14 +1580,14 @@ object ChatStore {
                 )
             }
             if (status != null) {
-                val info = if (status == "suspended") TaskSuspendInfo.of(msg) else TaskSuspendInfo()
+                val info = if (status == "suspended") TaskSuspendInfo.fromJson(msg) else TaskSuspendInfo()
                 if (info.resumeReady && !j.suspend.resumeReady) j = j.copy(resumeOutcome = null, resumeFailText = null)
                 j = j.copy(suspend = info)
                 // 离开挂起：上一次「接着跑」没成的那一行跟着作废（台账 resume-fail-line-outlives-status）
                 if (status != "suspended") j = j.copy(resuming = false, resumeOutcome = null, resumeFailText = null)
             }
             // 又跑起来了：上一次重试的那一行作废
-            if (ChatTaskKit.isActive(j.status)) j = j.copy(retryOutcome = null, retrying = false)
+            if (TaskDetailRules.isActive(j.status)) j = j.copy(retryOutcome = null, retrying = false)
             s.blocks[idx] = j
             if (status == "failed" || status == "cancelled") fillExecutor(id)
             if (status == "done") s.blocks += ChatBlock.Done(goal = j.goal, results = j.results ?: emptyList())
@@ -1594,7 +1602,7 @@ object ChatStore {
                 failReasonKind = if (status == "failed") msg.str("reason_kind") else null,
                 quotaWindow = if (status == "failed") com.geek.umbra.feature.account.ResetCardRules.quotaWindowOf(msg.str("window")) else null,
             )
-            if (status == "suspended") j = j.copy(suspend = TaskSuspendInfo.of(msg))
+            if (status == "suspended") j = j.copy(suspend = TaskSuspendInfo.fromJson(msg))
             s.taskMap[id] = s.blocks.size
             s.blocks += j
             if (status == "failed" || status == "cancelled") fillExecutor(id)
@@ -1602,7 +1610,7 @@ object ChatStore {
         // 助手问话下那颗钮跟着同一条推送走
         val ask = _resumeAsks.value[id]
         if (status != null && ask != null) {
-            val info = if (status == "suspended") TaskSuspendInfo.of(msg) else TaskSuspendInfo()
+            val info = if (status == "suspended") TaskSuspendInfo.fromJson(msg) else TaskSuspendInfo()
             var a = ask
             if (info.resumeReady && !a.info.resumeReady) a = a.copy(outcome = null, failText = null)
             a = a.copy(status = status, info = info)
@@ -1637,26 +1645,26 @@ object ChatStore {
     private fun fillExecutor(taskId: String) {
         AppGraph.scope.launch {
             val d = withContext(BackgroundWork) { fetchTaskDetail(taskId) } ?: return@launch
-            updateTaskCard(taskId) { it.copy(operate = ChatTaskKit.isOperate(d.task.executor)) }
+            updateTaskCard(taskId) { it.copy(operate = TaskRetryRules.isOperate(d.task.executor)) }
         }
     }
 
     /** 重试与接着跑共用的那一次 POST：只取分档要的 status / code / state / detail。 */
-    private suspend fun postTaskAction(path: String): TaskActionResponse = when (val r = AppGraph.http.raw("POST", path)) {
-        is HttpResult.Ok -> TaskActionResponse(r.status, null, null, "HTTP ${r.status}")
+    private suspend fun postTaskAction(path: String): TaskRetryResponse = when (val r = AppGraph.http.raw("POST", path)) {
+        is HttpResult.Ok -> TaskRetryResponse(r.status, null, null, "HTTP ${r.status}")
         is HttpResult.Fail -> {
             val o = runCatching { UmbraJson.parseToJsonElement(r.body) as JsonObject }.getOrNull()
-            TaskActionResponse(r.status, o?.str("code"), o?.str("state"), o?.str("detail")?.takeIf { it.isNotEmpty() } ?: "HTTP ${r.status}")
+            TaskRetryResponse(r.status, o?.str("code"), o?.str("state"), o?.str("detail")?.takeIf { it.isNotEmpty() } ?: "HTTP ${r.status}")
         }
-        is HttpResult.Offline -> TaskActionResponse(0, null, null, r.message)
-        is HttpResult.Blocked -> TaskActionResponse(0, null, null, "未登录")
+        is HttpResult.Offline -> TaskRetryResponse(0, null, null, r.message)
+        is HttpResult.Blocked -> TaskRetryResponse(0, null, null, "未登录")
     }
 
     /** 卡上「重试任务」：就地调接口、不跳详情。防连点的闸在这里（读的是现值）。null = 被闸掉了。 */
     suspend fun retryTaskCard(taskId: String): TaskRetryOutcome? {
         if (taskCard(taskId)?.retrying == true) return null
         updateTaskCard(taskId) { it.copy(retrying = true, retryOutcome = null) }
-        val o = ChatTaskKit.retryOutcome(postTaskAction(ChatTaskKit.retryPath(taskId)))
+        val o = TaskRetryRules.outcome(postTaskAction(TaskRetryRules.retryPath(taskId)))
         updateTaskCard(taskId) { j0 ->
             val j = j0.copy(retrying = false)
             when (o) {
@@ -1687,7 +1695,7 @@ object ChatStore {
             val d = withContext(BackgroundWork) { fetchTaskDetail(taskId) }
             done?.invoke()
             d ?: return@launch
-            val info = TaskSuspendInfo.of(d.task)
+            val info = d.task.suspendInfo
             _resumeAsks.value[taskId]?.let { _resumeAsks.value = _resumeAsks.value + (taskId to it.copy(status = d.task.status, info = info)) }
             updateTaskCard(taskId) { it.copy(status = d.task.status, suspend = if (d.task.status == "suspended") info else TaskSuspendInfo()) }
         }
@@ -1701,7 +1709,7 @@ object ChatStore {
         val before = if (from == ResumeSource.Ask && _resumeAsks.value[taskId] != null) _resumeAsks.value[taskId]!!.info
         else taskCard(taskId)?.suspend ?: _resumeAsks.value[taskId]?.info ?: TaskSuspendInfo()
         setResumeState(taskId, from) { it.copy(resuming = true, outcome = null, failText = null) }
-        val o = ChatTaskKit.resumeOutcome(postTaskAction(ChatTaskKit.resumePath(taskId)))
+        val o = TaskSuspendRules.outcome(postTaskAction(TaskSuspendRules.resumePath(taskId)))
         val text = o.message(before)
         setResumeState(taskId, from) { it.copy(resuming = false) }
         when (o) {
@@ -1716,8 +1724,8 @@ object ChatStore {
             }
             else -> {
                 if (o == TaskResumeOutcome.NotReady) {
-                    updateTaskCard(taskId) { it.copy(suspend = ChatTaskKit.afterNotReady(it.suspend)) }
-                    _resumeAsks.value[taskId]?.let { _resumeAsks.value = _resumeAsks.value + (taskId to it.copy(info = ChatTaskKit.afterNotReady(it.info))) }
+                    updateTaskCard(taskId) { it.copy(suspend = TaskSuspendRules.afterNotReady(it.suspend)) }
+                    _resumeAsks.value[taskId]?.let { _resumeAsks.value = _resumeAsks.value + (taskId to it.copy(info = TaskSuspendRules.afterNotReady(it.info))) }
                 }
                 setResumeState(taskId, from) { it.copy(outcome = o, failText = text) }
                 if (o.refreshes) refreshTaskState(taskId)

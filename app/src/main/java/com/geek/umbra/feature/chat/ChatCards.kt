@@ -59,6 +59,12 @@ import com.geek.umbra.designsystem.UmbraStatusBadge
 import com.geek.umbra.designsystem.UmbraTheme
 import com.geek.umbra.designsystem.UmbraType
 import com.geek.umbra.feature.knowledge.KbApi
+import com.geek.umbra.feature.task.TaskCardAction
+import com.geek.umbra.feature.task.TaskRetryCopy
+import com.geek.umbra.feature.task.TaskRetryOutcome
+import com.geek.umbra.feature.task.TaskRetryRules
+import com.geek.umbra.feature.task.TaskSuspendCopy
+import com.geek.umbra.feature.task.TaskSuspendRules
 import com.geek.umbra.navigation.Route
 import com.geek.umbra.net.ReasonKind
 import com.geek.umbra.net.ReasonRules
@@ -109,7 +115,7 @@ fun TraceCard(a: ChatBlock.Assistant) {
     }
 }
 
-/** 任务进度卡：状态图标 + 目标 + 徽标 + 进度条 + 消息（≤8 行）+ 百分比；可内嵌授权钮；收尾钮按 ChatTaskKit.cardAction。 */
+/** 任务进度卡：状态图标 + 目标 + 徽标 + 进度条 + 消息（≤8 行）+ 百分比；可内嵌授权钮；收尾钮按 TaskRetryRules.cardAction。 */
 @Composable
 fun TaskCard(j: ChatBlock.Task, conv: String) {
     val c = UmbraTheme.colors
@@ -117,7 +123,7 @@ fun TaskCard(j: ChatBlock.Task, conv: String) {
     // 「收尾了」只认三种终态（按映射后的枚举认，不按「不是 running / pending」排除）
     val finished = st == UmbraStatus.Done || st == UmbraStatus.Failed || st == UmbraStatus.Cancelled
     val suspended = j.status == "suspended"
-    val cardText = ChatTaskKit.suspendCardText(j.status, j.suspend)
+    val cardText = TaskSuspendRules.display(j.status, j.suspend)?.cardText
     Column(
         cardModifier().clickable(enabled = suspended && !j.gone) { AppGraph.router.go(Route.TaskDetail(j.taskId)) }
             .padding(horizontal = 13.dp, vertical = UmbraDimens.sp4),
@@ -170,11 +176,11 @@ private fun GoneNote(text: String) {
 @Composable
 private fun SuspendedCardAction(j: ChatBlock.Task) {
     val scope = rememberCoroutineScope()
-    val show = !j.gone && ChatTaskKit.showsResume(j.status, j.suspend) && (j.resumeOutcome?.keepsResume ?: true)
+    val show = !j.gone && TaskSuspendRules.showsResume(j.status, j.suspend) && (j.resumeOutcome?.keepsResume ?: true)
     if (!(j.gone || show || j.resumeFailText != null)) return
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        if (j.gone) GoneNote(TaskRetryCopy.MISSING)
-        if (show) UmbraButton(if (j.resuming) TaskSuspendCopy.RESUMING else TaskSuspendCopy.RESUME, {
+        if (j.gone) GoneNote(TaskRetryCopy.missing)
+        if (show) UmbraButton(if (j.resuming) TaskSuspendCopy.resuming else TaskSuspendCopy.resume, {
             if (!j.resuming) scope.launch { ChatStore.resumeTask(j.taskId, ChatStore.ResumeSource.Card) }
         }, Modifier.fillMaxWidth(), kind = UmbraButtonKind.Secondary, height = 44.dp)
         if (!j.gone) j.resumeFailText?.let { FailLine(it) }
@@ -190,20 +196,20 @@ private fun TaskCardAction(j: ChatBlock.Task, conv: String) {
     val scope = rememberCoroutineScope()
     // 上一次重试被服务端说死就不再给钮；operate 那一档不算说死（它换成「重新发起」）
     val blocked = j.retryOutcome?.let { !it.keepsRetry && it != TaskRetryOutcome.Operate } ?: false
-    val action = ChatTaskKit.cardAction(j.status, if (j.status == "failed") j.failAction else TaskFailAction.AsBefore, blocked, j.operate, j.gone)
+    val action = TaskRetryRules.cardAction(j.status, if (j.status == "failed") j.failAction else TaskFailAction.AsBefore, blocked, j.operate, j.gone)
     // 补救类失败（批次 278，同 PC 聊天任务卡）：额度用完先给［用重置卡］，原来那颗（去买 / 查看结果）照旧，再加一颗「重试任务」——
     // 用完卡人要有地方接着跑。顺序同 PC failCardActions：重置 · 去买 · 重试。
     val failed = j.status == "failed" && !j.gone
-    val fixRetry = ChatTaskKit.cardFixRetry(j.status, j.failReasonKind, blocked, j.gone, action)
+    val fixRetry = TaskRetryRules.cardFixRetry(j.status, j.failReasonKind, blocked, j.gone, action)
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        if (j.gone) GoneNote(TaskRetryCopy.MISSING)
+        if (j.gone) GoneNote(TaskRetryCopy.missing)
         if (failed && j.failReasonKind == "quota_exhausted") UseResetCardButton(j.quotaWindow)
         when (action) {
-            TaskCardAction.Retry -> UmbraButton(if (j.retrying) TaskRetryCopy.RETRYING else TaskRetryCopy.RETRY, {
+            TaskCardAction.Retry -> UmbraButton(if (j.retrying) TaskRetryCopy.retrying else TaskRetryCopy.retry, {
                 if (!j.retrying) scope.launch { ChatStore.retryTaskCard(j.taskId) }
             }, Modifier.fillMaxWidth(), kind = UmbraButtonKind.Secondary, height = 44.dp)
-            TaskCardAction.Relaunch -> UmbraButton(TaskRetryCopy.RELAUNCH, {
-                val text = ChatTaskKit.relaunchText(j.goal, null) ?: return@UmbraButton
+            TaskCardAction.Relaunch -> UmbraButton(TaskRetryCopy.relaunch, {
+                val text = TaskRetryRules.relaunchText(j.goal, null) ?: return@UmbraButton
                 ChatStore.prefillRelaunch(text)
                 // 卡在设备会话里时，原目标要回到和秘书的会话里去发
                 if (conv != ChatStore.MAIN_CONV) AppGraph.router.jump(Route.ChatThread(ChatStore.MAIN_CONV))
@@ -214,7 +220,7 @@ private fun TaskCardAction(j: ChatBlock.Task, conv: String) {
                 Modifier.fillMaxWidth(), kind = UmbraButtonKind.Secondary, height = 44.dp)
             null -> Unit
         }
-        if (fixRetry) UmbraButton(if (j.retrying) TaskRetryCopy.RETRYING else TaskRetryCopy.RETRY, {
+        if (fixRetry) UmbraButton(if (j.retrying) TaskRetryCopy.retrying else TaskRetryCopy.retry, {
             if (!j.retrying) scope.launch { ChatStore.retryTaskCard(j.taskId) }
         }, Modifier.fillMaxWidth(), kind = UmbraButtonKind.Secondary, height = 44.dp)
         if (!j.gone) j.retryOutcome?.message?.let { FailLine(it) }
@@ -229,7 +235,7 @@ fun ResumeAskAction(taskId: String) {
     val scope = rememberCoroutineScope()
     if (!ask.showsButton && ask.failText == null) return
     Column(Modifier.width(CARD_W), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        if (ask.showsButton) UmbraButton(if (ask.resuming) TaskSuspendCopy.RESUMING else TaskSuspendCopy.RESUME, {
+        if (ask.showsButton) UmbraButton(if (ask.resuming) TaskSuspendCopy.resuming else TaskSuspendCopy.resume, {
             if (!ask.resuming) scope.launch { ChatStore.resumeTask(taskId, ChatStore.ResumeSource.Ask) }
         }, Modifier.fillMaxWidth(), height = 44.dp)
         ask.failText?.let { FailLine(it) }

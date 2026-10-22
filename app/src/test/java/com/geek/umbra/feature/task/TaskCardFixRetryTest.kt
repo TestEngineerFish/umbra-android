@@ -1,11 +1,11 @@
-package com.geek.umbra.feature.chat
+package com.geek.umbra.feature.task
 
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /** 聊天任务卡补救类失败多给一颗「重试任务」（PC 聊天任务卡 retryHere / failCardActions，批次 278）。 */
-class ChatTaskFixRetryTest {
-    private val K = ChatTaskKit
+class TaskCardFixRetryTest {
+    private val K = TaskRetryRules
 
     @Test fun addsRetryForFixableFailures() {
         for (k in listOf("quota_exhausted", "need_membership", "insufficient_balance")) {

@@ -4,6 +4,10 @@
 // 每块的 id 在创建时定死（UUID），给 LazyColumn 当 key —— 同一条消息从占位到收尾 id 不变，列表不会闪。
 package com.geek.umbra.feature.chat
 
+import com.geek.umbra.feature.task.TaskResumeOutcome
+import com.geek.umbra.feature.task.TaskRetryOutcome
+import com.geek.umbra.feature.task.TaskSuspendInfo
+import com.geek.umbra.feature.task.TaskSuspendRules
 import com.geek.umbra.net.ImageTier
 import com.geek.umbra.net.PreparedImage
 import com.geek.umbra.net.ReasonKind
@@ -116,7 +120,7 @@ data class ResumeAsk(
     val outcome: TaskResumeOutcome? = null,
     val failText: String? = null,
 ) {
-    val showsButton: Boolean get() = ChatTaskKit.showsResume(status, info) && (outcome?.keepsResume ?: true)
+    val showsButton: Boolean get() = TaskSuspendRules.showsResume(status, info) && (outcome?.keepsResume ?: true)
 }
 
 /** 聊天里的一块。 */

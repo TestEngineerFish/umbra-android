@@ -1,5 +1,6 @@
 // 任务「重试」的判据 + 字面：出不出钮、出哪颗、失败怎么分档、每一档写什么（iOS: Features/Task/TaskRetryRules.swift）。
-// 任务详情底部动作条、聊天任务卡、任务列表「已不在」那一行三处共用这一份。
+// 任务详情底部动作条、聊天任务卡、任务列表「已不在」那一行、任务通知四处共用这一份。
+// 聊天包从前另抄过一份（ChatTaskKit），字面与判据逐条一致，已合并到这里（开发文档第五节技术债）。
 //
 // 出处：设计侧批次 222 §二。条件和字面都同 PC 221（UmbraPC/src/features/tasks/taskRetry.ts、zh-CN.json 的 tasks.retry*）。
 // **钮名也住在这里**：发请求的路径（retryPath）和钮名放在同一个文件，视图一律引用 TaskRetryCopy，不手写这四个字。
@@ -123,6 +124,14 @@ object TaskRetryRules {
 
     /** 补救完能接着跑的类别（PC `retryAfterFix`）：额度用完 / 没会员 / 欠费。 */
     fun retryAfterFix(reasonKind: String?): Boolean = reasonKind in setOf("quota_exhausted", "need_membership", "insufficient_balance")
+
+    /**
+     * 聊天任务卡上要不要在原来那颗钮之外**再给一颗「重试任务」**（PC 聊天任务卡 `retryHere`，批次 278）：
+     * 补救类失败（额度用完 / 没会员 / 欠费）原来那颗是「去买」/「查看结果」，人补救完（就地用了重置卡）得有地方点重试。
+     * 原来那颗已经是重试 / 重新发起、上一次重试被说死、任务已经不在了 —— 都不再加。
+     */
+    fun cardFixRetry(status: String, reasonKind: String?, blocked: Boolean, gone: Boolean, base: TaskCardAction?): Boolean =
+        status == "failed" && retryAfterFix(reasonKind) && !blocked && !gone && base != TaskCardAction.Retry && base != TaskCardAction.Relaunch
 
     /** 钮下的灰色提示。电脑操作任务没有这行：那是从头再来，不是「接着跑」。 */
     fun hint(status: String, button: TaskRetryButton?): String? {
