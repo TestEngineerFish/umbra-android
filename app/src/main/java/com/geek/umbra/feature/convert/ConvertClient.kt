@@ -3,9 +3,8 @@
 //
 // Android 和 iOS 的不同：分享透明 Activity 与主 App 同进程，所以**直接走 AppGraph.http**（请求闸、Bearer、分档码都在那一处），
 // 不用像 iOS 扩展那样自己写一段最小网络。只有一处例外：
-//   成品下载 `/files/<id>` 可能 302 到 OSS 签名地址。统一出口只跟同主机的重定向、而且只回字符串 ——
-//   这里用 `http.client` 自己发（同保险箱 / 远程文件面板取字节的做法），**不跟重定向**，拿到 3xx 后照 Location 另发一次（只认 https），
-//   两次都**不带登录头**（`/files` 不鉴权；带着 Authorization 去 OSS 会被当成签错的请求拒掉）。
+//   成品下载 `/files/<id>` 可能 302 到 OSS 签名地址。走统一出口的按字节读（[UmbraHttp.bytes]），放开「跳到别家 https」那一档，
+//   而且**不带登录头**（`/files` 不鉴权；带着 Authorization 去 OSS 会被当成签错的请求拒掉）。
 package com.geek.umbra.feature.convert
 
 import com.geek.umbra.app.AppGraph
@@ -14,24 +13,20 @@ import com.geek.umbra.net.UmbraJson
 import com.geek.umbra.net.Uploads
 import com.geek.umbra.net.arr
 import com.geek.umbra.net.bool
+import com.geek.umbra.net.dataOrNull
 import com.geek.umbra.net.dbl
 import com.geek.umbra.net.int
 import com.geek.umbra.net.long
 import com.geek.umbra.net.obj
 import com.geek.umbra.net.str
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
-import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
-import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import com.geek.umbra.net.UmbraHttp
 import java.time.Instant
-import java.util.concurrent.TimeUnit
 
 /** `/convert/devices` 的一格 + `/devices/all` 里离线的那几台（面板「选一台电脑」要把离线的也画出来、置灰）。 */
 data class ConvertPC(val id: String, val name: String, val online: Boolean, val lastSeen: Instant? = null)
@@ -164,40 +159,9 @@ object ConvertClient {
      */
     suspend fun cancel(id: String): Boolean = http.raw("DELETE", "/convert/jobs/$id", timeoutMs = TIMEOUT_MS) is HttpResult.Ok
 
-    /** 取成品：先问 `/files/<id>`（不带登录头、不跟重定向）；回 3xx 就照 Location 再要一次（只认 https）。`onProgress` 收 0–1。 */
-    suspend fun fetch(fileId: String, onProgress: (Float) -> Unit): ByteArray? = withContext(Dispatchers.IO) {
-        val first = http.url("/files/$fileId").toHttpUrlOrNull() ?: return@withContext null
-        val c = http.client.newBuilder().followRedirects(false).followSslRedirects(false)
-            .callTimeout(TRANSFER_TIMEOUT_MS, TimeUnit.MILLISECONDS).readTimeout(TRANSFER_TIMEOUT_MS, TimeUnit.MILLISECONDS).build()
-        fun get(url: okhttp3.HttpUrl): Pair<Int, Any?>? = runCatching {
-            c.newCall(Request.Builder().url(url).build()).execute().use { resp ->
-                when {
-                    resp.isSuccessful -> {
-                        val total = resp.body.contentLength()
-                        val src = resp.body.byteStream()
-                        val out = java.io.ByteArrayOutputStream(if (total in 1..Int.MAX_VALUE) total.toInt() else 8192)
-                        val buf = ByteArray(16 * 1024)
-                        var got = 0L
-                        while (true) {
-                            val n = src.read(buf)
-                            if (n < 0) break
-                            out.write(buf, 0, n)
-                            got += n
-                            if (total > 0) onProgress((got.toFloat() / total).coerceAtMost(1f))
-                        }
-                        resp.code to out.toByteArray()
-                    }
-                    resp.code in 300..399 -> resp.code to resp.header("Location")
-                    else -> resp.code to null
-                }
-            }
-        }.getOrNull()
-        val (code, v) = get(first) ?: return@withContext null
-        if (code in 200..299) return@withContext v as? ByteArray
-        val loc = (v as? String)?.let { first.resolve(it) }?.takeIf { it.isHttps } ?: return@withContext null
-        val (c2, v2) = get(loc) ?: return@withContext null
-        if (c2 in 200..299) v2 as? ByteArray else null
-    }
+    /** 取成品：`/files/<id>`（不带登录头）；回 3xx 就照 Location 再要（跳去别家只认 https）。`onProgress` 收 0–1。 */
+    suspend fun fetch(fileId: String, onProgress: (Float) -> Unit): ByteArray? =
+        http.bytes("/files/$fileId", timeoutMs = TRANSFER_TIMEOUT_MS, authed = false, followHttpsAway = true, onProgress = onProgress).dataOrNull
 
     private fun JsonObject.asBody() = toString().toRequestBody(UmbraHttp.JSON)
 }

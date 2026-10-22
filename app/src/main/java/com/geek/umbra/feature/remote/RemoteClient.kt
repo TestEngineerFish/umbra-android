@@ -43,7 +43,7 @@ import com.geek.umbra.net.SocketState
 import com.geek.umbra.net.UmbraHttp
 import com.geek.umbra.net.UmbraJson
 import com.geek.umbra.net.UmbraUrl
-import com.geek.umbra.net.await
+import com.geek.umbra.net.dataOrNull
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -57,7 +57,6 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.put
-import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.webrtc.DataChannel
 import org.webrtc.DefaultVideoDecoderFactory
@@ -603,19 +602,14 @@ class RemoteClient(val launch: RemoteLaunch) {
 
     /**
      * 取快照图的字节（iOS: HTTPService.swift:1553 `remoteImage`）。服务端给的是 `/files/<id>` 这种相对地址；照样带 Bearer。
-     * **只认同源**：这一条请求带着登录令牌，绝对地址指到别处时不发。不走 `AppGraph.http.raw`：它把回包读成字符串，图片会被毁掉。
+     * **只认同源**：这一条请求带着登录令牌，绝对地址指到别处时不发（统一出口本来也不给别家带令牌，这里干脆不去取）。
      */
     private suspend fun remoteImage(raw: String): ImageBitmap? = withContext(Dispatchers.IO) {
         val base = AppGraph.prefs.serverUrl
         val full = if (raw.startsWith("http")) raw else base + raw
         val host = runCatching { URI(full).host }.getOrNull()
         if (host == null || host != runCatching { URI(base).host }.getOrNull()) return@withContext null
-        val b = Request.Builder().url(full)
-        val token = AppGraph.session.token
-        if (token.isNotEmpty()) b.header("Authorization", "Bearer $token")
-        val bytes = runCatching {
-            AppGraph.http.client.newCall(b.build()).await().use { resp -> if (resp.code < 400) resp.body.bytes() else null }
-        }.getOrNull() ?: return@withContext null
+        val bytes = AppGraph.http.bytes(full).dataOrNull ?: return@withContext null
         BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
     }
 

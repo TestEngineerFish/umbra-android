@@ -62,7 +62,28 @@ object Uploads {
     fun safeName(name: String) = name.replace(Regex("[\"\\\\\r\n]"), "_").ifBlank { "file" }
 
     /**
-     * `POST /files/upload`（multipart，字段名 `file`，`application/octet-stream`），带真实进度。
+     * 发一次 multipart 上传（字段名 `file`，`application/octet-stream`，[extraParts] 排在它前面），带真实进度，
+     * **原样交回统一出口的结果** —— 回包不是 [UploadResponse] 的接口（知识库 `/kb/{id}/files`）、要自己读 412 / 413 /
+     * storage_full 的调用方用这一个。[onProgress] 在 IO 线程回调（已发字节, 总字节），按整数百分比节流。
+     */
+    suspend fun send(
+        bytes: ByteArray,
+        filename: String,
+        path: String = "/files/upload",
+        extraParts: Map<String, String> = emptyMap(),
+        timeoutMs: Long = 60_000,
+        onProgress: (sent: Long, total: Long) -> Unit = { _, _ -> },
+    ): HttpResult {
+        val http = com.geek.umbra.app.AppGraph.http
+        val file = ProgressBody(bytes, "application/octet-stream".toMediaType(), onProgress)
+        val mb = MultipartBody.Builder().setType(MultipartBody.FORM)
+        extraParts.forEach { (k, v) -> mb.addFormDataPart(k, v) }
+        mb.addFormDataPart("file", safeName(filename), file)
+        return http.raw("POST", path, body = mb.build(), timeoutMs = timeoutMs)
+    }
+
+    /**
+     * `POST /files/upload`，回包解成 [UploadResponse]（建在 [send] 上）。
      * 成功回 [UploadResponse]；失败回分档。[onProgress] 在 IO 线程回调 0..1。
      */
     suspend fun upload(
@@ -73,12 +94,7 @@ object Uploads {
         extraParts: Map<String, String> = emptyMap(),
         timeoutMs: Long = 60_000,
     ): Pair<UploadResponse?, UploadError?> {
-        val http = com.geek.umbra.app.AppGraph.http
-        val file = ProgressBody(bytes, "application/octet-stream".toMediaType(), onProgress)
-        val mb = MultipartBody.Builder().setType(MultipartBody.FORM)
-        extraParts.forEach { (k, v) -> mb.addFormDataPart(k, v) }
-        mb.addFormDataPart("file", safeName(filename), file)
-        val r = http.raw("POST", path, body = mb.build(), timeoutMs = timeoutMs)
+        val r = send(bytes, filename, path, extraParts, timeoutMs) { sent, total -> onProgress((sent * 100 / total.coerceAtLeast(1)).toInt() / 100f) }
         if (r is HttpResult.Ok) {
             val u = runCatching { UmbraJson.decodeFromString(UploadResponse.serializer(), r.body) }.getOrNull()
             return if (u != null && u.file_id.isNotEmpty()) u to null else null to UploadError.Server
@@ -86,7 +102,7 @@ object Uploads {
         return null to UploadError.of(r)
     }
 
-    private class ProgressBody(val data: ByteArray, val type: MediaType, val cb: (Float) -> Unit) : RequestBody() {
+    private class ProgressBody(val data: ByteArray, val type: MediaType, val cb: (Long, Long) -> Unit) : RequestBody() {
         override fun contentType() = type
         override fun contentLength() = data.size.toLong()
         override fun writeTo(sink: BufferedSink) {
@@ -98,7 +114,7 @@ object Uploads {
                     super.write(source, byteCount)
                     sent += byteCount
                     val pct = (sent * 100 / total).toInt()
-                    if (pct != lastPct) { lastPct = pct; cb(pct / 100f) } // 按整数百分比节流
+                    if (pct != lastPct) { lastPct = pct; cb(sent, data.size.toLong()) } // 按整数百分比节流
                 }
             }.buffer()
             counting.write(data)

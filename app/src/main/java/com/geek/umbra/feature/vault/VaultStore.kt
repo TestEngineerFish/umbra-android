@@ -11,10 +11,10 @@ package com.geek.umbra.feature.vault
 import com.geek.umbra.app.AppGraph
 import com.geek.umbra.model.TrashList
 import com.geek.umbra.net.HttpResult
-import com.geek.umbra.net.SessionRequestGate
 import com.geek.umbra.net.UmbraHttp
 import com.geek.umbra.net.UmbraUrl
 import com.geek.umbra.net.await
+import com.geek.umbra.net.dataOrNull
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -30,8 +30,6 @@ import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.put
-import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
-import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.File
 
@@ -439,18 +437,7 @@ object VaultStore {
         attPlain[fileId]?.let { return it }
         if (auk == null || fileId.isEmpty()) return null
         val gen = unlockGen
-        val full = http.url("/files/" + UmbraUrl.segment(fileId))
-        val basePath = http.server.toHttpUrlOrNull()?.encodedPath ?: ""
-        val reqPath = full.toHttpUrlOrNull()?.encodedPath ?: return null
-        if (SessionRequestGate.blocks(AppGraph.prefs.signedOut, reqPath, basePath)) return null
-        val token = AppGraph.session.token
-        val data = withContext(Dispatchers.IO) {
-            runCatching {
-                val b = Request.Builder().url(full)
-                if (token.isNotEmpty()) b.header("Authorization", "Bearer $token")
-                http.client.newCall(b.build()).await().use { resp -> if (resp.code == 200) resp.body.bytes() else null }
-            }.getOrNull()
-        } ?: return null
+        val data = http.bytes("/files/" + UmbraUrl.segment(fileId)).dataOrNull ?: return null
         if (gen != unlockGen) return null
         val vk = vaultKeys[s.curVaultId] ?: return null
         val plain = withContext(Dispatchers.Default) { VaultCrypto.aesDecryptBytes(vk, data) } ?: return null

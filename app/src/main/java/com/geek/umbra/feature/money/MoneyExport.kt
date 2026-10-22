@@ -63,10 +63,11 @@ import com.geek.umbra.designsystem.UmbraSpinningIcon
 import com.geek.umbra.designsystem.UmbraTheme
 import com.geek.umbra.designsystem.UmbraType
 import com.geek.umbra.navigation.UmbraSheet
+import com.geek.umbra.net.UmbraUrl
+import com.geek.umbra.net.dataOrNull
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import okhttp3.Request
 import java.io.File
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
@@ -334,7 +335,7 @@ private suspend fun runExport(
  * 拿不到的图**跳过不报错**：一张图下不下来不该让整次导出失败，csv 里那一列写着它的名字，收到的人对得上少了哪一张。
  * 一张都没拿到就不出 zip。iOS: MoneyExportSheet.swift:322
  */
-private fun writeAttachmentsZip(entries: List<MoneyEntryDTO>, base: String, work: File): File? {
+private suspend fun writeAttachmentsZip(entries: List<MoneyEntryDTO>, base: String, work: File): File? {
     val dest = File(work, "$base-凭证图.zip")
     var got = 0
     val used = HashSet<String>()
@@ -362,20 +363,10 @@ private fun writeAttachmentsZip(entries: List<MoneyEntryDTO>, base: String, work
     return dest
 }
 
-/**
- * 一张附件的字节：本机暂存的读本机文件；服务端的走统一出口的 OkHttp 客户端带令牌下载
- * （UmbraHttp.raw 回的是字符串正文，二进制会被解码坏，所以这里直接用它的 client）。拿不到回 null。
- */
-private fun attBytes(fileId: String): ByteArray? {
+/** 一张附件的字节：本机暂存的读本机文件；服务端的走统一出口按字节读（带令牌）。拿不到回 null。 */
+private suspend fun attBytes(fileId: String): ByteArray? {
     if (MoneyLocalRules.isLocalFileId(fileId)) return MoneyLocal.fileFor(fileId)?.takeIf { it.exists() }?.readBytes()
-    return runCatching {
-        val b = Request.Builder().url(MoneyApi.fileUrl(fileId))
-        val token = AppGraph.session.token
-        if (token.isNotEmpty()) b.header("Authorization", "Bearer $token")
-        AppGraph.http.client.newCall(b.build()).execute().use { resp ->
-            if (!resp.isSuccessful) null else resp.body.bytes()
-        }
-    }.getOrNull()
+    return AppGraph.http.bytes("/files/" + UmbraUrl.segment(fileId)).dataOrNull
 }
 
 /** 按魔数判后缀：服务端 /files/<id> 根本没有后缀，后缀错了接收方会把一张 JPEG 当未知文件。iOS: MoneyExportSheet.swift:375 */

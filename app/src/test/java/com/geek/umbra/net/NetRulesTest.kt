@@ -21,6 +21,22 @@ class NetRulesTest {
         assertFalse(UmbraUrl.followsRedirect("http://a.com:8080/x", "https://a.com/x"))
     }
 
+    /** 按字节读的出口据此决定带不带令牌：只给自己的服务端带。 */
+    @Test fun isServerOnlyOwnOrigin() {
+        val srv = "https://api.umbra.example"
+        assertTrue(UmbraUrl.isServer(srv, "https://api.umbra.example/files/abc"))
+        assertTrue(UmbraUrl.isServer("$srv/", "https://api.umbra.example/files/abc"))
+        assertTrue(UmbraUrl.isServer(srv, "https://api.umbra.example:443/files/abc"))
+        assertTrue("http→https 升级算同一家", UmbraUrl.isServer("http://api.umbra.example", "https://api.umbra.example/x"))
+        assertTrue("带路径前缀的服务端", UmbraUrl.isServer("https://h.example/umbra", "https://h.example/umbra/files/1"))
+        assertFalse("主机名只是前缀相同", UmbraUrl.isServer(srv, "https://api.umbra.example.evil.com/files/abc"))
+        assertFalse("别家 CDN", UmbraUrl.isServer(srv, "https://cdn.example.com/theme.umbraplugin"))
+        assertFalse("OSS 签名地址", UmbraUrl.isServer(srv, "https://bucket.oss-cn-hangzhou.aliyuncs.com/a?Signature=x"))
+        assertFalse("降级到 http 不算", UmbraUrl.isServer(srv, "http://api.umbra.example/files/abc"))
+        assertFalse("换端口不算", UmbraUrl.isServer(srv, "https://api.umbra.example:8443/files/abc"))
+        assertFalse("没配服务端", UmbraUrl.isServer("", "https://api.umbra.example/files/abc"))
+    }
+
     @Test fun sameSite() {
         assertTrue(UmbraUrl.sameSite("example.com", "login.example.com"))
         assertFalse(UmbraUrl.sameSite("example.com", "ple.com"))

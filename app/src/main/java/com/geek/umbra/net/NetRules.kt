@@ -43,6 +43,16 @@ object UmbraUrl {
         return a == b || a.endsWith(".$b") || b.endsWith(".$a")
     }
 
+    /**
+     * 一条完整地址是不是自己的服务端（[UmbraHttp.bytes] 据此决定带不带登录令牌、过不过请求闸）：
+     * 以服务端地址打头（路径前缀按整段比），或与它同主机同端口（含 http→https 升级）。`a.com.evil.com` 不算 `a.com`。
+     */
+    fun isServer(server: String, full: String): Boolean {
+        if (server.isEmpty()) return false
+        val base = server.trimEnd('/')
+        return full == base || full.startsWith("$base/") || full.startsWith("$base?") || followsRedirect(server, full)
+    }
+
     /** 重定向只跟同主机：同 scheme 同端口，或 http:80 → https:443 升级。跨源 3xx 一律不跟。 */
     fun followsRedirect(from: String, to: String): Boolean {
         val a = runCatching { URI(from) }.getOrNull() ?: return false

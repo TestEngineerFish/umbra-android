@@ -53,6 +53,19 @@ sealed interface HttpResult {
     data class Blocked(val path: String) : HttpResult
 }
 
+/** [UmbraHttp.bytes] 的结果。Ok 的 [data] 是原样字节；TooLarge = 超过调用方给的上限，读到一半就停了。 */
+sealed interface BytesResult {
+    class Ok(val status: Int, val data: ByteArray, val headers: okhttp3.Headers) : BytesResult
+    /** [body]：失败时服务端回的那段正文（JSON 原文；不是自己的服务端时为空），要读码以外字段（如 `state`）的调用方自己解。 */
+    data class Fail(val status: Int, val code: String?, val detail: String?, val body: String = "") : BytesResult
+    data object TooLarge : BytesResult
+    data class Offline(val message: String) : BytesResult
+    data class Blocked(val path: String) : BytesResult
+}
+
+/** 拿到了就是字节，其余一律 null（只关心「有没有」的调用方用）。 */
+val BytesResult.dataOrNull: ByteArray? get() = (this as? BytesResult.Ok)?.data
+
 /** 写操作的结果：成功带值；失败带服务端原话（detail 只用来显示，分档只看 code）。 */
 sealed interface ApiResult<out T> {
     data class Ok<T>(val value: T) : ApiResult<T>
@@ -125,21 +138,106 @@ class UmbraHttp(
         headers: Map<String, String> = emptyMap(),
         timeoutMs: Long? = null,
         authed: Boolean = true,
-    ): HttpResult {
-        val full = url(path, query)
+    ): HttpResult = when (val x = exchange(method, url(path, query), path, body, headers, timeoutMs, authed, followHttpsAway = false, ours = true)) {
+        is Exchange.Got -> x.resp.use { handle(it, x.token) }
+        is Exchange.Gave -> x.result
+    }
+
+    /**
+     * 按字节读（附件、快照、成品、主题包）。[raw] 把正文读成字符串，二进制会被按 UTF-8 解坏，所以另开这一个出口；
+     * 请求闸、Bearer、发起方头、重定向规矩、会话失效与离线记账都和 [raw] 是同一份。
+     *
+     * - [target]：以 `/` 开头的路径（拼服务端地址），或一条完整的 http(s) 地址（服务端回的绝对地址、CDN）。
+     *   **登录令牌只带给自己的服务端**：完整地址不同源时不带、也不过请求闸、不记离线（那是别人家的服务器）。
+     * - [maxBytes]：读到超过就停、回 [BytesResult.TooLarge]（先看 Content-Length，再边读边数）。
+     * - [onProgress]：0..1；不知道总长时不回调。在 IO 线程上调。
+     * - [followHttpsAway]：允许 3xx 跳到别的主机（只认 https），跳过去时**去掉登录头**（`/files/<id>` 302 到 OSS 签名地址那种）。
+     */
+    suspend fun bytes(
+        target: String,
+        query: Map<String, Any?> = emptyMap(),
+        headers: Map<String, String> = emptyMap(),
+        timeoutMs: Long? = null,
+        authed: Boolean = true,
+        maxBytes: Long = Long.MAX_VALUE,
+        followHttpsAway: Boolean = false,
+        onProgress: ((Float) -> Unit)? = null,
+    ): BytesResult {
+        val full = if (target.startsWith("/")) url(target, query) else target
+        return when (val x = exchange("GET", full, target, null, headers, timeoutMs, authed, followHttpsAway)) {
+            is Exchange.Gave -> when (val r = x.result) {
+                is HttpResult.Fail -> BytesResult.Fail(r.status, r.code, r.detail, r.body)
+                is HttpResult.Offline -> BytesResult.Offline(r.message)
+                is HttpResult.Blocked -> BytesResult.Blocked(r.path)
+                is HttpResult.Ok -> BytesResult.Fail(r.status, null, null)
+            }
+            is Exchange.Got -> withContext(Dispatchers.IO) {
+                x.resp.use { resp ->
+                    if (!resp.isSuccessful) {
+                        // 失败的正文是 JSON（码 / 原话），按 raw 那一套分档；不是我们的服务端就只留状态码。
+                        if (!x.ours) return@use BytesResult.Fail(resp.code, null, null)
+                        val r = handle(resp, x.token) as? HttpResult.Fail
+                        return@use BytesResult.Fail(resp.code, r?.code, r?.detail, r?.body ?: "")
+                    }
+                    if (x.ours) note(resp, x.token)
+                    try {
+                        readCapped(resp, maxBytes, onProgress)?.let { BytesResult.Ok(resp.code, it, resp.headers) } ?: BytesResult.TooLarge
+                    } catch (e: IOException) {
+                        if (x.ours && !prefs.signedOut) _offline.value = true
+                        BytesResult.Offline(e.message ?: e.javaClass.simpleName)
+                    }
+                }
+            }
+        }
+    }
+
+    /** 读正文字节，超过 [max] 回 null。 */
+    private fun readCapped(resp: Response, max: Long, onProgress: ((Float) -> Unit)?): ByteArray? {
+        val total = resp.body.contentLength()
+        if (total > max) return null
+        val src = resp.body.byteStream()
+        val out = java.io.ByteArrayOutputStream(if (total in 1..Int.MAX_VALUE) total.toInt() else 8192)
+        val buf = ByteArray(16 * 1024)
+        var got = 0L
+        while (true) {
+            val n = src.read(buf)
+            if (n < 0) break
+            got += n
+            if (got > max) return null
+            out.write(buf, 0, n)
+            if (total > 0) onProgress?.invoke((got.toFloat() / total).coerceAtMost(1f))
+        }
+        return out.toByteArray()
+    }
+
+    /** 一次往返的去向：拿到了响应（调用方负责关），或者在发出去之前 / 路上已经有了结论。 */
+    private sealed interface Exchange {
+        /** [ours]：最后答话的是不是自己的服务端（决定记不记会话 / 离线、失败正文按不按我们的 JSON 读）。 */
+        class Got(val resp: Response, val token: String, val ours: Boolean) : Exchange
+        class Gave(val result: HttpResult) : Exchange
+    }
+
+    /** [raw] 与 [bytes] 共用的发送：请求闸、令牌、发起方头、手动跟重定向。 */
+    private suspend fun exchange(
+        method: String, full: String, path: String, body: RequestBody?, headers: Map<String, String>,
+        timeoutMs: Long?, authed: Boolean, followHttpsAway: Boolean, ours: Boolean? = null,
+    ): Exchange {
         // 地址不是合法的 http(s)（空串、手抖填错）时 OkHttp 会抛 IllegalArgumentException —— 那不是 IOException，
         // 没人接就整个崩。这里当作一次失败返回，文案同 iOS NetworkError.invalidURL。
-        if (full.toHttpUrlOrNull() == null) return HttpResult.Fail(0, "invalid_url", "服务端地址填得不对（在「我 › 连接」里看）。")
-        val basePath = server.toHttpUrlOrNull()?.encodedPath ?: ""
-        val reqPath = full.toHttpUrlOrNull()?.encodedPath ?: path
-        if (SessionRequestGate.blocks(prefs.signedOut, reqPath, basePath)) return HttpResult.Blocked(path)
+        val fullUrl = full.toHttpUrlOrNull() ?: return Exchange.Gave(HttpResult.Fail(0, "invalid_url", "服务端地址填得不对（在「我 › 连接」里看）。"))
+        // raw 一律当自己的服务端（地址就是拿 server 拼的），行为与拆出这一段之前完全一样；bytes 才按地址判。
+        val ours = ours ?: UmbraUrl.isServer(server, fullUrl.toString())
+        if (ours) {
+            val basePath = server.toHttpUrlOrNull()?.encodedPath ?: ""
+            if (SessionRequestGate.blocks(prefs.signedOut, fullUrl.encodedPath, basePath)) return Exchange.Gave(HttpResult.Blocked(path))
+        }
 
-        val token = if (authed) session.token else ""
-        val b = Request.Builder().url(full)
+        val token = if (authed && ours) session.token else ""
+        val b = Request.Builder().url(fullUrl)
         if (token.isNotEmpty()) b.header("Authorization", "Bearer $token")
         headers.forEach { (k, v) -> b.header(k, v) }
         val background = coroutineContext[BackgroundWork.Key] != null
-        if (!headers.containsKey(InitiatorRules.HEADER) &&
+        if (ours && !headers.containsKey(InitiatorRules.HEADER) &&
             InitiatorRules.tags(System.currentTimeMillis(), Initiator.lastInputMs.get(), background)
         ) b.header(InitiatorRules.HEADER, InitiatorRules.USER)
         b.method(method, body ?: if (method == "POST" || method == "PUT" || method == "PATCH") ByteArray(0).toRequestBody(null) else null)
@@ -148,32 +246,38 @@ class UmbraHttp(
         return withContext(Dispatchers.IO) {
             var req = b.build()
             var hops = 0
+            var here = ours
             while (true) {
                 val resp = try {
                     c.newCall(req).await()
                 } catch (e: IOException) {
                     // 未登录（单机）时不记离线：那时只有探活 / 问门这类匿名请求，它们连不上不代表本机数据旧了 ——
                     // 记上的话本机账本（提醒、生活账本、灵感）页顶会挂一条误导人的「离线」条。
-                    if (!prefs.signedOut) _offline.value = true
-                    return@withContext HttpResult.Offline(e.message ?: e.javaClass.simpleName)
+                    if (here && !prefs.signedOut) _offline.value = true
+                    return@withContext Exchange.Gave(HttpResult.Offline(e.message ?: e.javaClass.simpleName))
                 }
                 if (resp.code in 300..399 && hops < 3) {
                     val loc = resp.header("Location")
                     resp.close()
-                    val target = loc?.let { req.url.resolve(it) }
-                    if (target != null && UmbraUrl.followsRedirect(req.url.toString(), target.toString())) {
-                        req = req.newBuilder().url(target).build(); hops++; continue
+                    val next = loc?.let { req.url.resolve(it) }
+                    if (next != null && UmbraUrl.followsRedirect(req.url.toString(), next.toString())) {
+                        req = req.newBuilder().url(next).build(); hops++; continue
                     }
-                    return@withContext HttpResult.Fail(resp.code, "cross_origin_redirect", "服务端把请求转去了别的地址，已拦下")
+                    if (next != null && followHttpsAway && next.isHttps) {
+                        // 跳去别家（OSS 签名地址）：登录头和发起方头都不跟过去。
+                        req = req.newBuilder().url(next).removeHeader("Authorization").removeHeader(InitiatorRules.HEADER).build()
+                        hops++; here = false; continue
+                    }
+                    return@withContext Exchange.Gave(HttpResult.Fail(resp.code, "cross_origin_redirect", "服务端把请求转去了别的地址，已拦下"))
                 }
-                return@withContext handle(resp, token)
+                return@withContext Exchange.Got(resp, token, here)
             }
-            @Suppress("UNREACHABLE_CODE") HttpResult.Offline("")
+            @Suppress("UNREACHABLE_CODE") Exchange.Gave(HttpResult.Offline(""))
         }
     }
 
-    private fun handle(resp: Response, sentToken: String): HttpResult {
-        val text = resp.body.string()
+    /** 收到自己服务端的响应后记账：在线了、会话失效、凭证状态。 */
+    private fun note(resp: Response, sentToken: String) {
         val code = resp.header(SessionRevokeRules.ERROR_HEADER)
         _offline.value = false
         if (SessionRevokeRules.http(resp.code, code, resp.header(SessionRevokeRules.SESSION_HEADER))) {
@@ -184,6 +288,12 @@ class UmbraHttp(
         } else if (resp.code in 200..299) {
             _authVerdict.value = AuthVerdict.Ok
         }
+    }
+
+    private fun handle(resp: Response, sentToken: String): HttpResult {
+        val text = resp.body.string()
+        val code = resp.header(SessionRevokeRules.ERROR_HEADER)
+        note(resp, sentToken)
         if (resp.code in 200..299) return HttpResult.Ok(resp.code, text, resp.headers)
         // 分档看头 X-Umbra-Error，没有再看 body 的 code；detail 只用来显示
         val parsed = runCatching { UmbraJson.parseToJsonElement(text).jsonObject }.getOrNull()

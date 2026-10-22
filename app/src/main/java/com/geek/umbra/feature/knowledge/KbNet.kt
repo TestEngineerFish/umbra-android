@@ -10,6 +10,7 @@ import com.geek.umbra.R
 import com.geek.umbra.app.AppGraph
 import com.geek.umbra.feature.account.StorageRules
 import com.geek.umbra.net.BackgroundWork
+import com.geek.umbra.net.BytesResult
 import com.geek.umbra.net.HttpResult
 import com.geek.umbra.net.UmbraHttp
 import com.geek.umbra.net.UmbraJson
@@ -24,19 +25,10 @@ import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
-import okhttp3.MediaType
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.MultipartBody
 import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
-import com.geek.umbra.net.SessionRevokeRules
-import com.geek.umbra.net.await
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
-import okio.Buffer
-import okio.BufferedSink
-import okio.ForwardingSink
-import okio.buffer
 import java.io.File
 import java.util.UUID
 
@@ -105,43 +97,18 @@ object KbNet {
 
     /**
      * 上传一份：multipart `path`（原名，UTF-8 表单字段 —— 中文名以它为准）+ `file`（filename 洗过的那份），带真实进度。
-     *
-     * ⚠️ 没用 net/Uploads.upload：它把回包固定解成 UploadResponse、没有 file_id 就当失败，也不把状态码 / 码交回来 ——
-     * `/kb/{id}/files` 回的是 {indexed, changed, path, doc}，分档要的 412 / 413 / storage_full 也拿不到。这里照它的做法
-     * （同一个洗名函数、同一个 octet-stream 体）自己拼，回原样的分档原料。
+     * 走 [Uploads.send]（原样交回结果）：`/kb/{id}/files` 回的是 {indexed, changed, path, doc}，分档要的 412 / 413 / storage_full 也在原始结果里。
      */
     suspend fun uploadKbFile(kbId: String, bytes: ByteArray, name: String, onProgress: (Long, Long) -> Unit): Pair<KbWriteResponse, KbUploadDTO?> {
-        val total = bytes.size.toLong()
-        val file = ProgressBody(bytes, "application/octet-stream".toMediaType()) { sent -> onProgress(sent, total) }
-        val body = MultipartBody.Builder().setType(MultipartBody.FORM)
-            .addFormDataPart("path", name)
-            .addFormDataPart("file", Uploads.safeName(name), file)
-            .build()
-        val (r, raw) = send("POST", "/kb/${KnowledgeRules.segment(kbId)}/files", body = body, timeoutMs = 180_000)
+        val raw = try {
+            Uploads.send(bytes, name, "/kb/${KnowledgeRules.segment(kbId)}/files", mapOf("path" to name), timeoutMs = 180_000, onProgress = onProgress)
+        } catch (e: CancellationException) {
+            return KnowledgeRules.transport(e) to null
+        }
+        val r = response(raw)
         val dto = if (KnowledgeRules.outcome(r) == KbOutcome.Ok && raw is HttpResult.Ok)
             runCatching { UmbraJson.decodeFromString(KbUploadDTO.serializer(), raw.body) }.getOrNull() else null
         return r to dto
-    }
-
-    /** 带进度的请求体（按整数百分比节流，免得每个 8 KB 块都去刷界面）。 */
-    private class ProgressBody(val data: ByteArray, val type: MediaType, val cb: (Long) -> Unit) : RequestBody() {
-        override fun contentType() = type
-        override fun contentLength() = data.size.toLong()
-        override fun writeTo(sink: BufferedSink) {
-            var sent = 0L
-            var lastPct = -1
-            val total = data.size.toLong().coerceAtLeast(1)
-            val counting = object : ForwardingSink(sink) {
-                override fun write(source: Buffer, byteCount: Long) {
-                    super.write(source, byteCount)
-                    sent += byteCount
-                    val pct = (sent * 100 / total).toInt()
-                    if (pct != lastPct) { lastPct = pct; cb(sent) }
-                }
-            }.buffer()
-            counting.write(data)
-            counting.flush()
-        }
     }
 
     /**
@@ -166,40 +133,21 @@ object KbNet {
         }
     }
 
-    /**
-     * 按**字节**拿原文。统一出口 `http.raw` 把回包读成字符串，二进制（PDF / DOCX）会被 UTF-8 解坏，所以这一条直接用
-     * 同一个 OkHttp 客户端（同样不跟跨源重定向）自己发；请求闸、Bearer、失效信号照统一出口的规矩补上：
-     * 未登录不发；`session_invalid` 交给 AuthService.report（带发请求时那把令牌）。
-     */
-    private suspend fun rawBytes(path: String): Pair<KbWriteResponse, ByteArray?> {
-        if (AppGraph.prefs.signedOut) return KbWriteResponse(0, KnowledgeRules.LocalCode.SIGNED_OUT, null, "") to null
-        val token = AppGraph.session.token
-        val b = okhttp3.Request.Builder().url(http.url(path))
-        if (token.isNotEmpty()) b.header("Authorization", "Bearer $token")
-        return withContext(Dispatchers.IO + BackgroundWork) {
-            val resp = try {
-                http.client.newBuilder().readTimeout(120, java.util.concurrent.TimeUnit.SECONDS).build().newCall(b.build()).await()
-            } catch (e: java.io.IOException) {
-                return@withContext KbWriteResponse(0, null, null, e.message ?: "") to null
+    /** 按**字节**拿原文（统一出口的 [com.geek.umbra.net.UmbraHttp.bytes]：请求闸、Bearer、会话失效都在那一处）。后台路径。 */
+    private suspend fun rawBytes(path: String): Pair<KbWriteResponse, ByteArray?> =
+        when (val r = withContext(BackgroundWork) { http.bytes(path, timeoutMs = RAW_TIMEOUT_MS) }) {
+            is BytesResult.Ok -> KbWriteResponse(r.status, null, null, "") to r.data
+            is BytesResult.Fail -> {
+                val o = runCatching { UmbraJson.parseToJsonElement(r.body) as? JsonObject }.getOrNull()
+                KbWriteResponse(r.status, r.code, (o?.get("state") as? JsonPrimitive)?.contentOrNull, r.detail ?: "") to null
             }
-            resp.use {
-                val err = it.header(SessionRevokeRules.ERROR_HEADER)
-                if (SessionRevokeRules.http(it.code, err, it.header(SessionRevokeRules.SESSION_HEADER))) {
-                    AppGraph.scope.launch { AppGraph.auth.report(token) }
-                }
-                if (it.isSuccessful) {
-                    val bytes = try { it.body.bytes() } catch (e: java.io.IOException) { return@withContext KbWriteResponse(0, null, null, e.message ?: "") to null }
-                    KbWriteResponse(it.code, null, null, "") to bytes
-                } else {
-                    val text = runCatching { it.body.string() }.getOrDefault("")
-                    val o = runCatching { UmbraJson.parseToJsonElement(text) as? JsonObject }.getOrNull()
-                    val bodyCode = (o?.get("code") as? JsonPrimitive)?.contentOrNull
-                    val detail = (o?.get("detail") as? JsonPrimitive)?.contentOrNull ?: ""
-                    KbWriteResponse(it.code, err ?: bodyCode, (o?.get("state") as? JsonPrimitive)?.contentOrNull, detail) to null
-                }
-            }
+            is BytesResult.Offline -> KbWriteResponse(0, null, null, r.message) to null
+            is BytesResult.Blocked -> KbWriteResponse(0, KnowledgeRules.LocalCode.SIGNED_OUT, null, "") to null
+            BytesResult.TooLarge -> KbWriteResponse(0, null, null, "") to null // 没设上限，到不了
         }
-    }
+
+    /** 原文下载的总时限：从前只设了 120 秒读超时、不限总时长；统一出口的时限是整次请求，所以放宽到 5 分钟，大 PDF 走蜂窝也够。 */
+    private const val RAW_TIMEOUT_MS = 300_000L
 
     private fun String.toBody(): RequestBody = toRequestBody(UmbraHttp.JSON)
 }

@@ -29,6 +29,7 @@ import com.geek.umbra.designsystem.UmbraThemePalette
 import com.geek.umbra.feature.widget.WidgetBridge
 import com.geek.umbra.net.AccountSwitchRules
 import com.geek.umbra.net.ApiResult
+import com.geek.umbra.net.BytesResult
 import com.geek.umbra.net.HttpResult
 import com.geek.umbra.net.LoginState
 import com.geek.umbra.net.Prefs
@@ -52,10 +53,8 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonObject
-import okhttp3.Request
 import java.io.File
 import java.time.Instant
-import java.util.concurrent.TimeUnit
 
 /** 商城主题目录的一条（`GET /plugins/catalog?type=theme`）。宽松解析：缺字段给空，不让一条坏的拖垮整个目录。 */
 data class ThemeCatalogEntry(
@@ -573,29 +572,12 @@ object ThemeStore {
         val url = e.packageUrl.trim()
         if (url.isEmpty()) return ThemeResult.Err(ThemeFail(ThemeFailKind.Broken, "发布方还没放安装包"))
         if (!url.startsWith("https://")) return ThemeResult.Err(ThemeFail(ThemeFailKind.Broken, "主题安装包地址不是 https，不下载"))
-        val data = withContext(Dispatchers.IO) {
-            runCatching {
-                val c = AppGraph.http.client.newBuilder().callTimeout(DOWNLOAD_TIMEOUT_MS, TimeUnit.MILLISECONDS).build()
-                c.newCall(Request.Builder().url(url).header("Accept", "application/octet-stream").build()).execute().use { resp ->
-                    if (!resp.isSuccessful) return@use null
-                    if (resp.body.contentLength() > MAX_DOWNLOAD) return@use ByteArray(0)
-                    val src = resp.body.byteStream()
-                    val buf = java.io.ByteArrayOutputStream()
-                    val chunk = ByteArray(8192)
-                    while (true) {
-                        val n = src.read(chunk)
-                        if (n < 0) break
-                        buf.write(chunk, 0, n)
-                        if (buf.size() > MAX_DOWNLOAD) return@use ByteArray(0)
-                    }
-                    buf.toByteArray()
-                }
-            }
+        val bytes = when (val r = AppGraph.http.bytes(url, headers = mapOf("Accept" to "application/octet-stream"), timeoutMs = DOWNLOAD_TIMEOUT_MS, maxBytes = MAX_DOWNLOAD.toLong())) {
+            is BytesResult.Ok -> r.data
+            BytesResult.TooLarge -> return ThemeResult.Err(ThemeFail(ThemeFailKind.Broken, "主题安装包太大"))
+            is BytesResult.Offline -> return ThemeResult.Err(ThemeFail(ThemeFailKind.Broken, "安装包下不下来，检查网络后再试"))
+            else -> return ThemeResult.Err(ThemeFail(ThemeFailKind.Broken, "安装包下不下来"))
         }
-        val bytes = data.getOrNull()
-        if (data.isFailure) return ThemeResult.Err(ThemeFail(ThemeFailKind.Broken, "安装包下不下来，检查网络后再试"))
-        if (bytes == null) return ThemeResult.Err(ThemeFail(ThemeFailKind.Broken, "安装包下不下来"))
-        if (bytes.isEmpty()) return ThemeResult.Err(ThemeFail(ThemeFailKind.Broken, "主题安装包太大"))
         return when (val r = withContext(Dispatchers.Default) { ThemePackage.inspect(bytes, ThemePublisher.PEM) }) {
             is ThemeResult.Err -> r
             is ThemeResult.Ok -> if (r.value.manifest.id != e.id) ThemeResult.Err(ThemeFail(ThemeFailKind.Broken, "包里的主题不是这一个"))
