@@ -9,26 +9,18 @@ import android.content.ClipboardManager
 import android.content.Intent
 import android.net.Uri
 import androidx.browser.customtabs.CustomTabsIntent
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.draggable
-import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
@@ -39,21 +31,18 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.layout
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.geek.umbra.app.AppGraph
@@ -63,7 +52,6 @@ import com.geek.umbra.designsystem.UmbraDimens
 import com.geek.umbra.designsystem.UmbraGroupCard
 import com.geek.umbra.designsystem.UmbraIcon
 import com.geek.umbra.designsystem.UmbraIconPaths
-import com.geek.umbra.designsystem.UmbraMotion
 import com.geek.umbra.designsystem.UmbraRowDivider
 import com.geek.umbra.designsystem.UmbraSectionLabel
 import com.geek.umbra.designsystem.UmbraSettingRow
@@ -72,8 +60,6 @@ import com.geek.umbra.designsystem.UmbraSwitch
 import com.geek.umbra.designsystem.UmbraTheme
 import com.geek.umbra.designsystem.UmbraTone
 import com.geek.umbra.navigation.UmbraSheet
-import kotlinx.coroutines.launch
-import kotlin.math.roundToInt
 
 // MARK: - 整页模板里的几块（iOS UmbraSettingsPage 的 intro / footnote / hero）
 
@@ -269,52 +255,6 @@ private fun ChoiceSheetBody(title: String, subtitle: String?, items: List<MeShee
         }
         Spacer(Modifier.height(10.dp))
         UmbraButton("取消", onCancel, Modifier.fillMaxWidth(), kind = UmbraButtonKind.Secondary, height = 46.dp)
-    }
-}
-
-// MARK: - 左滑露钮的行（iOS .swipeActions(allowsFullSwipe: false)）
-
-/** 左滑露出的一颗钮。 */
-data class MeSwipeAction(val label: String, val bg: Color, val fg: Color, val onClick: () -> Unit)
-
-/**
- * 左滑一行露出钮，**不会滑到底就执行**（iOS `allowsFullSwipe: false`；破坏性动作一律再过确认弹窗）。
- *
- * 为什么不用 M3 的 SwipeToDismissBox：它的语义是「滑过阈值 = 划走这一行」，停不在「露着钮等你按」的中间态；
- * 用 confirmValueChange 拦回去的话钮露不住、点不到。这里自己做一个只有两档（收起 / 露钮）的拖动。
- */
-@Composable
-fun MeSwipeRow(actions: List<MeSwipeAction>, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
-    if (actions.isEmpty()) { Box(modifier) { content() }; return }
-    val density = LocalDensity.current
-    val btnW = 78.dp
-    val maxPx = with(density) { (btnW * actions.size).toPx() }
-    val offset = remember { Animatable(0f) }
-    val scope = rememberCoroutineScope()
-    val c = UmbraTheme.colors
-    Box(modifier.fillMaxWidth().height(IntrinsicSize.Min).background(c.card)) {
-        Row(Modifier.align(Alignment.CenterEnd).fillMaxHeight()) {
-            actions.forEach { a ->
-                Box(
-                    Modifier.width(btnW).fillMaxHeight().background(a.bg).clickable(role = Role.Button) {
-                        scope.launch { offset.animateTo(0f, tween(UmbraMotion.swipe)) }
-                        a.onClick()
-                    },
-                    contentAlignment = Alignment.Center,
-                ) { Text(a.label, color = a.fg, style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.SemiBold), textAlign = TextAlign.Center) }
-            }
-        }
-        Box(
-            Modifier.fillMaxWidth().offset { IntOffset(offset.value.roundToInt(), 0) }.background(c.card)
-                .draggable(
-                    orientation = Orientation.Horizontal,
-                    state = rememberDraggableState { d -> scope.launch { offset.snapTo((offset.value + d).coerceIn(-maxPx, 0f)) } },
-                    onDragStopped = { v ->
-                        val open = offset.value < -maxPx / 2 || v < -800f
-                        offset.animateTo(if (open) -maxPx else 0f, tween(UmbraMotion.swipe))
-                    },
-                ),
-        ) { content() }
     }
 }
 

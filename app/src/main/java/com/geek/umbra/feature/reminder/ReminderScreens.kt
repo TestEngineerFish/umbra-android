@@ -3,15 +3,11 @@
 package com.geek.umbra.feature.reminder
 
 import androidx.compose.foundation.layout.widthIn
-import android.Manifest
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.BackHandler
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.LinearEasing
@@ -83,7 +79,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.geek.umbra.R
 import com.geek.umbra.app.AppGraph
@@ -297,7 +292,7 @@ private fun ReminderRow(r: Reminder, leaving: Boolean, onToggle: () -> Unit) {
         })
     }
     val checked = r.done || leaving
-    val leading = listOf(UmbraSwipeAction(if (checked) "取消完成" else "完成", if (checked) UmbraIconPaths.x else UmbraIconPaths.check, c.success, onToggle))
+    val leading = listOf(UmbraSwipeAction(if (checked) "取消完成" else "完成", if (checked) UmbraIconPaths.x else UmbraIconPaths.check, c.success, onClick = onToggle))
     UmbraRevealSwipeRow(leading = leading, trailing = trailing, resetKey = r) {
         Row(
             Modifier.fillMaxWidth().background(c.card).clickable { router.go(Route.RemDetail(r.id)) }

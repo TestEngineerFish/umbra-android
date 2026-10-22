@@ -13,19 +13,16 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.SwipeToDismissBox
-import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -34,7 +31,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
@@ -49,9 +45,11 @@ import com.geek.umbra.designsystem.UmbraEmptyState
 import com.geek.umbra.designsystem.UmbraFilterChips
 import com.geek.umbra.designsystem.UmbraIcon
 import com.geek.umbra.designsystem.UmbraIconPaths
+import com.geek.umbra.designsystem.UmbraRevealSwipeRow
 import com.geek.umbra.designsystem.UmbraScreen
 import com.geek.umbra.designsystem.UmbraSegment
 import com.geek.umbra.designsystem.UmbraSegmentedControl
+import com.geek.umbra.designsystem.UmbraSwipeAction
 import com.geek.umbra.designsystem.UmbraTagPill
 import com.geek.umbra.designsystem.UmbraTheme
 import com.geek.umbra.designsystem.UmbraTopBarIcon
@@ -101,7 +99,7 @@ fun MoneyListView() {
     val offline by AppGraph.http.offline.watch()
     var refreshing by remember { mutableStateOf(false) }
     /** 当前左滑开着的那一行（一次只开一行）。 */
-    var openRow by remember { mutableStateOf<String?>(null) }
+    val openRow = remember { mutableStateOf<Any?>(null) }
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) { MoneyStore.loadIfNeeded() }
@@ -197,10 +195,7 @@ fun MoneyListView() {
                                 topStart = if (first) r else 0.dp, topEnd = if (first) r else 0.dp,
                                 bottomStart = if (last) r else 0.dp, bottomEnd = if (last) r else 0.dp,
                             )
-                            SwipeRow(
-                                e, shape, first, ledger, openRow,
-                                onOpen = { openRow = it },
-                            ) {
+                            SwipeRow(e, shape, first, ledger, openRow) {
                                 EntryRow(e, g.past, stacks, titleLines, subLines)
                             }
                         }
@@ -317,10 +312,9 @@ private fun EmptyStates(rcptOnly: Boolean, monthEmpty: Boolean) {
 // MARK: 行
 
 /**
- * 左滑露按钮的行。⚠️ SwipeToDismissBox 滑到底也**不执行任何动作**，只是把三颗按钮露出来；点按钮先合上再做事，
- * 点行本身（已划开时）只合上。破坏性的删除仍过确认弹窗。一次只开一行（openRow）。
- * ⚠️ iOS 的系统 swipeActions 只露按钮那么宽；M3 的 SwipeToDismissBox 没有「停在按钮宽度」的锚点，
- * 这里是整行滑走、按钮靠右排在露出的底上 —— 交 Claude Design 裁是否要换成自绘的 anchoredDraggable。
+ * 流水一行的左滑（批次 201：「记账流水那三颗钮照搬进同一个件」）：移到另一个账本 / 编辑 / 删除，走 designsystem 的
+ * [UmbraRevealSwipeRow] —— 只露按钮、拖到底不执行，删除仍过确认弹窗；同一时刻只开一行（[openRow]）。
+ * 整行可点 → 详情；摊开时点行身只合上（公共件盖的那一层管）。
  */
 @Composable
 private fun SwipeRow(
@@ -328,52 +322,23 @@ private fun SwipeRow(
     shape: Shape,
     first: Boolean,
     ledger: Ledger,
-    openRow: String?,
-    onOpen: (String?) -> Unit,
+    openRow: MutableState<Any?>,
     content: @Composable () -> Unit,
 ) {
     val c = UmbraTheme.colors
-    val state = rememberSwipeToDismissBoxState()
-    val scope = rememberCoroutineScope()
-    val isOpen = state.currentValue == SwipeToDismissBoxValue.EndToStart
-    LaunchedEffect(isOpen) { if (isOpen) onOpen(e.id) else if (openRow == e.id) onOpen(null) }
-    LaunchedEffect(openRow) { if (openRow != e.id && state.currentValue != SwipeToDismissBoxValue.Settled) state.reset() }
-    fun close(then: () -> Unit) { scope.launch { state.reset(); then() } }
-
-    Box(Modifier.fillMaxWidth().clip(shape).background(c.card)) {
-        SwipeToDismissBox(
-            state = state,
-            enableDismissFromStartToEnd = false,
-            backgroundContent = {
-                Row(Modifier.fillMaxSize().background(c.bg), horizontalArrangement = Arrangement.End) {
-                    // 「移到另一个账本」（G3）：沿用现有行操作多一项，不新画形制。不进详情（挪这一下不可撤销地清掉科目）。
-                    SwipeAction(if (ledger == Ledger.Business) "移回生活" else "移到经营", c.muted, c.card) { close { confirmMove(e, ledger) } }
-                    SwipeAction("编辑", c.warning, c.onWarning) { close { AppGraph.router.go(Route.MoneyAdd(e.id)) } }
-                    // 删除放最靠边那一个。
-                    SwipeAction("删除", c.danger, c.onDanger) { close { confirmDelete(e) } }
-                }
-            },
-        ) {
-            Box(
-                Modifier.fillMaxWidth().background(c.card)
-                    // 整行可点 → 详情；已划开时点一下只合上。
-                    .clickable(role = Role.Button) { if (isOpen) close {} else showMoneyEntryDetail(e) },
-            ) {
-                content()
-                if (!first) MoneyRowSeparator(Modifier.align(Alignment.TopCenter))
-            }
+    val actions = listOf(
+        // 「移到另一个账本」（G3）：沿用现有行操作多一项，不新画形制。不进详情（挪这一下不可撤销地清掉科目）。
+        if (ledger == Ledger.Business) UmbraSwipeAction("移回生活", UmbraIconPaths.wallet, c.muted) { confirmMove(e, ledger) }
+        else UmbraSwipeAction("移到经营", UmbraIconPaths.briefcase, c.muted) { confirmMove(e, ledger) },
+        UmbraSwipeAction("编辑", UmbraIconPaths.textLines, c.warning, c.onWarning) { AppGraph.router.go(Route.MoneyAdd(e.id)) },
+        // 删除放最靠边那一个。
+        UmbraSwipeAction("删除", UmbraIconPaths.trash, c.danger, c.onDanger) { confirmDelete(e) },
+    )
+    UmbraRevealSwipeRow(trailing = actions, openRow = openRow, rowKey = e.id, modifier = Modifier.fillMaxWidth().clip(shape).background(c.card)) {
+        Box(Modifier.fillMaxWidth().background(c.card).clickable(role = Role.Button) { showMoneyEntryDetail(e) }) {
+            content()
+            if (!first) MoneyRowSeparator(Modifier.align(Alignment.TopCenter))
         }
-    }
-}
-
-/** 左滑露出的一颗按钮：实色底 + 前景（iOS 系统 swipe 按钮的形制，宽 74）。 */
-@Composable
-private fun SwipeAction(label: String, bg: Color, fg: Color, onClick: () -> Unit) {
-    Box(
-        Modifier.fillMaxHeight().width(74.dp).background(bg).clickable(role = Role.Button, onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(label, color = fg, style = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.SemiBold), maxLines = 1)
     }
 }
 

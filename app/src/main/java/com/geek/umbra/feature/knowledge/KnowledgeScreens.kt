@@ -48,6 +48,7 @@ import com.geek.umbra.designsystem.UmbraIconPaths
 import com.geek.umbra.designsystem.UmbraPhaseFailedCard
 import com.geek.umbra.designsystem.UmbraProgressBar
 import com.geek.umbra.designsystem.UmbraPrompt
+import com.geek.umbra.designsystem.UmbraRevealSwipeRow
 import com.geek.umbra.designsystem.UmbraRowDivider
 import com.geek.umbra.designsystem.UmbraScreen
 import com.geek.umbra.designsystem.UmbraScreenPhase
@@ -56,13 +57,12 @@ import com.geek.umbra.designsystem.UmbraSoftChip
 import com.geek.umbra.designsystem.UmbraSpinningIcon
 import com.geek.umbra.designsystem.UmbraStatusDot
 import com.geek.umbra.designsystem.UmbraStripAction
+import com.geek.umbra.designsystem.UmbraSwipeAction
 import com.geek.umbra.designsystem.UmbraTheme
 import com.geek.umbra.designsystem.UmbraTopBarIcon
 import com.geek.umbra.designsystem.UmbraType
 import com.geek.umbra.designsystem.umbraPhaseTop
 import com.geek.umbra.feature.me.MeNote
-import com.geek.umbra.feature.me.MeSwipeAction
-import com.geek.umbra.feature.me.MeSwipeRow
 import com.geek.umbra.navigation.Route
 import com.geek.umbra.navigation.UmbraAlert
 import kotlinx.coroutines.delay
@@ -264,10 +264,10 @@ private fun DocRow(model: KbDocsModel, d: KbDocDTO, busy: Boolean) {
     val ctx = AppGraph.context
     val st = d.docState
     val actions = buildList {
-        add(MeSwipeAction(ctx.getString(R.string.kb_delete), c.danger, c.onDanger) { askDelete(model, d) })
-        if (st == KbDocState.Failed) add(MeSwipeAction(ctx.getString(R.string.kb_retry), c.warning, c.onWarning) { retry(model, d) })
+        add(UmbraSwipeAction(ctx.getString(R.string.kb_delete), UmbraIconPaths.trash, c.danger, c.onDanger) { askDelete(model, d) })
+        if (st == KbDocState.Failed) add(UmbraSwipeAction(ctx.getString(R.string.kb_retry), UmbraIconPaths.repeatArrows, c.warning, c.onWarning) { retry(model, d) })
     }
-    MeSwipeRow(actions) {
+    UmbraRevealSwipeRow(trailing = actions) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp)) {
             Row(
                 Modifier.fillMaxWidth().defaultMinSize(minHeight = UmbraDimens.rowMinH - 16.dp)

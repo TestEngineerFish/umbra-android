@@ -22,29 +22,23 @@
 //   · iOS 的 alert 里能放 TextField；Android 的 UmbraAlert 只有两颗钮，所以起名 / 改名走底部弹层（moneyAskText）。
 //   · iOS 的 UmbraSheet(items:) / UmbraSheet(icons:) 在 Android 地基里没有现成件（Router 的 UmbraSheet 只有
 //     自画内容），这里先写成 internal 的 moneyPresentList / moneyPresentIcons，周期与设置页共用；
-//     地基补上通用件后整份替换。左滑行（MoneySwipeRow）同理。
+//     地基补上通用件后整份替换。左滑行已换成 designsystem 的 UmbraRevealSwipeRow。
 package com.geek.umbra.feature.money
 
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -67,20 +61,17 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
@@ -92,11 +83,12 @@ import com.geek.umbra.designsystem.UmbraExtraIcons
 import com.geek.umbra.designsystem.UmbraGroupCard
 import com.geek.umbra.designsystem.UmbraIcon
 import com.geek.umbra.designsystem.UmbraIconPaths
-import com.geek.umbra.designsystem.UmbraMotion
 import com.geek.umbra.designsystem.UmbraPrompt
+import com.geek.umbra.designsystem.UmbraRevealSwipeRow
 import com.geek.umbra.designsystem.UmbraRowDivider
 import com.geek.umbra.designsystem.UmbraScreen
 import com.geek.umbra.designsystem.UmbraSectionLabel
+import com.geek.umbra.designsystem.UmbraSwipeAction
 import com.geek.umbra.designsystem.UmbraTheme
 import com.geek.umbra.designsystem.UmbraTopBarIcon
 import com.geek.umbra.designsystem.UmbraType
@@ -380,12 +372,13 @@ private fun CatSection(
                         if (i > 0) UmbraRowDivider()
                         // 左滑按钮顺序照 iOS swipeActions（声明顺序 = 从最外侧往里），这里按屏幕左→右排。
                         // 兜底分类没有停用键 —— 没有键比「有键但点了报错」诚实。
+                        val c = UmbraTheme.colors
                         val actions = buildList {
-                            add(MoneySwipeAction("改名", null, MoneySwipeTone.Warning) { onRename(cat) })
-                            add(MoneySwipeAction("换图标", UmbraIconPaths.image, MoneySwipeTone.Orange) { onIcon(cat) })
-                            if (!cat.locked) add(MoneySwipeAction("停用", UmbraIconPaths.ban, MoneySwipeTone.Danger) { onDisable(cat) })
+                            add(UmbraSwipeAction("改名", UmbraIconPaths.textLines, c.warning, c.onWarning) { onRename(cat) })
+                            add(UmbraSwipeAction("换图标", UmbraIconPaths.image, c.orange, c.onAccent) { onIcon(cat) })
+                            if (!cat.locked) add(UmbraSwipeAction("停用", UmbraIconPaths.ban, c.danger, c.onDanger) { onDisable(cat) })
                         }
-                        MoneySwipeRow(key = cat.slug, openRow = openRow, actions = actions) {
+                        UmbraRevealSwipeRow(trailing = actions, openRow = openRow, rowKey = cat.slug) {
                             CatRow(
                                 cat = cat, meta = meta(cat), dragging = i == dragIdx,
                                 handle = Modifier.pointerInput(cat.slug) {
@@ -793,12 +786,12 @@ fun MoneyCatDetailView(slug: String) {
                     subs.forEachIndexed { i, s ->
                         key(s) {
                             if (i > 0) UmbraRowDivider()
-                            MoneySwipeRow(
-                                key = s, openRow = openRow,
-                                actions = listOf(
-                                    MoneySwipeAction("改名", null, MoneySwipeTone.Warning) { askRenameSub(s) },
-                                    MoneySwipeAction("删除", UmbraIconPaths.trash, MoneySwipeTone.Danger) { confirmDeleteSub(s) },
+                            UmbraRevealSwipeRow(
+                                trailing = listOf(
+                                    UmbraSwipeAction("改名", UmbraIconPaths.textLines, c.warning, c.onWarning) { askRenameSub(s) },
+                                    UmbraSwipeAction("删除", UmbraIconPaths.trash, c.danger, c.onDanger) { confirmDeleteSub(s) },
                                 ),
+                                openRow = openRow, rowKey = s,
                             ) {
                                 Row(
                                     Modifier.fillMaxWidth().background(c.card).defaultMinSize(minHeight = UmbraDimens.rowMinH)
@@ -1079,84 +1072,3 @@ internal fun moneyPresentIcons(current: String, onPick: (MoneyCatArt.Pick) -> Un
 }
 
 
-/** 左滑按钮的底色档：照 iOS `.tint(UmbraColor.danger / .orange / .warning)`。 */
-internal enum class MoneySwipeTone { Danger, Orange, Warning }
-
-internal class MoneySwipeAction(val label: String, val icon: String?, val tone: MoneySwipeTone, val onClick: () -> Unit)
-
-/**
- * 左滑露按钮的行（iOS `.swipeActions(edge: .trailing, allowsFullSwipe: false)`）。
- *
- * **只露按钮，不滑到底自动执行**（allowsFullSwipe: false）；破坏性动作点了还要过确认弹窗。
- * 同一时刻只开一行（[openRow] 记着开着的那一行的 key，别的行看到不是自己就收回）—— 几行能同时划开是 iOS 那边
- * 自绘侧滑行退役的三宗罪之一。开着时点行身 = 收回，不触发行的点击。
- * 不用 M3 SwipeToDismissBox：它的锚点只有「原位 / 整行划走」两档，停不到「露出按钮」那一档。
- */
-@Composable
-internal fun MoneySwipeRow(
-    key: Any,
-    openRow: MutableState<Any?>,
-    actions: List<MoneySwipeAction>,
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit,
-) {
-    if (actions.isEmpty()) { Box(modifier) { content() }; return }
-    val c = UmbraTheme.colors
-    val density = LocalDensity.current
-    val btnW = 74.dp
-    val maxPx = with(density) { (btnW * actions.size).toPx() }
-    val offset = remember { Animatable(0f) }
-    val scope = rememberCoroutineScope()
-
-    fun settle(open: Boolean) {
-        scope.launch { offset.animateTo(if (open) -maxPx else 0f, tween(UmbraMotion.swipe)) }
-        if (open) openRow.value = key else if (openRow.value == key) openRow.value = null
-    }
-
-    LaunchedEffect(openRow.value) {
-        if (openRow.value != key && offset.value != 0f) offset.animateTo(0f, tween(UmbraMotion.swipe))
-    }
-
-    Box(modifier.fillMaxWidth()) {
-        Row(Modifier.matchParentSize(), horizontalArrangement = Arrangement.End) {
-            actions.forEach { a ->
-                val bg = when (a.tone) {
-                    MoneySwipeTone.Danger -> c.danger
-                    MoneySwipeTone.Orange -> c.orange
-                    MoneySwipeTone.Warning -> c.warning
-                }
-                Column(
-                    Modifier.width(btnW).fillMaxHeight().background(bg)
-                        .clickable(role = Role.Button) { settle(false); a.onClick() },
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(3.dp, Alignment.CenterVertically),
-                ) {
-                    if (a.icon != null) UmbraIcon(a.icon, c.onDanger, size = 17.dp)
-                    Text(a.label, color = c.onDanger, style = TextStyle(fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold))
-                }
-            }
-        }
-        Box(
-            Modifier.offset { IntOffset(offset.value.roundToInt(), 0) }.fillMaxWidth()
-                .pointerInput(maxPx) {
-                    detectHorizontalDragGestures(
-                        onDragEnd = { settle(offset.value < -maxPx / 2) },
-                        onDragCancel = { settle(offset.value < -maxPx / 2) },
-                    ) { change, dx ->
-                        change.consume()
-                        if (openRow.value != key) openRow.value = key
-                        scope.launch { offset.snapTo((offset.value + dx).coerceIn(-maxPx, 0f)) }
-                    }
-                },
-        ) {
-            content()
-            if (offset.value != 0f) {
-                // 开着时盖一层透明的点击层：点行身只收回，不进详情。
-                Box(
-                    Modifier.matchParentSize().alpha(0f)
-                        .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { settle(false) },
-                )
-            }
-        }
-    }
-}

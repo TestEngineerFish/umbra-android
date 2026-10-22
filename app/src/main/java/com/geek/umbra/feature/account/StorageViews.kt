@@ -54,9 +54,11 @@ import com.geek.umbra.designsystem.UmbraGroupCard
 import com.geek.umbra.designsystem.UmbraIcon
 import com.geek.umbra.designsystem.UmbraIconPaths
 import com.geek.umbra.designsystem.UmbraProgressBar
+import com.geek.umbra.designsystem.UmbraRevealSwipeRow
 import com.geek.umbra.designsystem.UmbraRowDivider
 import com.geek.umbra.designsystem.UmbraScreen
 import com.geek.umbra.designsystem.UmbraStripAction
+import com.geek.umbra.designsystem.UmbraSwipeAction
 import com.geek.umbra.designsystem.UmbraTheme
 import com.geek.umbra.designsystem.UmbraTopBarIcon
 import com.geek.umbra.feature.knowledge.KbNet
@@ -64,8 +66,6 @@ import com.geek.umbra.feature.knowledge.KbOutcome
 import com.geek.umbra.feature.knowledge.KnowledgeRules
 import com.geek.umbra.feature.knowledge.kbFailText
 import com.geek.umbra.feature.me.MeNote
-import com.geek.umbra.feature.me.MeSwipeAction
-import com.geek.umbra.feature.me.MeSwipeRow
 import com.geek.umbra.navigation.Route
 import com.geek.umbra.navigation.UmbraAlert
 import com.geek.umbra.net.ApiResult
@@ -401,10 +401,10 @@ private fun StorageGroup(
                         if (i > 0) UmbraRowDivider(Modifier.padding(start = 14.dp))
                         val actions = if (kind == "trash") listOf(
                             // 破坏性动作不滑到底执行，点了还要过确认弹窗。
-                            MeSwipeAction("彻底删除", c.danger, c.onDanger) { onPurge(item) },
-                            MeSwipeAction("找回", c.muted, c.card) { onRestore(item) },
-                        ) else listOf(MeSwipeAction("删除", c.danger, c.onDanger) { onDelete(item, list.keep_days) })
-                        MeSwipeRow(actions) { ItemRow(kind, item) }
+                            UmbraSwipeAction("彻底删除", UmbraIconPaths.trash, c.danger, c.onDanger) { onPurge(item) },
+                            UmbraSwipeAction("找回", UmbraIconPaths.repeatArrows, c.muted) { onRestore(item) },
+                        ) else listOf(UmbraSwipeAction("删除", UmbraIconPaths.trash, c.danger, c.onDanger) { onDelete(item, list.keep_days) })
+                        UmbraRevealSwipeRow(trailing = actions) { ItemRow(kind, item) }
                     }
                     StorageRules.restLine(list.rest)?.let { (text, size) ->
                         // 这一行不能操作（234 §六）：它说的是「列表之外还有」，不是一条条目。

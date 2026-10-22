@@ -13,17 +13,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.SwipeToDismissBox
-import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -35,7 +31,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -49,9 +44,11 @@ import com.geek.umbra.designsystem.UmbraDimens
 import com.geek.umbra.designsystem.UmbraGroupCard
 import com.geek.umbra.designsystem.UmbraIcon
 import com.geek.umbra.designsystem.UmbraIconPaths
+import com.geek.umbra.designsystem.UmbraRevealSwipeRow
 import com.geek.umbra.designsystem.UmbraRowDivider
 import com.geek.umbra.designsystem.UmbraScreen
 import com.geek.umbra.designsystem.UmbraStatusDot
+import com.geek.umbra.designsystem.UmbraSwipeAction
 import com.geek.umbra.designsystem.UmbraTheme
 import com.geek.umbra.designsystem.UmbraType
 import com.geek.umbra.feature.me.DevicesStore
@@ -177,33 +174,20 @@ private fun ContactRow(conv: String, dev: com.geek.umbra.model.KnownDevice?, pre
         }
     }
     if (dev == null) { row(); return }
-    // 只有设备行能左滑「移除」；滑过阈值弹确认（破坏性操作必过确认），不滑到底自动执行
-    val scope = rememberCoroutineScope()
-    val state = rememberSwipeToDismissBoxState()
-    SwipeToDismissBox(
-        state = state,
-        enableDismissFromStartToEnd = false,
-        backgroundContent = {
-            Box(Modifier.fillMaxSize().background(c.danger).padding(horizontal = 20.dp), contentAlignment = Alignment.CenterEnd) {
-                Text("移除", color = c.onDanger, style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.SemiBold))
-            }
-        },
-        onDismiss = { v ->
-            scope.launch { state.reset() }
-            if (v == SwipeToDismissBoxValue.EndToStart) {
-                AppGraph.router.confirm(
-                    UmbraAlert(
-                        title = "从联系人移除「${ChatStore.convLabel(conv)}」？",
-                        message = "只是从列表里拿掉，设备重新连上会再次出现。",
-                        confirmLabel = "移除", destructive = true,
-                    ) {
-                        DevicesStore.forget(dev.device_id)
-                        AppGraph.router.showToast("已移除")
-                    },
-                )
-            }
-        },
-    ) { row() }
+    // 只有设备行能左滑：露出「移除」钮（公共件，拖到底不执行），点了再过确认（破坏性操作必过确认）。
+    val remove = UmbraSwipeAction("移除", UmbraIconPaths.trash, c.danger, c.onDanger) {
+        AppGraph.router.confirm(
+            UmbraAlert(
+                title = "从联系人移除「${ChatStore.convLabel(conv)}」？",
+                message = "只是从列表里拿掉，设备重新连上会再次出现。",
+                confirmLabel = "移除", destructive = true,
+            ) {
+                DevicesStore.forget(dev.device_id)
+                AppGraph.router.showToast("已移除")
+            },
+        )
+    }
+    UmbraRevealSwipeRow(trailing = listOf(remove), resetKey = dev.device_id) { row() }
 }
 
 @Composable

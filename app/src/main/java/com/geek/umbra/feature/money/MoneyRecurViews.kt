@@ -65,10 +65,12 @@ import com.geek.umbra.designsystem.UmbraIcon
 import com.geek.umbra.designsystem.UmbraIconPaths
 import com.geek.umbra.designsystem.UmbraMenuItem
 import com.geek.umbra.designsystem.UmbraMoreMenu
+import com.geek.umbra.designsystem.UmbraRevealSwipeRow
 import com.geek.umbra.designsystem.UmbraRowDivider
 import com.geek.umbra.designsystem.UmbraScreen
 import com.geek.umbra.designsystem.UmbraSegment
 import com.geek.umbra.designsystem.UmbraSegmentedControl
+import com.geek.umbra.designsystem.UmbraSwipeAction
 import com.geek.umbra.designsystem.UmbraTheme
 import com.geek.umbra.designsystem.UmbraTopBarIcon
 import com.geek.umbra.designsystem.UmbraTopBarText
@@ -274,16 +276,16 @@ fun MoneyRecurListView() {
                             key(r.id) {
                                 if (i > 0) UmbraRowDivider()
                                 // iOS swipeActions 声明顺序是 删除、停止（最外侧在前），屏幕上左→右是 停止、删除。
-                                MoneySwipeRow(
-                                    key = r.id, openRow = openRow,
-                                    actions = listOf(
-                                        MoneySwipeAction(
+                                UmbraRevealSwipeRow(
+                                    trailing = listOf(
+                                        UmbraSwipeAction(
                                             if (r.paused) "开始" else "停止",
                                             if (r.paused) UmbraIconPaths.play else UmbraIconPaths.pauseCircle,
-                                            MoneySwipeTone.Warning,
+                                            c.warning, c.onWarning,
                                         ) { toggle(r) },
-                                        MoneySwipeAction("删除", UmbraIconPaths.trash, MoneySwipeTone.Danger) { confirmDelete(r) },
+                                        UmbraSwipeAction("删除", UmbraIconPaths.trash, c.danger, c.onDanger) { confirmDelete(r) },
                                     ),
+                                    openRow = openRow, rowKey = r.id,
                                 ) {
                                     // 分类名 / 图标在这里取：cats 变了（改名、换图标）这一层会重组，行跟着拿到新值。
                                     val k = cats.firstOrNull { it.slug == r.cat }

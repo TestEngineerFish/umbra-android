@@ -2,7 +2,6 @@
 package com.geek.umbra.feature.vault
 
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -14,15 +13,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.draggable
-import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -39,7 +34,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -50,7 +44,6 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
@@ -58,7 +51,6 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.geek.umbra.R
@@ -72,9 +64,11 @@ import com.geek.umbra.designsystem.UmbraFilterChips
 import com.geek.umbra.designsystem.UmbraIcon
 import com.geek.umbra.designsystem.UmbraIconPaths
 import com.geek.umbra.designsystem.UmbraNotice
+import com.geek.umbra.designsystem.UmbraRevealSwipeRow
 import com.geek.umbra.designsystem.UmbraScreen
 import com.geek.umbra.designsystem.UmbraSearchField
 import com.geek.umbra.designsystem.UmbraStripAction
+import com.geek.umbra.designsystem.UmbraSwipeAction
 import com.geek.umbra.designsystem.UmbraTagPill
 import com.geek.umbra.designsystem.UmbraTheme
 import com.geek.umbra.designsystem.UmbraTopBarIcon
@@ -84,7 +78,6 @@ import com.geek.umbra.navigation.Route
 import com.geek.umbra.navigation.UmbraAlert
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlin.math.roundToInt
 
 @Composable
 internal fun VaultHomeContent() {
@@ -562,36 +555,20 @@ private fun confirmDelete(it: VItem) {
 private fun RecordRow(it: VItem, showsGroups: Boolean, typeName: String, query: String) {
     val c = UmbraTheme.colors
     val router = AppGraph.router
-    val scope = rememberCoroutineScope()
     val pwd = passwordOf(it)
-    val density = LocalDensity.current
-    val btnW = 76.dp
-    val revealPx = with(density) { (btnW * (if (pwd != null) 2 else 1)).toPx() }
-    val offset = remember(it.id) { Animatable(0f) }
-    fun close() { scope.launch { offset.animateTo(0f, tween(160)) } }
     val shape = RoundedCornerShape(UmbraDimens.radiusSwipeRow)
-    Box(Modifier.fillMaxWidth().clip(shape)) {
-        // 背后的两颗钮
-        Row(Modifier.matchParentSize(), horizontalArrangement = Arrangement.End) {
-            if (pwd != null) {
-                Box(Modifier.width(btnW).fillMaxHeight().background(c.orange).clickable {
-                    close(); VaultClipboard.copySensitive(pwd); router.showToast("已复制密码 · 60 秒后自动清除")
-                }, contentAlignment = Alignment.Center) { Text("复制密码", color = c.onAccent, style = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.SemiBold)) }
-            }
-            Box(Modifier.width(btnW).fillMaxHeight().background(c.danger).clickable { close(); confirmDelete(it) }, contentAlignment = Alignment.Center) {
-                Text("删除", color = c.onDanger, style = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.SemiBold))
-            }
-        }
+    val actions = buildList {
+        if (pwd != null) add(UmbraSwipeAction("复制密码", UmbraIconPaths.copy, c.orange, c.onAccent) {
+            VaultClipboard.copySensitive(pwd); router.showToast("已复制密码 · 60 秒后自动清除")
+        })
+        add(UmbraSwipeAction("删除", UmbraIconPaths.trash, c.danger, c.onDanger) { confirmDelete(it) })
+    }
+    // 左滑走 designsystem 的公共件（只露钮、拖到底不执行；摊开时点行身只合上）。
+    UmbraRevealSwipeRow(trailing = actions, resetKey = it.id, modifier = Modifier.fillMaxWidth().clip(shape)) {
         Row(
-            Modifier.offset { IntOffset(offset.value.roundToInt(), 0) }
-                .fillMaxWidth().background(c.card)
-                .draggable(
-                    rememberDraggableState { d -> scope.launch { offset.snapTo((offset.value + d).coerceIn(-revealPx, 0f)) } },
-                    Orientation.Horizontal,
-                    onDragStopped = { v -> scope.launch { offset.animateTo(if (offset.value < -revealPx / 2 || v < -800f) -revealPx else 0f, tween(160)) } },
-                )
+            Modifier.fillMaxWidth().background(c.card)
                 .combinedClickable(
-                    onClick = { if (offset.value != 0f) close() else router.go(Route.VaultRecord(it.id, query)) },
+                    onClick = { router.go(Route.VaultRecord(it.id, query)) },
                     onLongClick = { rowMenu(it, showsGroups) },
                 )
                 .heightIn(min = UmbraDimens.rowMinHSub).padding(horizontal = 13.dp, vertical = 10.dp),
