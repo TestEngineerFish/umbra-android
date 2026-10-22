@@ -330,7 +330,7 @@ private fun FollowRow(ctx: Context, tr: DutyTr, f: DutyFollow) {
     val trailing = buildList {
         add(UmbraSwipeAction(ctx.getString(R.string.duty_follow_delete), UmbraIconPaths.trash, c.danger) { askDelete(ctx, f) })
         if (f.state == "ended") {
-            add(UmbraSwipeAction(ctx.getString(R.string.duty_follow_restart), UmbraIconPaths.repeatArrows, c.orange) { write { DutyStore.patchFollow(f.id, state("active")) } })
+            add(UmbraSwipeAction(ctx.getString(R.string.duty_follow_restart), UmbraIconPaths.play, c.orange) { write { DutyStore.patchFollow(f.id, state("active")) } })
         } else {
             add(UmbraSwipeAction(ctx.getString(R.string.duty_follow_end), UmbraIconPaths.stopCircle, c.faint) { write { DutyStore.patchFollow(f.id, state("ended")) } })
             add(UmbraSwipeAction(

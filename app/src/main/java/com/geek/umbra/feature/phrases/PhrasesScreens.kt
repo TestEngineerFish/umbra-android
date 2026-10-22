@@ -61,6 +61,7 @@ import com.geek.umbra.designsystem.UmbraDimens
 import com.geek.umbra.designsystem.UmbraEmptyState
 import com.geek.umbra.designsystem.UmbraFieldLabel
 import com.geek.umbra.designsystem.UmbraIcon
+import com.geek.umbra.designsystem.UmbraExtraIcons
 import com.geek.umbra.designsystem.UmbraIconPaths
 import com.geek.umbra.designsystem.UmbraRevealSwipeRow
 import com.geek.umbra.designsystem.UmbraRowDivider
@@ -230,7 +231,7 @@ private fun PhraseRow(p: Phrase) {
                     confirmLabel = "删除", destructive = true,
                 ) { PhraseStore.delete(p.id); router.showToast("已删除「${p.name}」") })
             },
-            UmbraSwipeAction("编辑", UmbraIconPaths.textLines, c.muted) { router.go(Route.MePhraseEdit(p.id)) },
+            UmbraSwipeAction("编辑", UmbraExtraIcons.edit, c.muted) { router.go(Route.MePhraseEdit(p.id)) },
         ),
         resetKey = p,
     ) {

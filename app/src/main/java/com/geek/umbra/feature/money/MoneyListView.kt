@@ -44,6 +44,7 @@ import com.geek.umbra.designsystem.UmbraDimens
 import com.geek.umbra.designsystem.UmbraEmptyState
 import com.geek.umbra.designsystem.UmbraFilterChips
 import com.geek.umbra.designsystem.UmbraIcon
+import com.geek.umbra.designsystem.UmbraExtraIcons
 import com.geek.umbra.designsystem.UmbraIconPaths
 import com.geek.umbra.designsystem.UmbraRevealSwipeRow
 import com.geek.umbra.designsystem.UmbraScreen
@@ -330,7 +331,7 @@ private fun SwipeRow(
         // 「移到另一个账本」（G3）：沿用现有行操作多一项，不新画形制。不进详情（挪这一下不可撤销地清掉科目）。
         if (ledger == Ledger.Business) UmbraSwipeAction("移回生活", UmbraIconPaths.wallet, c.muted) { confirmMove(e, ledger) }
         else UmbraSwipeAction("移到经营", UmbraIconPaths.briefcase, c.muted) { confirmMove(e, ledger) },
-        UmbraSwipeAction("编辑", UmbraIconPaths.textLines, c.warning, c.onWarning) { AppGraph.router.go(Route.MoneyAdd(e.id)) },
+        UmbraSwipeAction("编辑", UmbraExtraIcons.edit, c.warning, c.onWarning) { AppGraph.router.go(Route.MoneyAdd(e.id)) },
         // 删除放最靠边那一个。
         UmbraSwipeAction("删除", UmbraIconPaths.trash, c.danger, c.onDanger) { confirmDelete(e) },
     )

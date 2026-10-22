@@ -376,8 +376,8 @@ private fun CatSection(
                         // 兜底分类没有停用键 —— 没有键比「有键但点了报错」诚实。
                         val c = UmbraTheme.colors
                         val actions = buildList {
-                            add(UmbraSwipeAction("改名", UmbraIconPaths.textLines, c.warning, c.onWarning) { onRename(cat) })
-                            add(UmbraSwipeAction("换图标", UmbraIconPaths.image, c.orange, c.onAccent) { onIcon(cat) })
+                            add(UmbraSwipeAction("改名", UmbraExtraIcons.edit, c.warning, c.onWarning) { onRename(cat) })
+                            add(UmbraSwipeAction("换图标", UmbraExtraIcons.shapes, c.orange, c.onAccent) { onIcon(cat) })
                             if (!cat.locked) add(UmbraSwipeAction("停用", UmbraIconPaths.ban, c.danger, c.onDanger) { onDisable(cat) })
                         }
                         UmbraRevealSwipeRow(trailing = actions, openRow = openRow, rowKey = cat.slug) {
@@ -792,7 +792,7 @@ fun MoneyCatDetailView(slug: String) {
                             if (i > 0) UmbraRowDivider()
                             UmbraRevealSwipeRow(
                                 trailing = listOf(
-                                    UmbraSwipeAction("改名", UmbraIconPaths.textLines, c.warning, c.onWarning) { askRenameSub(s) },
+                                    UmbraSwipeAction("改名", UmbraExtraIcons.edit, c.warning, c.onWarning) { askRenameSub(s) },
                                     UmbraSwipeAction("删除", UmbraIconPaths.trash, c.danger, c.onDanger) { confirmDeleteSub(s) },
                                 ),
                                 openRow = openRow, rowKey = s,

@@ -98,7 +98,7 @@ R8 的问题只在运行时暴露（序列化类被裁、反射找不到），�
 |---|---|---|
 | SwiftUI TabView + 每 Tab NavigationStack | Compose `NavigationBar` + 每 Tab 一条 Navigation 3 返回栈 | 再点当前 Tab 回根；推入页隐藏底栏 |
 | 系统左缘返回 | 系统返回手势 / Predictive Back | Android 平台惯例 |
-| `.swipeActions` 左滑 | `UmbraRevealSwipeRow`：`SwipeToDismissBox` 拒绝滑走、摊开胶囊钮（只露按钮不自动执行，可设同一时刻只开一行） | 全 App 一份（批次 201）；破坏性操作一律走确认弹窗 |
+| `.swipeActions` 左滑 | `UmbraRevealSwipeRow`：`SwipeToDismissBox` 拒绝滑走、摊开胶囊钮（只露按钮不自动执行，可设同一时刻只开一行） | 全 App 一份（批次 201）；破坏性操作一律走确认弹窗；钮上图标只用 umbra-icons.json 登记过的名字（批次 283：重试 refresh-cw、找回 undo、改名 / 编辑 edit、换图标 shapes、停止周期 ban），`SwipeIconsTest` 守着 |
 | 系统 alert / confirm | `router.confirm(UmbraAlert)`（M3 `AlertDialog`） | 固定两颗钮 |
 | alert 里塞一格 TextField | `UmbraPrompt`（底部弹层：标题 + 说明 + 一格 + 取消 / 确认） | UmbraAlert 没有输入框 |
 | `UmbraAlert(showsCancel: false)` 单钮说明 | `UmbraNotice`（底部弹层，正文能滚） | |

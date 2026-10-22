@@ -44,6 +44,7 @@ import com.geek.umbra.designsystem.UmbraDimens
 import com.geek.umbra.designsystem.UmbraEmptyState
 import com.geek.umbra.designsystem.UmbraGroupCard
 import com.geek.umbra.designsystem.UmbraIcon
+import com.geek.umbra.designsystem.UmbraExtraIcons
 import com.geek.umbra.designsystem.UmbraIconPaths
 import com.geek.umbra.designsystem.UmbraPhaseFailedCard
 import com.geek.umbra.designsystem.UmbraProgressBar
@@ -265,7 +266,7 @@ private fun DocRow(model: KbDocsModel, d: KbDocDTO, busy: Boolean) {
     val st = d.docState
     val actions = buildList {
         add(UmbraSwipeAction(ctx.getString(R.string.kb_delete), UmbraIconPaths.trash, c.danger, c.onDanger) { askDelete(model, d) })
-        if (st == KbDocState.Failed) add(UmbraSwipeAction(ctx.getString(R.string.kb_retry), UmbraIconPaths.repeatArrows, c.warning, c.onWarning) { retry(model, d) })
+        if (st == KbDocState.Failed) add(UmbraSwipeAction(ctx.getString(R.string.kb_retry), UmbraExtraIcons.refreshCw, c.warning, c.onWarning) { retry(model, d) })
     }
     UmbraRevealSwipeRow(trailing = actions) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp)) {

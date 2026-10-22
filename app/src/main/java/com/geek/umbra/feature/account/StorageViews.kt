@@ -404,7 +404,7 @@ private fun StorageGroup(
                         val actions = if (kind == "trash") listOf(
                             // 破坏性动作不滑到底执行，点了还要过确认弹窗。
                             UmbraSwipeAction("彻底删除", UmbraIconPaths.trash, c.danger, c.onDanger) { onPurge(item) },
-                            UmbraSwipeAction("找回", UmbraIconPaths.repeatArrows, c.muted) { onRestore(item) },
+                            UmbraSwipeAction("找回", UmbraExtraIcons.undo, c.muted) { onRestore(item) },
                         ) else listOf(UmbraSwipeAction("删除", UmbraIconPaths.trash, c.danger, c.onDanger) { onDelete(item, list.keep_days) })
                         UmbraRevealSwipeRow(trailing = actions) { ItemRow(kind, item) }
                     }

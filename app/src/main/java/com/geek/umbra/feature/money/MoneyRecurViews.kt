@@ -282,7 +282,7 @@ fun MoneyRecurListView() {
                                     trailing = listOf(
                                         UmbraSwipeAction(
                                             if (r.paused) "开始" else "停止",
-                                            if (r.paused) UmbraIconPaths.play else UmbraIconPaths.pauseCircle,
+                                            if (r.paused) UmbraIconPaths.play else UmbraIconPaths.ban,
                                             c.warning, c.onWarning,
                                         ) { toggle(r) },
                                         UmbraSwipeAction("删除", UmbraIconPaths.trash, c.danger, c.onDanger) { confirmDelete(r) },
