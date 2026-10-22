@@ -52,6 +52,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.fragment.app.FragmentActivity
+import com.geek.umbra.R
+import com.geek.umbra.app.Brand
 import com.geek.umbra.app.AppGraph
 import com.geek.umbra.designsystem.Appearance
 import com.geek.umbra.designsystem.UmbraButton
@@ -97,7 +99,7 @@ class AutofillActivity : FragmentActivity() {
     }
 
     private fun pick(user: String, pwd: String) {
-        val ds = UmbraAutofillService.datasetFor(this, parsed, user, pwd, user.ifEmpty { "Umbra" })
+        val ds = UmbraAutofillService.datasetFor(this, parsed, user, pwd, user.ifEmpty { getString(R.string.brand_name) })
         if (ds != null) setResult(Activity.RESULT_OK, Intent().putExtra(AutofillManager.EXTRA_AUTHENTICATION_RESULT, ds))
         finish()
     }
@@ -176,10 +178,10 @@ private fun AutofillPanel(activity: FragmentActivity, parsed: ParsedFields, onPi
         // 顶栏：字标 + 标题 + 关闭
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(24.dp).clip(RoundedCornerShape(7.dp)).background(c.orange), contentAlignment = Alignment.Center) {
-                Text("U", color = c.onAccent, style = TextStyle(fontSize = 13.sp, fontWeight = UmbraType.weight650))
+                Text(Brand.monogram, color = c.onAccent, style = TextStyle(fontSize = 13.sp, fontWeight = UmbraType.weight650))
             }
             Spacer(Modifier.width(10.dp))
-            Text("Umbra · 密码填充", color = c.text, style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.SemiBold), modifier = Modifier.weight(1f))
+            Text("${Brand.productName} · 密码填充", color = c.text, style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.SemiBold), modifier = Modifier.weight(1f))
             Box(Modifier.heightIn(min = UmbraDimens.tapMin).clickable(role = Role.Button, onClick = onCancel), contentAlignment = Alignment.Center) {
                 Text("关闭", color = c.orangeText, style = TextStyle(fontSize = 15.sp))
             }
@@ -193,7 +195,7 @@ private fun AutofillPanel(activity: FragmentActivity, parsed: ParsedFields, onPi
         if (!unlocked) {
             Column(Modifier.verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 // 设计侧 199 答复第 12 条：解锁页那句改为这一句
-                Text(if (faceAvailable) "解锁后才能填充。生物识别通过即可，不用打开 Umbra。" else "解锁后才能填充。主密码不保存、不上传 —— 填充时也一样。",
+                Text(if (faceAvailable) "解锁后才能填充。生物识别通过即可，不用打开${Brand.productName}。" else "解锁后才能填充。主密码不保存、不上传 —— 填充时也一样。",
                     color = c.muted, style = TextStyle(fontSize = 13.sp, lineHeight = 20.sp))
                 if (faceAvailable) {
                     UmbraButton(if (faceScanning) "识别中…" else "用${name}解锁", { startFace() }, Modifier.fillMaxWidth(), enabled = !faceScanning, height = 46.dp)

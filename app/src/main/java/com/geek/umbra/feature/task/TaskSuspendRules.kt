@@ -5,6 +5,7 @@
 // 纯 Kotlin，配 JUnit 用例（TaskSuspendRulesTest.kt + 两端共享夹具 TaskSuspendFixtureTest.kt）。
 package com.geek.umbra.feature.task
 
+import com.geek.umbra.app.Brand
 import com.geek.umbra.model.TaskItem
 import com.geek.umbra.model.TaskWaitingDevice
 import com.geek.umbra.net.UmbraUrl
@@ -45,7 +46,9 @@ object TaskSuspendCopy {
     const val copyDetail = "复制详情"
 
     /** 手机上接不了 PC 的程序，所以不出「接入能力」，改说这件事去哪做（iOS 独有那句，Android 同样适用）。 */
-    const val iosCapabilityHint = "在电脑上打开 Umbra 的「能力」页接上。"
+    // 名字两侧不留空格：中文句子里的中文名照中文排版贴着写（与 PC 共用夹具 taskSuspendCases.json 140be97 逐字一致）；
+    // 原来的空格是给拉丁字母「Umbra」留的。
+    const val iosCapabilityHint = "在电脑上打开${Brand.productName}的「能力」页接上。"
 
     // 可以接着跑了（resume_ready: true，批次 224）
     const val readyDeviceTitle = "「{{device}}」上线了，要接着跑吗？"

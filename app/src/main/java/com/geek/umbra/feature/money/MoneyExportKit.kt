@@ -6,6 +6,7 @@
 // 所以「范围」做成一份东西（MoneyExportRange），范围句、文件名、主钮上的笔数全从它推。
 package com.geek.umbra.feature.money
 
+import com.geek.umbra.app.Brand
 import java.util.Locale
 
 /**
@@ -61,7 +62,7 @@ data class MoneyExportRange(
     val actionTitle: String get() = "导出这 $count 笔"
 
     /** 文件名（不含扩展名）。⚠️ 唯一会离开这个 App 的那一段字，必须跟着范围走，不能是写死的月份。 */
-    val fileBase: String get() = "umbra-账目-" + segs.joinToString("-") { MoneyExportKit.safeFileSeg(it.slug) }
+    val fileBase: String get() = MoneyExportKit.FILE_PREFIX + segs.joinToString("-") { MoneyExportKit.safeFileSeg(it.slug) }
 }
 
 /** iOS: MoneyExportKit.swift:105 */
@@ -127,8 +128,17 @@ object MoneyExportKit {
     /** 一次导出的所有文件都放进一个以它开头的临时目录里：为了删得干净，按前缀整个删。 */
     const val TMP_DIR_PREFIX = "umbra-money-export-"
 
-    /** 旧版散在 tmp 根上的那几样的前缀（= MoneyExportRange.fileBase 的开头）。 */
+    /**
+     * 旧版散在 tmp 根上的那几样的前缀（= 10-22 改名之前 MoneyExportRange.fileBase 的开头）。
+     * **不跟品牌名走**：它认的是升级前那个版本写下的文件，那时候的前缀就是这几个字。
+     */
     const val LEGACY_PREFIX = "umbra-账目-"
+
+    /**
+     * 这一版导出文件名的开头（MoneyExportRange.fileBase 拿它起头）：收文件的人只看得到这个名字，是对外显示，取 Brand。
+     * 清理也认它 —— 改名后文件名不再落在 LEGACY_PREFIX 里，不认的话这一版导出的文件逃过清理。iOS: MoneyExportKit.swift `filePrefix`
+     */
+    const val FILE_PREFIX = "${Brand.productName}-账目-"
 
     /**
      * tmp 下这一项是不是导出留下的（要清掉的）。⚠️ 只认这个前缀，不认 `umbra-` 这类更宽的 ——
@@ -137,7 +147,8 @@ object MoneyExportKit {
      */
     fun isExportTmp(name: String): Boolean =
         (name.startsWith(TMP_DIR_PREFIX) && name.length > TMP_DIR_PREFIX.length) ||
-            (name.startsWith(LEGACY_PREFIX) && name.length > LEGACY_PREFIX.length)
+            (name.startsWith(LEGACY_PREFIX) && name.length > LEGACY_PREFIX.length) ||
+            (name.startsWith(FILE_PREFIX) && name.length > FILE_PREFIX.length)
 
     // ── CSV ──
 

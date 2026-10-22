@@ -4,6 +4,7 @@
 // 「接入的能力」组故意不在：稿里的翻译 / 压视频只是示例，没有真实的 Skill / MCP 接入，摆假动作等于骗人点。
 package com.geek.umbra.feature.chat
 
+import com.geek.umbra.app.Brand
 import com.geek.umbra.designsystem.UmbraIconPaths
 
 /** 一个快捷动作。k 是过滤用的英文键（也当 id）；label 是芯片和发送前缀；params 是选中后输入框的灰色占位。 */
@@ -19,7 +20,7 @@ object SlashCatalog {
             SlashAction("rem", "建提醒", "时间 + 要提醒你做什么", "时间 要提醒你做什么", UmbraIconPaths.bell),
         )),
         SlashGroup("任务", listOf(
-            SlashAction("task", "创建任务", "描述目标，Umbra 拆步骤去做", "要它做什么", UmbraIconPaths.task),
+            SlashAction("task", "创建任务", "描述目标，${Brand.productName}拆步骤去做", "要它做什么", UmbraIconPaths.task),
         )),
     )
 

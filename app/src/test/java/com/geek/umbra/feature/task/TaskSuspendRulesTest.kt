@@ -1,5 +1,6 @@
 package com.geek.umbra.feature.task
 
+import com.geek.umbra.app.Brand
 import com.geek.umbra.model.TaskWaitingDevice
 import com.geek.umbra.net.UmbraJson
 import kotlinx.serialization.json.JsonObject
@@ -68,7 +69,7 @@ class TaskSuspendRulesTest {
         assertEquals("哪台设备上都没有这几项能力。接上以后会问你要不要接着跑。", d.body)
         assertEquals("已挂起 · 缺能力：图片生成、设计", d.listMeta)
         assertEquals("缺能力：图片生成、设计，接上后会问你要不要接着跑", d.cardText)
-        assertEquals("在电脑上打开 Umbra 的「能力」页接上。", d.iosHint)
+        assertEquals("在电脑上打开${Brand.productName}的「能力」页接上。", d.iosHint)
 
         val one = TaskSuspendInfo(reason = "no_capability", missingCapabilities = listOf("image_gen"), labels = listOf("图片生成"))
         assertEquals("哪台设备上都没有这项能力。接上以后会问你要不要接着跑。", R.display("suspended", one)!!.body)
@@ -80,7 +81,7 @@ class TaskSuspendRulesTest {
         assertEquals("这一步要用的程序或 Skill 哪台设备上都没有。接上以后会问你要不要接着跑。", e.body)
         assertEquals("已挂起 · 缺一项程序或 Skill", e.listMeta)
         assertEquals("缺一项程序或 Skill，接上后会问你要不要接着跑", e.cardText)
-        assertEquals("在电脑上打开 Umbra 的「能力」页接上。", e.iosHint)
+        assertEquals("在电脑上打开${Brand.productName}的「能力」页接上。", e.iosHint)
         assertFalse(d.listMetaWarn); assertFalse(e.listMetaWarn)
     }
 

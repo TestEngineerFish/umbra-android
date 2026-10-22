@@ -32,6 +32,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -44,6 +45,8 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.geek.umbra.R
+import com.geek.umbra.app.Brand
 import com.geek.umbra.app.AppGraph
 import com.geek.umbra.designsystem.UmbraButton
 import com.geek.umbra.designsystem.UmbraCard
@@ -152,7 +155,7 @@ fun AuthScreen(gate: Gate) {
                 fail?.let { FailCard(it, lockLeft) }
                 when {
                     oidc -> {
-                        Text("用 Umbra 账号登录", color = c.text, style = UmbraType.sectionTitle)
+                        Text("用${Brand.productName}账号登录", color = c.text, style = UmbraType.sectionTitle)
                         Text(
                             if (waitingOidc) "等登录页那边登录…  登录页没有自动打开的话，再按一次。"
                             else "会打开系统的登录页，在那里登录；没有账号的话在那一页注册。登录完成后自动回到这里。",
@@ -253,7 +256,7 @@ fun AuthScreen(gate: Gate) {
                     modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable { auth.useStandalone(); AppGraph.router.tab = com.geek.umbra.navigation.Tab.standaloneHome }.padding(horizontal = 12.dp, vertical = 12.dp),
                 )
                 Text(
-                    "提醒、保险箱、常用语这些本机功能不用登录；聊天、任务要登录 Umbra 账号，到时在「我 › 账号」里登。",
+                    "提醒、保险箱、常用语这些本机功能不用登录；聊天、任务要登录${Brand.productName}账号，到时在「我 › 账号」里登。",
                     color = c.muted, style = TextStyle(fontSize = 12.sp, lineHeight = 17.sp), textAlign = TextAlign.Center,
                 )
             }
@@ -267,10 +270,10 @@ private fun Wordmark() {
     val c = UmbraTheme.colors
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 4.dp)) {
         Box(Modifier.size(32.dp).clip(RoundedCornerShape(9.dp)).background(c.orange), contentAlignment = Alignment.Center) {
-            Text("U", color = c.onAccent, style = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.SemiBold))
+            Text(Brand.monogram, color = c.onAccent, style = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.SemiBold))
         }
         Spacer(Modifier.width(10.dp))
-        Text("Umbra", color = c.text, style = TextStyle(fontSize = 17.sp, fontWeight = UmbraType.weight560))
+        Text(stringResource(R.string.brand_name), color = c.text, style = TextStyle(fontSize = 17.sp, fontWeight = UmbraType.weight560))
     }
 }
 

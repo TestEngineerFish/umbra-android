@@ -34,6 +34,7 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
+import com.geek.umbra.app.Brand
 import com.geek.umbra.R
 import com.geek.umbra.app.MainActivity
 import com.geek.umbra.designsystem.UmbraDark
@@ -90,7 +91,7 @@ internal fun WWordmark(big: Boolean = false) {
         contentAlignment = Alignment.Center,
     ) {
         // 出图 #10 字标是 650 → Bold（Glance 只有三档字重）。
-        Text("U", style = TextStyle(color = WTheme.onOrange, fontSize = if (big) 12.sp else 9.sp, fontWeight = FontWeight.Bold))
+        Text(Brand.monogram, style = TextStyle(color = WTheme.onOrange, fontSize = if (big) 12.sp else 9.sp, fontWeight = FontWeight.Bold))
     }
 }
 
@@ -125,7 +126,7 @@ internal fun WSignedOut(modifier: GlanceModifier) {
             modifier = GlanceModifier.size(18.dp), colorFilter = ColorFilter.tint(WTheme.muted),
         )
         Spacer(GlanceModifier.height(6.dp))
-        Text("请登录 Umbra", style = TextStyle(color = WTheme.text, fontSize = 15.sp, fontWeight = FontWeight.Medium), maxLines = 1)
+        Text("请登录${Brand.productName}", style = TextStyle(color = WTheme.text, fontSize = 15.sp, fontWeight = FontWeight.Medium), maxLines = 1)
     }
 }
 

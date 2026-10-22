@@ -7,21 +7,20 @@
     <string name="share_insp_empty">没记上：内容是空的。写几个字，或者带上图片。</string>
     <string name="share_insp_failed">没记上。内容还在，可以再试一次。</string>
     <string name="share_insp_image">分享进来的图片</string>
-    <string name="share_insp_notConfigured">没记上：还没连接服务器，先打开 Umbra 设置连接。</string>
+    <string name="share_insp_notConfigured">没记上：还没连接服务器，先打开%1$s设置连接。</string>
     <string name="share_insp_offline">没记上：连不上服务器。内容还在，稍后再点保存。</string>
     <string name="share_insp_placeholder">写点什么…</string>
     <string name="share_insp_rejected">没记上：服务器没收下这条，原样重试也没用。</string>
     <string name="share_insp_removeImage">去掉这张图</string>
-    <string name="share_insp_renewInApp">记不上：登录要续一下。先打开一次 Umbra，再回来分享。</string>
+    <string name="share_insp_renewInApp">记不上：登录要续一下。先打开一次%1$s，再回来分享。</string>
     <string name="share_insp_research">帮我查查</string>
     <string name="share_insp_save">保存</string>
     <string name="share_insp_saved">记下了</string>
     <string name="share_insp_serverError">没记上：服务器出错了。内容还在，稍后再试。</string>
-    <string name="share_insp_signedOut">记不上：还没登录。先打开 Umbra 登录，再回来分享。</string>
-    <string name="share_insp_title">记到 Umbra 灵感</string>
+    <string name="share_insp_signedOut">记不上：还没登录。先打开%1$s登录，再回来分享。</string>
     <string name="share_insp_tooLarge">没记上：有一张图超过了服务器的单张上限。去掉那张再试。</string>
-    <!-- Android 独有：未登录时面板上那颗「打开 Umbra」（iOS 扩展里打不开宿主 App，只有那一句话）。 -->
-    <string name="share_insp_openApp">打开 Umbra</string>
+    <!-- Android 独有：未登录时面板上那颗「打开 <产品名>」（iOS 扩展里打不开宿主 App，只有那一句话）。 -->
+    <string name="share_insp_openApp">打开%1$s</string>
     <!-- 分享进来的是图时底部那个切换（iOS share.conv.modeInsp / modeConvert，扩展表）。 -->
     <string name="share_conv_modeInsp">记灵感</string>
     <string name="share_conv_modeConvert">用电脑转换</string>

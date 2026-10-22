@@ -80,6 +80,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import com.geek.umbra.app.Brand
 import com.geek.umbra.R
 import com.geek.umbra.app.AppGraph
 import com.geek.umbra.designsystem.UmbraButton
@@ -209,7 +210,7 @@ fun RemListScreen() {
         if (refusedTombs.isNotEmpty()) item("refusedTombs") { RefusedTombsBanner(refusedTombs) }
         if (notifyOk == false && items.isNotEmpty()) item("perm") {
             WarnBanner(
-                UmbraIconPaths.alertTriangle, "没有通知权限，到点不会响", "去系统设置 › 通知 › Umbra 打开就行。",
+                UmbraIconPaths.alertTriangle, "没有通知权限，到点不会响", "去系统设置 › 通知 › ${Brand.productName}打开就行。",
                 listOf("去开启" to { requestNotify() }),
             )
         }
@@ -217,7 +218,7 @@ fun RemListScreen() {
         if (!exactOk && items.any { !it.done }) item("exact") {
             val ctx = LocalContext.current
             WarnBanner(
-                UmbraIconPaths.clock, "没开「闹钟和提醒」，到点可能晚几分钟才响", "系统默认不让 App 准点叫你，去设置里允许 Umbra 就能准时。",
+                UmbraIconPaths.clock, "没开「闹钟和提醒」，到点可能晚几分钟才响", "系统默认不让 App 准点叫你，去设置里允许${Brand.productName}就能准时。",
                 listOf("去授权" to {
                     if (Build.VERSION.SDK_INT >= 31) runCatching {
                         ctx.startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:${ctx.packageName}")))

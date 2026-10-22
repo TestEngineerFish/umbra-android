@@ -1,5 +1,6 @@
 package com.geek.umbra.feature.money
 
+import com.geek.umbra.app.Brand
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -11,10 +12,10 @@ class MoneyExportKitTest {
 
     /** ⚠️ 162 §一 那次返工的实物。 */
     @Test fun fileNameCases() {
-        assertEquals("文件名跟着三段范围走", "umbra-账目-2026-08-支出-餐饮", range(MoneyExportScope.Filtered, "支出", "餐饮").fileBase)
-        assertEquals("只有月份时就只有月份", "umbra-账目-2026-08", range(MoneyExportScope.Filtered).fileBase)
-        assertEquals("少一段就少一段", "umbra-账目-2026-08-收入", range(MoneyExportScope.Filtered, dir = "收入").fileBase)
-        assertEquals("全部那一档的文件名", "umbra-账目-全部", range(MoneyExportScope.All).fileBase)
+        assertEquals("文件名跟着三段范围走", "${Brand.productName}-账目-2026-08-支出-餐饮", range(MoneyExportScope.Filtered, "支出", "餐饮").fileBase)
+        assertEquals("只有月份时就只有月份", "${Brand.productName}-账目-2026-08", range(MoneyExportScope.Filtered).fileBase)
+        assertEquals("少一段就少一段", "${Brand.productName}-账目-2026-08-收入", range(MoneyExportScope.Filtered, dir = "收入").fileBase)
+        assertEquals("全部那一档的文件名", "${Brand.productName}-账目-全部", range(MoneyExportScope.All).fileBase)
         val all = range(MoneyExportScope.All).fileBase
         assertTrue("「全部」的文件名里混进了月份：$all", !all.contains("2026") && !all.contains("08"))
         assertTrue("当前筛选那一档的文件名丢了月份", range(MoneyExportScope.Filtered, dir = "支出").fileBase.contains("2026-08"))
@@ -104,9 +105,9 @@ class MoneyExportKitTest {
         val cut = MoneyExportRcpt("2026-12", "2026 年第 4 季", 640, 500)
         fun r(rc: MoneyExportRcpt?, dir: String? = null, count: Int = 7) = MoneyExportRange(
             MoneyExportKit.segments(MoneyExportScope.Filtered, "2026-08", "2026 年 8 月", dir, null, rc), count, rc)
-        assertEquals("待补票那一筛的文件名", "umbra-账目-待补票-截至2026-12", r(full).fileBase)
+        assertEquals("待补票那一筛的文件名", "${Brand.productName}-账目-待补票-截至2026-12", r(full).fileBase)
         assertTrue("待补票那一筛的文件名里还写着正在看的那个月（内容是整季含往季）", !r(full).fileBase.contains("2026-08"))
-        assertEquals("方向筛选照样跟在后面", "umbra-账目-待补票-截至2026-12-支出", r(full, "支出").fileBase)
+        assertEquals("方向筛选照样跟在后面", "${Brand.productName}-账目-待补票-截至2026-12-支出", r(full, "支出").fileBase)
         assertEquals("没截断时范围句不多话",
             "要导的是：待补票（截至 2026 年第 4 季，含往季） · 共 7 笔。生成一个 csv，接着挑去处。", r(full).sentence)
         assertEquals("被 limit 截断时范围句要说出来",
@@ -114,7 +115,7 @@ class MoneyExportKitTest {
                 "待补票一共 640 笔，这里只拿到了最近的 500 笔，没拿到的不在这份文件里。生成一个 csv，接着挑去处。",
             r(cut, count = 500).sentence)
         assertTrue("截断判据：拿回来的比总数少才算", cut.truncated && !full.truncated)
-        assertEquals("没开待补票时文件名照旧按月", "umbra-账目-2026-08", r(null).fileBase)
+        assertEquals("没开待补票时文件名照旧按月", "${Brand.productName}-账目-2026-08", r(null).fileBase)
         assertEquals("全部那一档混进了待补票口径", "全部",
             MoneyExportKit.segments(MoneyExportScope.All, "2026-08", "2026 年 8 月", null, null, full).joinToString("") { it.slug })
     }
@@ -132,5 +133,8 @@ class MoneyExportKitTest {
         assertTrue("清到了系统的临时文件", !k.isExportTmp("CFNetworkDownload_x.tmp"))
         assertTrue("只有前缀本身不该算", !k.isExportTmp(k.TMP_DIR_PREFIX))
         assertTrue("这一版的 csv 文件名不在清理范围里", k.isExportTmp(range(MoneyExportScope.Filtered).fileBase + ".csv"))
+        // 品牌改名（10-22）：这一版的前缀跟着 Brand 走，旧前缀照样认（升级前留下的那几份明文）。
+        assertTrue("改名后这一版的 zip 要被清", k.isExportTmp("${Brand.productName}-账目-全部-凭证图.zip"))
+        assertTrue("只有新前缀本身不该算", !k.isExportTmp(k.FILE_PREFIX))
     }
 }

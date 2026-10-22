@@ -42,6 +42,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.geek.umbra.app.Brand
 import com.geek.umbra.R
 import com.geek.umbra.app.AppGraph
 import com.geek.umbra.designsystem.UmbraColorScheme
@@ -397,7 +398,7 @@ fun MemoryEditScreen(id: String?, kind: String) {
                         }
                         Note("固定的一条，标题和一句话不能改")
                     } else {
-                        Field("标题") { MemoryLine(title, { title = it }, "例如：Umbra 设计稿", c) }
+                        Field("标题") { MemoryLine(title, { title = it }, "例如：${Brand.productName}设计稿", c) }
                         Field("一句话 · 是什么，什么时候读") { MemoryLine(summary, { summary = it }, "例如：项目的批次往来。聊到设计稿或批次号时读。", c) }
                     }
                     Field("详情 · 一行一条") { MemoryEditor(bodyText, { bodyText = it }, "一行写一条要点", c, minHeight = 180, enabled = !busy) }
