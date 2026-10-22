@@ -98,7 +98,8 @@ class BrandTest {
      */
     @Test fun noCodenameInKotlinLiterals() {
         val allowed = listOf("newPlainText(", "RELATIVE_PATH", "getExternalStoragePublicDirectory(", "const val codename")
-        val literal = Regex("\"(?:[^\"\\\\]|\\\\.)*\"")
+        // 占有量词（++ / *+）：普通的 (a|b)* 每个字符递归一层，长字面量会把测试线程的栈撑爆（产品名改「长尾雀」那次就炸过）。
+        val literal = Regex("\"(?:[^\"\\\\]++|\\\\.)*+\"")
         val hits = file("src/main/java").walk().filter { it.isFile && it.extension == "kt" }.flatMap { f ->
             f.readLines().mapIndexedNotNull { i, line ->
                 val code = if (line.trimStart().startsWith("*")) "" else line.substringBefore("//")

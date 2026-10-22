@@ -62,7 +62,8 @@ class DesignSystemCopyTest {
      * 不许有产品名或代号（整词，UmbraTheme 这类标识符不算）。要用产品名走 Brand.productName / R.string.brand_name。
      */
     @Test fun noHardcodedBrandInDesignSystem() {
-        val literal = Regex("\"(?:[^\"\\\\]|\\\\.)*\"")
+        // 占有量词（++ / *+）：普通的 (a|b)* 每个字符递归一层，长字面量会把测试线程的栈撑爆（产品名改「长尾雀」那次就炸过）。
+        val literal = Regex("\"(?:[^\"\\\\]++|\\\\.)*+\"")
         val brand = Regex("(?<![A-Za-z\\-.])(${Brand.codename}|${Brand.productNameEn})(?![A-Za-z\\-])|${Brand.productName}")
         val hits = file("src/main/java/com/geek/umbra/designsystem").walk().filter { it.extension == "kt" }.flatMap { f ->
             f.readLines().mapIndexedNotNull { i, line ->

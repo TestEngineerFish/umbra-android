@@ -1,4 +1,4 @@
-// 产品名的唯一来源（sam 10-22 拍板）：对外叫「悠蜗」，Umbra 只是内部代号。
+// 产品名的唯一来源（sam 10-22 拍板）：对外叫「长尾雀」，Umbra 只是内部代号。
 //
 // 改名只改这一个文件，然后跑 `python3 -I tools/gen_brand.py` 和 `python3 -I tools/gen_strings.py`：
 // - gen_brand.py 按这里的值生成 res/values*/brand.xml（app_name、brand_name，以及 manifest 里那种没法带 %s 的整句 label）；
@@ -6,8 +6,8 @@
 // - app/build.gradle.kts 读这里的 productNameEn 给安装包起文件名。
 // 三处都用正则读本文件，所以常量的写法（const val 名 = "值"，或 const val 名 = 另一个常量名）别改。BrandTest 守着资源与这里一致。
 //
-// 空格规则（全端统一，geek-99 10-22）：产品名挨着汉字或中文标点时两边不留空格（「用悠蜗账号登录」），
-// 挨着英文或数字时留一个（「悠蜗 App」）；「 · 」「 › 」这类分隔符本身带的空格照留。BrandTest 守着。
+// 空格规则（全端统一，geek-99 10-22）：产品名挨着汉字或中文标点时两边不留空格（「用长尾雀账号登录」），
+// 挨着英文或数字时留一个（「长尾雀 App」）；「 · 」「 › 」这类分隔符本身带的空格照留。BrandTest 守着。
 //
 // 不改的（用户看不见、改了会断数据或断对端）：applicationId / 包名 / 命名空间 / 类名、Prefs 与 DataStore 键、
 // 文件目录名、通知渠道 ID、请求头 X-Umbra-*、剪贴板 label —— 清单见开发文档第五节「品牌名」。
@@ -15,17 +15,19 @@ package com.geek.umbra.app
 
 object Brand {
     /** 对外产品名（中文界面、写死中文的文案用它）。 */
-    const val productName = "悠蜗"
+    const val productName = "长尾雀"
     /**
-     * 产品名的 ASCII 版。英文名还没定，先占位，**不上界面**（sam 10-22：英文名定下来之前不对外露出 Youwo）。
+     * 产品名的 ASCII 版。英文名还没定，先占位，**不上界面**（拼音占位；sam 10-22：英文名定下来之前不对外露出 Changweique）。
      * 只用在必须是 ASCII、写不了中文的地方 —— Android 侧只有一处：安装包文件名（app/build.gradle.kts）。
      */
-    const val productNameEn = "Youwo"
+    const val productNameEn = "Changweique"
     /**
      * 英文界面显示的产品名（启动器名、英文文案、分享面板）。英文名定下来之前就是中文名 —— 定了只改这一行，
      * 让它指向 productNameEn，再重跑 gen_brand.py / gen_strings.py。
      */
     const val displayNameEn = productName
+    /** 昵称（sam 10-22）。这次只登记常量，界面上先不用 —— 哪句文案用它等 iOS / 设计侧定。 */
+    const val nickname = "雀雀"
     /** 内部代号：包名、类名、请求头、日志里出现的那个名字。不上界面。 */
     const val codename = "Umbra"
     /**

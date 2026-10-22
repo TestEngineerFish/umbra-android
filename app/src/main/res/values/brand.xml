@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- 自动生成，请勿手改：tools/gen_brand.py ← app/Brand.kt -->
 <resources>
-    <string name="app_name">悠蜗</string>
-    <string name="brand_name">悠蜗</string>
-    <string name="share_insp_title">记到悠蜗灵感</string>
+    <string name="app_name">长尾雀</string>
+    <string name="brand_name">长尾雀</string>
+    <string name="share_insp_title">记到长尾雀灵感</string>
 </resources>
