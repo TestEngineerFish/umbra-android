@@ -581,7 +581,7 @@ fun ShopThemePage(id: String) {
             }
         }
         settingSection("spec", null, listOf(
-            UmbraSettingRow(str(R.string.theme_specBy), value = e.author.ifEmpty { Brand.productName }),
+            UmbraSettingRow(str(R.string.theme_specBy), value = e.author.ifEmpty { str(R.string.brand_name) }),
             UmbraSettingRow(str(R.string.theme_specHas), value = str(R.string.theme_specModes)),
             UmbraSettingRow(str(R.string.theme_specPrice), value = priceText(e)),
         ))

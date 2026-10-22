@@ -526,9 +526,10 @@ fun GeneralScreen() {
 fun AboutScreen() {
     // 版本号从构建配置读，**不写死** —— 写死的版本号在下一次发版时一定忘了改（MeViews.swift:619）。
     val version = "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE}) · Android"
+    val name = stringResource(R.string.brand_name)
     UmbraScreen(title = "关于", onBack = { router.back() }) {
         settingSection("about", null, listOf(
-            UmbraSettingRow(Brand.productName, value = version),
+            UmbraSettingRow(name, value = version),
             UmbraSettingRow("客户端 ID", value = AppGraph.prefs.clientId, mono = true, action = {
                 copyPlainText(AppGraph.prefs.clientId); router.showToast("已复制")
             }),

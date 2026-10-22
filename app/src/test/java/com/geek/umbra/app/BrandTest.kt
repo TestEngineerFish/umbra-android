@@ -17,7 +17,8 @@ class BrandTest {
         Regex("<string name=\"${Regex.escape(key)}\"[^>]*>([^<]*)</string>").find(file("src/main/res/$dir/$file").readText())?.groupValues?.get(1)
 
     /** 代号整词（UmbraTheme、X-Umbra-Session 这类标识符里的不算）。 */
-    private val codename = Regex("(?<![A-Za-z\\-.])${Brand.codename}(?![A-Za-z\\-])")
+    // 后面只排除字母：「Umbra-账目-」这种代号后跟连字符的文件名也是对外显示，第一版排除了连字符，漏掉了导出文件名。
+    private val codename = Regex("(?<![A-Za-z\\-.])${Brand.codename}(?![A-Za-z])")
 
     /** brand.xml 是 tools/gen_brand.py 按 Brand.kt 生成的：改了 Brand.kt 忘了重跑，这里会红。 */
     @Test fun brandXmlMatchesBrandKt() {
@@ -37,6 +38,16 @@ class BrandTest {
                     .filter { codename.containsMatchIn(it.groupValues[2]) }.map { "${f.parentFile.name}/${f.name}: ${it.groupValues[1]}" }
             }.toList()
         assertTrue("资源里还有写死的代号：$hits", hits.isEmpty())
+    }
+
+    /**
+     * 生成的资源里不许残留 iOS 的占位符 {brand}：iOS 收口后文案表里写的是占位符，生成时必须换成产品名。
+     * 第一版 PR 就栽在这儿 —— 当时重跑 gen_strings 读到了 iOS 改到一半的工作区，16 句原样印着 {brand}，而上面那条只查代号。
+     */
+    @Test fun noBrandTokenInResources() {
+        val hits = file("src/main/res").walk().filter { it.isFile && it.extension == "xml" && it.parentFile.name.startsWith("values") }
+            .filter { Brand.token in it.readText() }.map { "${it.parentFile.name}/${it.name}" }.toList()
+        assertTrue("资源里还印着占位符 ${Brand.token}：$hits", hits.isEmpty())
     }
 
     /** 产品名不在别处写死：手写的资源与 Kotlin 一律引用（brand_name / Brand.productName），生成文件除外。 */

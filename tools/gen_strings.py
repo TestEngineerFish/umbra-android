@@ -8,7 +8,9 @@ iOS 改了文案重跑一次即可同步，不会各改各的。
   移植时按中文原文查资源名；
 - 格式符：%@ → %s，%lld/%ld → %d；一句里有多个参数时一律补成位置参数（%1$s），否则 lint 报错；
 - 只有中文没有英文的条目只写进 values/，英文模式下回落中文（与 iOS 行为一致）；
-- 产品名：iOS 文案里的「Umbra」（整词）换成 app/Brand.kt 的产品名，中文表用 productName、英文表用 productNameEn。
+- 产品名：iOS 文案里的占位符 {brand}（iOS 品牌收口 5fe6fcc 起，取字入口统一替换）和残留的整词「Umbra」
+  都换成 app/Brand.kt 的产品名，中文表用 productName、英文表用 productNameEn。生成时就换掉，不映射成 %s：
+  Android 资源里一句话没法引用另一条资源，映射成 %s 就得让每个调用处都补一个参数。
   key 不动（中文字面 key 的资源名仍按 iOS 原文算），所以 Kotlin 里的 R.string 引用不受改名影响。
 用法：python3 -I tools/gen_strings.py   （UmbraAndroid 根目录，要求 ../UmbraiOS 并排；在 worktree 里跑时用 UMBRA_IOS=<iOS 仓路径> 指定）
 """
@@ -31,7 +33,9 @@ BRAND = _gb.load()
 CODENAME = re.compile(r"(?<![A-Za-z\-])" + re.escape(BRAND["codename"]) + r"(?![A-Za-z\-])")
 
 def brand(s: str, lang: str) -> str:
-    return CODENAME.sub(BRAND["productName"] if lang == "zh" else BRAND["productNameEn"], s)
+    name = BRAND["productName"] if lang == "zh" else BRAND["productNameEn"]
+    # 残留的整词代号：iOS 以中文原文作 key、没有译文的那批旧条目里还写着 Umbra。
+    return CODENAME.sub(name, s.replace("{brand}", name))
 
 FMT = re.compile(r"%(\d+\$)?(@|lld|ld|d|lf|f|%)")
 

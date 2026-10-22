@@ -32,6 +32,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -44,6 +45,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.geek.umbra.R
 import com.geek.umbra.app.Brand
 import com.geek.umbra.app.AppGraph
 import com.geek.umbra.designsystem.UmbraButton
@@ -268,10 +270,10 @@ private fun Wordmark() {
     val c = UmbraTheme.colors
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 4.dp)) {
         Box(Modifier.size(32.dp).clip(RoundedCornerShape(9.dp)).background(c.orange), contentAlignment = Alignment.Center) {
-            Text("U", color = c.onAccent, style = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.SemiBold))
+            Text(Brand.monogram, color = c.onAccent, style = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.SemiBold))
         }
         Spacer(Modifier.width(10.dp))
-        Text(Brand.productName, color = c.text, style = TextStyle(fontSize = 17.sp, fontWeight = UmbraType.weight560))
+        Text(stringResource(R.string.brand_name), color = c.text, style = TextStyle(fontSize = 17.sp, fontWeight = UmbraType.weight560))
     }
 }
 

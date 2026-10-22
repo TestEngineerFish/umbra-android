@@ -52,6 +52,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.fragment.app.FragmentActivity
+import com.geek.umbra.R
 import com.geek.umbra.app.Brand
 import com.geek.umbra.app.AppGraph
 import com.geek.umbra.designsystem.Appearance
@@ -98,7 +99,7 @@ class AutofillActivity : FragmentActivity() {
     }
 
     private fun pick(user: String, pwd: String) {
-        val ds = UmbraAutofillService.datasetFor(this, parsed, user, pwd, user.ifEmpty { Brand.productName })
+        val ds = UmbraAutofillService.datasetFor(this, parsed, user, pwd, user.ifEmpty { getString(R.string.brand_name) })
         if (ds != null) setResult(Activity.RESULT_OK, Intent().putExtra(AutofillManager.EXTRA_AUTHENTICATION_RESULT, ds))
         finish()
     }
@@ -177,7 +178,7 @@ private fun AutofillPanel(activity: FragmentActivity, parsed: ParsedFields, onPi
         // 顶栏：字标 + 标题 + 关闭
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(24.dp).clip(RoundedCornerShape(7.dp)).background(c.orange), contentAlignment = Alignment.Center) {
-                Text("U", color = c.onAccent, style = TextStyle(fontSize = 13.sp, fontWeight = UmbraType.weight650))
+                Text(Brand.monogram, color = c.onAccent, style = TextStyle(fontSize = 13.sp, fontWeight = UmbraType.weight650))
             }
             Spacer(Modifier.width(10.dp))
             Text("${Brand.productName} · 密码填充", color = c.text, style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.SemiBold), modifier = Modifier.weight(1f))
