@@ -47,16 +47,18 @@ import androidx.compose.ui.unit.sp
 import com.geek.umbra.R
 import com.geek.umbra.app.AppGraph
 import com.geek.umbra.designsystem.UmbraDimens
-import com.geek.umbra.designsystem.UmbraErrorCard
 import com.geek.umbra.designsystem.UmbraExtraIcons
 import com.geek.umbra.designsystem.UmbraFieldLabel
 import com.geek.umbra.designsystem.UmbraGroupCard
 import com.geek.umbra.designsystem.UmbraIcon
 import com.geek.umbra.designsystem.UmbraIconPaths
+import com.geek.umbra.designsystem.UmbraPhaseFailedCard
 import com.geek.umbra.designsystem.UmbraProgressBar
 import com.geek.umbra.designsystem.UmbraRevealSwipeRow
 import com.geek.umbra.designsystem.UmbraRowDivider
 import com.geek.umbra.designsystem.UmbraScreen
+import com.geek.umbra.designsystem.UmbraScreenPhase
+import com.geek.umbra.designsystem.UmbraSkeleton
 import com.geek.umbra.designsystem.UmbraStripAction
 import com.geek.umbra.designsystem.UmbraSwipeAction
 import com.geek.umbra.designsystem.UmbraTheme
@@ -319,6 +321,8 @@ fun StoragePage() {
         },
     ) {
         val s = storage
+        // 首屏三态走公共判据：拿到过就画；没拿到时，有失败原因 → 错误卡（服务端那句原话、只带「重试」，同 iOS），否则骨架。
+        val phase = UmbraScreenPhase.resolve(hasContent = s != null, loading = failText == null, loadedOnce = false, offline = false)
         when {
             s != null -> {
                 val face = StorageFace(s)
@@ -364,16 +368,14 @@ fun StoragePage() {
                     }
                 }
             }
-            failText != null -> item("fail") {
-                UmbraErrorCard(title = "拿不到存储用量", body = failText, actions = listOf("重试" to { scope.launch { reload() }; Unit }))
+            phase is UmbraScreenPhase.Failed -> item("fail") {
+                UmbraPhaseFailedCard(phase.offline, { scope.launch { reload() } }, title = "拿不到存储用量", checkServer = false, body = failText)
             }
-            else -> item("loading") { MePlaceholder("正在读取…") }
+            // 首屏用骨架（设计系统 states.skeleton：「首屏加载用骨架」）；从前这里是一行「正在读取…」。
+            else -> item("loading") { UmbraSkeleton() }
         }
     }
 }
-
-@Composable
-private fun MePlaceholder(text: String) = com.geek.umbra.feature.me.MePlaceholderRow(text)
 
 /** 一组：组头「标签 …… 总量 · N 项」+ 条目（左滑）/ 保险箱一行 / 空态 +「其余 N 项」。 */
 @Composable

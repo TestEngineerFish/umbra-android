@@ -36,7 +36,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -54,8 +53,10 @@ import com.geek.umbra.designsystem.UmbraIcon
 import com.geek.umbra.designsystem.UmbraIconPaths
 import com.geek.umbra.designsystem.UmbraMenuItem
 import com.geek.umbra.designsystem.UmbraMoreMenu
+import com.geek.umbra.designsystem.UmbraPhaseFailedCard
 import com.geek.umbra.designsystem.UmbraRowDivider
 import com.geek.umbra.designsystem.UmbraScreen
+import com.geek.umbra.designsystem.UmbraScreenPhase
 import com.geek.umbra.designsystem.UmbraSegment
 import com.geek.umbra.designsystem.UmbraSegmentedControl
 import com.geek.umbra.designsystem.UmbraSettingRow
@@ -101,6 +102,9 @@ fun MemoryScreen() {
     LaunchedEffect(Unit) { MemoryStore.load() }
     val count = items?.size ?: 0
     val retry: () -> Unit = { scope.launch { MemoryStore.load() } }
+    val offline by AppGraph.http.offline.collectAsState()
+    // 首屏三态走公共判据：一份都没读到时，还在读 → 骨架，读失败 → 错误卡；手里有一份就画它（读失败那条另说，见下）。
+    val phase = UmbraScreenPhase.resolve(hasContent = items != null, loading = !failed, loadedOnce = false, offline = offline)
 
     UmbraScreen(
         title = "记忆", onBack = { router.back() }, refreshing = refreshing,
@@ -116,13 +120,12 @@ fun MemoryScreen() {
             // 读失败但手里有上次那份：照画，顶上说清楚这不是最新的（umbra-ios#86 ②）。
             item("stale") { UmbraErrorStrip("没读到最新的记忆，眼前这份是上次读到的。", tone = UmbraTone.Warning, action = AppGraph.context.getString(R.string.state_retry) to retry) }
         }
-        if (list == null) {
-            item("state") {
-                if (failed) UmbraErrorCard(title = "没读到记忆", body = stringResource(R.string.state_failed_reason_server), actions = listOf(stringResource(R.string.state_retry) to retry))
-                else UmbraSkeleton()
-            }
-            return@UmbraScreen
+        when (phase) {
+            UmbraScreenPhase.Skeleton -> { item("state") { UmbraSkeleton() }; return@UmbraScreen }
+            is UmbraScreenPhase.Failed -> { item("state") { UmbraPhaseFailedCard(phase.offline, retry, title = "没读到记忆") }; return@UmbraScreen }
+            is UmbraScreenPhase.Content -> Unit
         }
+        if (list == null) return@UmbraScreen
         // 第一组：让秘书去改记忆的两件事。
         val first = buildList {
             val t = telling

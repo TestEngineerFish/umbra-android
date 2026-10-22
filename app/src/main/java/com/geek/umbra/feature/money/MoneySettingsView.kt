@@ -23,8 +23,9 @@ import com.geek.umbra.R
 import com.geek.umbra.app.AppGraph
 import com.geek.umbra.designsystem.UmbraChoice
 import com.geek.umbra.designsystem.UmbraChoiceItem
-import com.geek.umbra.designsystem.UmbraErrorCard
+import com.geek.umbra.designsystem.UmbraPhaseFailedCard
 import com.geek.umbra.designsystem.UmbraScreen
+import com.geek.umbra.designsystem.UmbraScreenPhase
 import com.geek.umbra.designsystem.UmbraSettingRow
 import com.geek.umbra.designsystem.UmbraSkeleton
 import com.geek.umbra.designsystem.UmbraTheme
@@ -141,20 +142,20 @@ fun MoneySettingsView() {
             }
         },
     ) {
-        if (!loadedOnce) {
-            item(key = "skeleton") {
-                if (failed) {
-                    UmbraErrorCard(
-                        title = "设置没拉下来",
+        // 首屏三态走公共判据：没拉到过时，在拉 → 骨架，拉失败 → 错误卡。错误卡照 iOS 用这一屏自己那句原因、只带「重试」。
+        when (val phase = UmbraScreenPhase.resolve(hasContent = loadedOnce, loading = !failed, loadedOnce = false, offline = false)) {
+            UmbraScreenPhase.Skeleton -> { item(key = "skeleton") { UmbraSkeleton() }; return@UmbraScreen }
+            is UmbraScreenPhase.Failed -> {
+                item(key = "skeleton") {
+                    UmbraPhaseFailedCard(
+                        phase.offline, { MoneyStore.launch { MoneySettings.retry() } }, Modifier.fillMaxWidth(),
+                        title = "设置没拉下来", checkServer = false,
                         body = "连不上服务端，或者它这一下没回。开关的值只在服务端有一份，拿不到就不画 —— 画一个猜的值出来，你点了会以为改上了。",
-                        actions = listOf(stringResource(R.string.state_retry) to { MoneyStore.launch { MoneySettings.retry() } }),
-                        modifier = Modifier.fillMaxWidth(),
                     )
-                } else {
-                    UmbraSkeleton()
                 }
+                return@UmbraScreen
             }
-            return@UmbraScreen
+            is UmbraScreenPhase.Content -> Unit
         }
         // 稿里这一组叫「分类与预算」。预算不存在，组名跟着内容走。footer 只写人话，token 名进注释不进正文。
         settingSection("cats", "分类与周期", catsRows, footer = "记账页上那张周期卡和这一行通向同一个页面：卡上看下次几时记，这里改规则。")

@@ -40,7 +40,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
@@ -373,13 +372,9 @@ fun TaskDetailView(id: String) {
                 }
             }
             TaskDetailPhase.Failed -> item("fail") {
-                // 整屏错误卡同列表那一张；不挂离线条 —— 有内容时偶尔拉失败这一屏要留着内容。
-                UmbraErrorCard(
-                    title = stringResource(R.string.state_failed_title),
-                    body = stringResource(if (offline) R.string.state_failed_reason_offline else R.string.state_failed_reason_server),
-                    actions = listOf(stringResource(R.string.state_retry) to { AppGraph.scope.launch { TasksStore.retryTaskDetail(id) }; Unit }),
-                    modifier = Modifier.padding(16.dp),
-                )
+                // 整屏错误卡同列表那一张（公共件），但只带「重试」、不挂离线条（iOS TaskViews.swift:414 同）：
+                // 这一页的四档判据（多一档「不存在」）在 TaskDetailRules，不走 umbraScreenPhase。
+                UmbraPhaseFailedCard(offline, { AppGraph.scope.launch { TasksStore.retryTaskDetail(id) } }, Modifier.padding(16.dp), checkServer = false)
             }
         }
     }

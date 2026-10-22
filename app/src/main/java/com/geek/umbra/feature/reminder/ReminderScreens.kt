@@ -88,15 +88,16 @@ import com.geek.umbra.designsystem.UmbraDateText
 import com.geek.umbra.designsystem.UmbraDimens
 import com.geek.umbra.designsystem.UmbraEmptyState
 import com.geek.umbra.designsystem.UmbraErrorCard
-import com.geek.umbra.designsystem.UmbraErrorStrip
 import com.geek.umbra.designsystem.UmbraFieldLabel
 import com.geek.umbra.designsystem.UmbraGroupCard
 import com.geek.umbra.designsystem.UmbraIcon
 import com.geek.umbra.designsystem.UmbraIconPaths
+import com.geek.umbra.designsystem.UmbraPhaseFailedCard
 import com.geek.umbra.designsystem.UmbraPickers
 import com.geek.umbra.designsystem.UmbraRevealSwipeRow
 import com.geek.umbra.designsystem.UmbraRowDivider
 import com.geek.umbra.designsystem.UmbraScreen
+import com.geek.umbra.designsystem.UmbraScreenPhase
 import com.geek.umbra.designsystem.UmbraSegment
 import com.geek.umbra.designsystem.UmbraSegmentedControl
 import com.geek.umbra.designsystem.UmbraSettingRow
@@ -111,6 +112,7 @@ import com.geek.umbra.designsystem.UmbraTopBarIcon
 import com.geek.umbra.designsystem.UmbraTopBarText
 import com.geek.umbra.designsystem.UmbraType
 import com.geek.umbra.designsystem.UmbraWhenTab
+import com.geek.umbra.designsystem.umbraPhaseTop
 import com.geek.umbra.navigation.Route
 import com.geek.umbra.navigation.UmbraAlert
 import com.geek.umbra.net.ImageTier
@@ -176,13 +178,8 @@ fun RemListScreen() {
 
     // 首屏三态：有内容先给内容；没内容 + 首次同步在路上 → 骨架；没内容 + 没成功同步过 → 错误卡。
     // 未登录（单机）不算「没同步成功」—— 单机本来就不同步，直接给空态（提醒是本地功能）。
-    val hasContent = items.isNotEmpty()
-    val phase = when {
-        hasContent -> 0
-        firstSyncing && !locked -> 1
-        !loadedOnce && !locked -> 2
-        else -> 0
-    }
+    // 照 iOS ReminderStore.screenPhase；锁着（单机）时当「有内容」、不算离线 —— 直接给空态，不挂离线条、不出错误卡。
+    val phase = UmbraScreenPhase.resolve(items.isNotEmpty() || locked, firstSyncing, loadedOnce, offline && !locked)
     val pool = items.filter { if (seg == 0) !it.done else it.done }
     val groups = (if (seg == 0) todoOrder else doneOrder).mapNotNull { name -> pool.filter { it.group == name }.takeIf { it.isNotEmpty() }?.let { name to it } }
 
@@ -191,22 +188,16 @@ fun RemListScreen() {
         actions = { UmbraTopBarIcon(UmbraIconPaths.plus, "新建", { router.go(Route.RemEdit(null)) }, tint = UmbraTheme.colors.orange) },
         refreshing = refreshing,
         onRefresh = { scope.launch { refreshing = true; store.reloadAsync(); refreshing = false } },
-        topContent = if (offline && !locked && phase == 0) {
-            { UmbraErrorStrip("${stringResource(R.string.state_offline_title)} · ${stringResource(R.string.state_offline_reason)}", tone = UmbraTone.Warning, action = stringResource(R.string.state_retry) to { store.reload() }) }
-        } else null,
+        // 提醒有本地缓存：离线条说「下面是上次同步到的内容」（不是 live 那句）。
+        topContent = umbraPhaseTop(phase, live = false) { store.reload() },
     ) {
         when (phase) {
-            1 -> { item("skeleton") { UmbraSkeleton() }; return@UmbraScreen }
-            2 -> {
-                item("failed") {
-                    UmbraErrorCard(
-                        title = "同步不上提醒",
-                        body = stringResource(if (offline) R.string.state_failed_reason_offline else R.string.state_failed_reason_server),
-                        actions = listOf(stringResource(R.string.state_retry) to { store.reload() }),
-                    )
-                }
+            UmbraScreenPhase.Skeleton -> { item("skeleton") { UmbraSkeleton() }; return@UmbraScreen }
+            is UmbraScreenPhase.Failed -> {
+                item("failed") { UmbraPhaseFailedCard(phase.offline, { store.reload() }, title = "同步不上提醒") }
                 return@UmbraScreen
             }
+            is UmbraScreenPhase.Content -> Unit
         }
         item("seg") {
             UmbraSegmentedControl(

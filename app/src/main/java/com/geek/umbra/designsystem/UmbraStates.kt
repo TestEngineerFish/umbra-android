@@ -49,16 +49,25 @@ object UmbraStates {
 /**
  * 整屏错误卡（三态的 failed 档）。[title] 默认「拿不到数据」，这一屏有更准的说法才传；
  * 第二段分「够不着」（查网络）和「够得着但没给数据」（查地址和令牌）。
+ * [checkServer] = false：只给「重试」一颗（任务详情照 iOS 就是这样 —— 它不挂整页修饰符，错误卡只带重试）。
+ * [body]：这一屏有更准的原因（记账设置那段「为什么拿不到就不画」、存储用量服务端给的那句）才传，替掉通用的两句。
  */
 @Composable
-fun UmbraPhaseFailedCard(offline: Boolean, retry: () -> Unit, modifier: Modifier = Modifier, title: String? = null) {
+fun UmbraPhaseFailedCard(
+    offline: Boolean,
+    retry: () -> Unit,
+    modifier: Modifier = Modifier,
+    title: String? = null,
+    checkServer: Boolean = true,
+    body: String? = null,
+) {
     val actions = buildList {
         add(stringResource(R.string.state_retry) to retry)
-        UmbraStates.checkServer?.let { add(stringResource(R.string.state_checkServer) to it) }
+        if (checkServer) UmbraStates.checkServer?.let { add(stringResource(R.string.state_checkServer) to it) }
     }
     UmbraErrorCard(
         title = title ?: stringResource(R.string.state_failed_title),
-        body = stringResource(if (offline) R.string.state_failed_reason_offline else R.string.state_failed_reason_server),
+        body = body ?: stringResource(if (offline) R.string.state_failed_reason_offline else R.string.state_failed_reason_server),
         actions = actions,
         modifier = modifier,
     )
