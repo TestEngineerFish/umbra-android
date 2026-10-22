@@ -1,6 +1,6 @@
 # Umbra Android 开发文档
 
-最后更新：2026-10-17（一期移植完成）· 参照 iOS 端 `UmbraiOS` 6076afa
+最后更新：2026-10-22（技术债五项收口）· 参照 iOS 端 `UmbraiOS` 0464ea7（逐功能对齐到的 iOS 提交写在第五节各行）
 
 **这一份是 Android 端的总入口。** 技术选型、工程约定、iOS→Android 平台映射、功能清单与实现状态都在这里；
 逐模块的接口字段、业务规则、页面细节在 `docs/reference/` 下四份盘点里（从 iOS 源码逐文件读出来的）：
@@ -52,9 +52,9 @@ Android 端**功能与 iOS 端对齐**，服务端完全共用（同一套接口
 UmbraAndroid/
 ├── app/src/main/java/com/geek/umbra/
 │   ├── app/          Application、MainActivity、AppGraph（依赖容器）、会话守卫
-│   ├── designsystem/ token（颜色/字号/间距）、主题、通用组件 —— 对应 iOS DesignSystem/
+│   ├── designsystem/ token（颜色/字号/间距）、主题、通用组件（三态页、左滑行、输入 / 说明弹层…）—— 对应 iOS DesignSystem/
 │   ├── navigation/   路由表、Router（每 Tab 一条栈）、外壳、深链 —— 对应 iOS Navigation/
-│   ├── net/          配置、安全存储、HTTP 统一出口、鉴权、会话失效、WebSocket —— 对应 iOS Networking/
+│   ├── net/          配置、安全存储、HTTP 统一出口（含按字节读、上传、带鉴权的取图）、reason_kind 判定、鉴权、会话失效、WebSocket —— 对应 iOS Networking/
 │   ├── model/        跨功能数据模型
 │   ├── feature/<功能>/  每个功能的页面 + 状态 + 纯判据（*Rules.kt）
 │   └── util/         真被两个以上功能用到的工具
@@ -71,16 +71,25 @@ UmbraAndroid/
    配 JUnit 用例，输入输出照抄 iOS 的 `Tools/swifttests/*Tests.swift`。
 5. **页面里不许出现字面量颜色 / 字号 / 圆角**，一律从 `designsystem` 取。前景色走 `*Text` 那一支。
 6. **「没拉到」= null，「空」= emptyList()**，全工程不许混。
-7. **文案**：进 `res/values/strings.xml`（中文默认）与 `res/values-en/strings.xml`。与 PC / iOS 逐字一致的句子（附件失败、reasonKind、任务重试、删除后果、CSV 列头）不许意译。
+7. **文案**：与 iOS 逐字一致。iOS 走 `L("x.y")` 的用 `stringResource(R.string.x_y)`（`res/values*/strings_ios.xml` 由 `tools/gen_strings.py` 从 iOS 生成，**不手改**）；
+   iOS 写死中文的，Kotlin 里也写中文字面量；Android 独有的句子放手写的 `strings.xml` / `strings_*_android.xml` / `strings_share.xml` / `strings_widget.xml`。
+   与 PC / iOS 逐字一致的句子（附件失败、reasonKind、任务重试、删除后果、CSV 列头）不许意译。
+8. **通用件先找 designsystem / net**：页面三态 `umbraScreenPhase`、左滑 `UmbraRevealSwipeRow`、一格输入 `UmbraPrompt`、单钮说明 `UmbraNotice`、
+   取二进制 `UmbraHttp.bytes`、带鉴权的图 `UmbraImages.loader`、`reason_kind` 判定 `ReasonRules`、设备列表 `DevicesStore` —— 都只有一份，别在模块里再抄。
 
 ### 构建与验证
 
 ```bash
 export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
-./gradlew :app:assembleDebug        # 编出 app/build/outputs/apk/debug/app-debug.apk
+./gradlew :app:compileDebugKotlin   # 最快的编译检查
 ./gradlew :app:testDebugUnitTest    # 纯判据用例
+./gradlew :app:assembleDebug        # 编出 app/build/outputs/apk/debug/app-debug.apk
+./gradlew :app:assembleRelease      # R8 压缩混淆；改了序列化模型 / 加了依赖必须编一次并装到模拟器上跑
 ./gradlew :app:lintDebug            # Android Lint
 ```
+
+release 包本机验证（调试证书签名，同包名要先卸载 debug 包）：`build-tools/37.0.0/zipalign -p 4` → `apksigner sign --ks ~/.android/debug.keystore --ks-pass pass:android` → `adb install`。
+R8 的问题只在运行时暴露（序列化类被裁、反射找不到），所以「编过」不算数。模拟器 AVD `umbra_test`（API 34 arm64），开着就复用。
 
 ## 四、iOS → Android 平台映射
 
@@ -88,9 +97,11 @@ export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
 |---|---|---|
 | SwiftUI TabView + 每 Tab NavigationStack | Compose `NavigationBar` + 每 Tab 一条 Navigation 3 返回栈 | 再点当前 Tab 回根；推入页隐藏底栏 |
 | 系统左缘返回 | 系统返回手势 / Predictive Back | Android 平台惯例 |
-| `.swipeActions` 左滑 | `SwipeToDismissBox`（只露按钮不自动执行） | 破坏性操作一律走确认弹窗 |
-| 系统 alert / confirm | M3 `AlertDialog` | |
-| 底部弹层 / 选择器 | M3 `ModalBottomSheet` | |
+| `.swipeActions` 左滑 | `UmbraRevealSwipeRow`：`SwipeToDismissBox` 拒绝滑走、摊开胶囊钮（只露按钮不自动执行，可设同一时刻只开一行） | 全 App 一份（批次 201）；破坏性操作一律走确认弹窗 |
+| 系统 alert / confirm | `router.confirm(UmbraAlert)`（M3 `AlertDialog`） | 固定两颗钮 |
+| alert 里塞一格 TextField | `UmbraPrompt`（底部弹层：标题 + 说明 + 一格 + 取消 / 确认） | UmbraAlert 没有输入框 |
+| `UmbraAlert(showsCancel: false)` 单钮说明 | `UmbraNotice`（底部弹层，正文能滚） | |
+| 底部弹层 / 选择器 | `router.present(UmbraSheet)`（M3 `ModalBottomSheet`） | |
 | UIDatePicker 滚轮 | 自绘 `UmbraDateTimePanel`（月历 + 时分滚轮，照设计 token） | |
 | UserDefaults | DataStore Preferences | 键名照搬 |
 | Keychain（ThisDeviceOnly） | Keystore 包裹 + 排除 Auto Backup | |
@@ -115,7 +126,8 @@ export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
 
 图例：✅ 已实现　🟡 已实现但需真机 / 联网验证　⛔ Android 无法实现（已用替代方案或不做）　⏳ 待服务端
 
-> 2026-10-17 一期移植完成：全部模块已从 iOS 逐文件移植，全工程 **374 条 JUnit 用例全过**（纯判据照抄 iOS `Tools/swifttests` 与 PC 共享夹具）。
+> 2026-10-17 一期移植完成：全部模块已从 iOS 逐文件移植，全工程 374 条 JUnit 用例全过（纯判据照抄 iOS `Tools/swifttests` 与 PC 共享夹具）。
+> 2026-10-22：之后补了主题、用电脑转换、就地用重置卡，并收口第五节的技术债五项；现在全工程 **401 条用例全过**，release 包（R8）在模拟器上走过记账 / 提醒 / 外观页。
 > 模拟器（Android 14）单机模式实测过：登录屏、单机模式、四 Tab 外壳、提醒新建与闹钟排程、日期面板、工具页、记账记一笔、保险箱建库 / 解锁、App 内切语言、深链冷启动。
 > **Mac 到服务器 443 被 reset（直连、走代理都一样），所有联网功能只验证到编译与用例，需要接真机（蜂窝网络）走一遍** —— 标 🟡 的就是这些。
 
@@ -132,7 +144,7 @@ export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
 | 会话失效与静默续期 | 🟡 | 闩 + 30 秒冷却有用例 |
 | 单机模式 / 会话守卫 | ✅ | 模拟器实测 |
 | `/ws/chat` 长连接 | 🟡 | 协议层 ping 只容忍 1 颗没回（iOS 2 颗），弱网多一次重连 |
-| 中英双语 + App 内切换 | ✅ | 1495 条 iOS 文案生成；iOS 写死中文的页面英文模式下也是中文（与 iOS 同） |
+| 中英双语 + App 内切换 | ✅ | 1708 条 iOS 文案生成（`strings_ios.xml`）；iOS 写死中文的页面英文模式下也是中文（与 iOS 同） |
 | 浅色 / 深色 / 跟随系统 | ✅ | |
 
 ### 功能模块
@@ -152,6 +164,7 @@ export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
 | 我 · 首页 / 设备与能力 / 连接 / 通知 / 通用 / 关于 | ✅ | |
 | 通知权限（冷启动问一次；没问过当场弹框，问过才跳设置） | ✅ | 照 iOS 4bad681，`app/NotificationPermission.kt` 一处管；模拟器实测拒绝后不再追问 |
 | 账号 / 会员 / 积分 / 商城 / 存储 / 改密码 / 注销 | 🟡 | |
+| 就地用重置卡（会员额度 80% 起出［重置］、额度用完的聊天错误卡 / 读图卡 / 任务失败卡 / 聊天任务卡出［用重置卡］+ 补救后「重试任务」） | 🟡 | 照 PC `resetCard.ts` / `QuotaRows.tsx`（设计侧批次 278）：**Android 照卖重置卡，和 PC 同一套**（iOS 32de292 起不卖，只递已有的卡）；用卡、张数、落到商城那一组待真机 |
 | 记忆 | 🟡 | |
 | 知识库 | 🟡 | 原文交系统里能打开该类型的 App（没有 QuickLook） |
 | 执勤（含聊天里的早报卡、提议卡撤销、例程 / 关注 / 规则子页、今天预算） | 🟡 | 已对齐 iOS 4bad681；联网部分待真机 |
@@ -184,12 +197,22 @@ export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
 - 主题许可证：iOS 本机许可证整机一份、读取时不核账号（同 PC #128）；Android 登出 / 换号即清、读取核 `sub` 与记下的账号。
 - 主题试用到点：iOS 开着编辑页时多等 3 秒再退（SwiftUI 换根视图身份会丢草稿）；Compose 换配色只重组、不丢状态，Android 不用等。
 
-### 技术债（不影响功能）
-- 聊天包 `ChatTaskKit` 与任务包 `TaskRetryRules` / `TaskSuspendRules` 有一份重复（文案已逐条核对一致），宜合成一份。
-- `reason_kind` 判定在聊天（`ChatReasonRules`）与任务（`TaskReason`）各一份，宜挪进 `net/`。
-- 各模块自补的组件（三态页、只露按钮的左滑行、输入弹层、单钮说明弹层、带鉴权的图片加载器）宜挪进 `designsystem/` / `net/`。
-- `UmbraHttp.raw` 只回字符串：二进制下载（附件、快照、知识库原文）各模块自己拼请求，宜加按字节读的出口；`Uploads.upload` 宜交回原始结果。
-- 设备列表在聊天与「我」各存一份。
+### 技术债
+
+**2026-10-22 已收口的五项**（每项单独提交，纯重构为主；界面上的变化另报 Claude Design）：
+
+| 项 | 提交 | 现在在哪 |
+|---|---|---|
+| `reason_kind` 判定聊天、任务各一份 | e108d7a | `net/ReasonRules.kt`（含 `TaskFailAction`） |
+| 聊天 `ChatTaskKit` 与任务 `TaskRetryRules` / `TaskSuspendRules` 重复 | 22a8da0 | 只留任务包那份，聊天卡直接用 |
+| `UmbraHttp.raw` 只回字符串，二进制各模块自己拼请求；`Uploads.upload` 不交原始结果 | 78f5a21 | `UmbraHttp.bytes()`（令牌只给自己的服务端、可设上限 / 进度 / 跳别家 https 去登录头）、`Uploads.send` |
+| 设备列表聊天与「我」各存一份 | 80ad58d | `feature/me` 的 `DevicesStore` |
+| 各模块自补的组件 | 65e066f / 983c459 / b9d11b9 / a80fde3 | 三态 `designsystem/UmbraStates.kt`、取图 `net/UmbraImages.kt`、弹层 `designsystem/UmbraSheets.kt`、左滑 `designsystem/UmbraRevealSwipeRow.kt` |
+
+**还剩的**（盘点时顺带发现，不影响功能）：
+- 「附件已删除」占位在聊天图片格、提醒附件、记账凭证三处各画一份（灰度、字号已分叉）；iOS 是一份 `UmbraAttGonePlaceholder`。
+- 「标题 + 选项行 + 取消」的选择弹层有四份：`presentChoice`（我）、记账分类页、执勤、保险箱 `VaultSheetBody`。
+- 几页还是自己写的三态（提醒列表、任务详情、记忆、记账设置、存储用量），没走 `umbraScreenPhase`；`UmbraCardNoData` 只在记账包里。
 
 ## 六、需要服务端配合
 
@@ -215,5 +238,5 @@ export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
 | 期 | 内容 | 状态 |
 |---|---|---|
 | 一期 | 全部模块从 iOS 移植（基础、聊天、提醒、工具、任务、灵感、记账、保险箱、常用语、我 / 账号 / 记忆 / 知识库、执勤、使用记录、远程控制、小组件、分享、快捷方式、自动填充） | ✅ 2026-10-17 |
-| 二期 | 真机联网验证（登录、聊天、同步、远程控制）；Claude Design 第 199 封的平台差异裁定落地；技术债收口（见第五节） | 待真机 |
+| 二期 | 真机联网验证（登录、聊天、同步、远程控制、主题、转换、重置卡）；Claude Design 第 199 封的平台差异裁定落地（✅ e3a016c）；技术债五项收口（✅ 2026-10-22，见第五节） | 真机验证待做 |
 | 三期 | 服务端推送（FCM / 厂商通道，待服务端）；上架准备（签名、混淆规则核对、隐私说明） | 待服务端 |
