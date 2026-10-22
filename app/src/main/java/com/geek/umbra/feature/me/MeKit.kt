@@ -17,7 +17,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -35,10 +34,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -47,8 +44,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
@@ -74,7 +69,6 @@ import com.geek.umbra.designsystem.UmbraSectionLabel
 import com.geek.umbra.designsystem.UmbraSettingRow
 import com.geek.umbra.designsystem.UmbraSpinningIcon
 import com.geek.umbra.designsystem.UmbraSwitch
-import com.geek.umbra.designsystem.UmbraTextField
 import com.geek.umbra.designsystem.UmbraTheme
 import com.geek.umbra.designsystem.UmbraTone
 import com.geek.umbra.navigation.UmbraSheet
@@ -276,43 +270,6 @@ private fun ChoiceSheetBody(title: String, subtitle: String?, items: List<MeShee
         Spacer(Modifier.height(10.dp))
         UmbraButton("取消", onCancel, Modifier.fillMaxWidth(), kind = UmbraButtonKind.Secondary, height = 46.dp)
     }
-}
-
-// MARK: - 一格输入的弹层（iOS 的 alert + TextField）
-
-/**
- * iOS 用系统 alert 里塞一格 TextField（显示名、新建知识库）。Router 的确认弹窗只有两颗钮、没有输入框，
- * 这里改成底部弹层：标题 + 说明 + 一格 + 取消 / 确认。确认钮在内容为空时**不置灰**（显示名允许留空）由 [allowEmpty] 定。
- */
-fun presentPrompt(
-    title: String,
-    message: String?,
-    initial: String,
-    placeholder: String,
-    confirmLabel: String,
-    allowEmpty: Boolean,
-    onConfirm: (String) -> Unit,
-) {
-    AppGraph.router.present(UmbraSheet("prompt-${System.nanoTime()}") { dismiss ->
-        val c = UmbraTheme.colors
-        var text by remember { mutableStateOf(initial) }
-        val focus = remember { FocusRequester() }
-        LaunchedEffect(Unit) { kotlinx.coroutines.delay(120); runCatching { focus.requestFocus() } }
-        Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(start = 16.dp, end = 16.dp, bottom = 16.dp)) {
-            Text(title, color = c.text, style = TextStyle(fontSize = 17.sp, fontWeight = FontWeight.SemiBold), modifier = Modifier.padding(horizontal = 4.dp))
-            if (message != null) {
-                Spacer(Modifier.height(4.dp))
-                Text(message, color = c.muted, style = TextStyle(fontSize = 13.sp, lineHeight = 19.sp), modifier = Modifier.padding(horizontal = 4.dp))
-            }
-            Spacer(Modifier.height(12.dp))
-            UmbraTextField(text, { text = it }, Modifier.focusRequester(focus), placeholder = placeholder, keyboardOptions = KeyboardOptions.Default)
-            Spacer(Modifier.height(14.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                UmbraButton("取消", dismiss, Modifier.weight(1f), kind = UmbraButtonKind.Secondary, height = 46.dp)
-                UmbraButton(confirmLabel, { dismiss(); onConfirm(text) }, Modifier.weight(1f), height = 46.dp, enabled = allowEmpty || text.isNotBlank())
-            }
-        }
-    })
 }
 
 // MARK: - 左滑露钮的行（iOS .swipeActions(allowsFullSwipe: false)）

@@ -275,20 +275,6 @@ private fun VaultSheetBody(title: String, subtitle: String?, items: List<VaultSh
     }
 }
 
-/** 单按钮的说明面板（iOS 的 showsCancel:false 单钮弹窗；Router 的确认弹窗总是两颗钮，长句放面板里读得完）。 */
-fun presentVaultNotice(title: String, body: String, button: String = "知道了") {
-    AppGraph.router.present(UmbraSheet("vault-notice-${System.nanoTime()}") { dismiss ->
-        val c = UmbraTheme.colors
-        Column(Modifier.fillMaxWidth().padding(horizontal = UmbraDimens.pagePadX).padding(bottom = 16.dp).navigationBarsPadding()) {
-            Text(title, color = c.text, style = UmbraType.sectionTitle)
-            Spacer(Modifier.height(8.dp))
-            Text(body, color = c.muted, style = TextStyle(fontSize = 14.sp, lineHeight = 21.sp))
-            Spacer(Modifier.height(16.dp))
-            com.geek.umbra.designsystem.UmbraButton(button, dismiss, Modifier.fillMaxWidth(), height = 44.dp)
-        }
-    })
-}
-
 /**
  * 保险箱输入框：卡片底 / bg 底、圆角 10、1px 描边。`password` 时画圆点；关掉联想 / 自动更正（键盘不记密码）。
  * 长按复制 / 剪切由外层 [VaultFrame] 改道到敏感剪贴板。

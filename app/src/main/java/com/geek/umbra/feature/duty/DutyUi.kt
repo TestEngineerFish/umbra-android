@@ -25,7 +25,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -34,19 +33,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberDatePickerState
-import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -74,7 +67,6 @@ import com.geek.umbra.designsystem.UmbraIconPaths
 import com.geek.umbra.designsystem.UmbraRowDivider
 import com.geek.umbra.designsystem.UmbraSectionLabel
 import com.geek.umbra.designsystem.UmbraSwitch
-import com.geek.umbra.designsystem.UmbraTextField
 import com.geek.umbra.designsystem.UmbraTheme
 import com.geek.umbra.navigation.UmbraSheet
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -288,59 +280,6 @@ internal fun dutyPresentList(key: String, title: String, subtitle: String? = nul
                 }
             }
             UmbraButton(stringResource(R.string.duty_cancel), dismiss, Modifier.fillMaxWidth(), kind = UmbraButtonKind.Secondary, height = 50.dp)
-        }
-    })
-}
-
-/**
- * 填一格文字（iOS 是系统 alert 里一格 TextField）：Android 的 UmbraAlert 只有两颗钮、没有输入框，
- * 落成一张带输入框的底部弹层：标题 + 一句说明 + 输入框 + 取消 / 确认。
- */
-internal fun dutyAskText(
-    key: String,
-    title: String,
-    message: String?,
-    placeholder: String,
-    initial: String,
-    confirmLabel: String,
-    onConfirm: (String) -> Unit,
-) {
-    AppGraph.router.present(UmbraSheet("duty-text-$key") { dismiss ->
-        val c = UmbraTheme.colors
-        var text by remember { mutableStateOf(initial) }
-        val focus = remember { FocusRequester() }
-        LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
-        Column(
-            Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 16.dp).navigationBarsPadding().imePadding(),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            Text(title, color = c.text, style = TextStyle(fontSize = 17.sp, fontWeight = FontWeight.SemiBold))
-            if (!message.isNullOrEmpty()) Text(message, color = c.muted, style = TextStyle(fontSize = 13.sp, lineHeight = 19.sp))
-            UmbraTextField(text, { text = it }, Modifier.focusRequester(focus), placeholder = placeholder)
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                UmbraButton(stringResource(R.string.duty_cancel), dismiss, Modifier.weight(1f), kind = UmbraButtonKind.Secondary, height = 44.dp)
-                UmbraButton(confirmLabel, { dismiss(); onConfirm(text) }, Modifier.weight(1f), height = 44.dp)
-            }
-        }
-    })
-}
-
-/**
- * 只有一颗「知道了」的说明框（iOS `UmbraAlert(showsCancel: false)`，「为什么」/ 节点配置 / 步骤输出）。
- * Android 地基的 UmbraAlert 固定两颗钮（取消 + 确认），不改地基，落成一张底部弹层：标题 + 正文 + 「知道了」。
- * 正文可能有七八行（上下文摘要），弹层能滚。
- */
-internal fun dutyInfo(title: String, body: String) {
-    AppGraph.router.present(UmbraSheet("duty-info-${System.nanoTime()}") { dismiss ->
-        val c = UmbraTheme.colors
-        Column(
-            Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 16.dp)
-                .navigationBarsPadding(),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Text(title, color = c.text, style = TextStyle(fontSize = 17.sp, fontWeight = FontWeight.SemiBold))
-            Text(body, color = c.text, style = TextStyle(fontSize = 14.sp, lineHeight = 21.sp))
-            UmbraButton(stringResource(R.string.presence_ok), dismiss, Modifier.fillMaxWidth(), kind = UmbraButtonKind.Secondary, height = 48.dp)
         }
     })
 }

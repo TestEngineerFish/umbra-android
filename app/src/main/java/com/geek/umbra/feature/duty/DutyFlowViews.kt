@@ -24,6 +24,7 @@ import com.geek.umbra.R
 import com.geek.umbra.app.AppGraph
 import com.geek.umbra.designsystem.UmbraColorScheme
 import com.geek.umbra.designsystem.UmbraDimens
+import com.geek.umbra.designsystem.UmbraNotice
 import com.geek.umbra.designsystem.UmbraScreen
 import com.geek.umbra.designsystem.UmbraTheme
 import com.geek.umbra.navigation.Route
@@ -178,7 +179,7 @@ private fun showNode(ctx: Context, tr: DutyTr, o: DutyFlowKit.OrderedNode, name:
     val cfg = DutyFlowKit.configLines(o.node, catalog, tr)
     lines += cfg.ifEmpty { listOf(ctx.getString(R.string.duty_flow_noConfig)) }
     lines += ctx.getString(R.string.duty_flow_editOnPCShort)
-    dutyInfo(name, lines.joinToString("\n"))
+    UmbraNotice.present(name, lines.joinToString("\n"))
 }
 
 // MARK: - 运行详情
@@ -267,7 +268,7 @@ private fun stepRow(ctx: Context, tr: DutyTr, c: UmbraColorScheme, n: Int, row: 
             val lines = mutableListOf<String>()
             if (s.error.isNotEmpty()) lines += ctx.getString(R.string.duty_flow_stepError, s.error)
             if (s.out_summary.isNotEmpty()) lines += s.out_summary
-            dutyInfo(name, lines.joinToString("\n\n"))
+            UmbraNotice.present(name, lines.joinToString("\n\n"))
         }
     }
 }

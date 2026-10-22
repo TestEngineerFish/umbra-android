@@ -71,6 +71,7 @@ import com.geek.umbra.designsystem.UmbraFieldLabel
 import com.geek.umbra.designsystem.UmbraFilterChips
 import com.geek.umbra.designsystem.UmbraIcon
 import com.geek.umbra.designsystem.UmbraIconPaths
+import com.geek.umbra.designsystem.UmbraNotice
 import com.geek.umbra.designsystem.UmbraScreen
 import com.geek.umbra.designsystem.UmbraSearchField
 import com.geek.umbra.designsystem.UmbraStripAction
@@ -422,7 +423,7 @@ private fun offerBiometryIfFirstTime(password: String) {
         title = "用 $name 解锁保险箱？",
         message = "打开后，这里和别的 App 的密码自动填充都可以用${name}解锁，没通过再输主密码。主密码存在这台设备的安全硬件里，不上传、不进备份。",
         confirmLabel = "打开", cancelLabel = "暂不",
-        onCancel = { presentVaultNotice("以后也可以打开", "保险箱「⋯」→「保险箱设置」→「用 $name 解锁」。") },
+        onCancel = { UmbraNotice.present("以后也可以打开", "保险箱「⋯」→「保险箱设置」→「用 $name 解锁」。") },
     ) {
         val act = VaultHostActivity.current ?: return@UmbraAlert
         VaultSession.enableBiometry(act, password) { err -> router.showToast(err ?: "$name 解锁已开启") }

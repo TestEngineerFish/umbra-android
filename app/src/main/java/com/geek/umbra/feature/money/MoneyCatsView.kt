@@ -43,7 +43,6 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -70,8 +69,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -96,10 +93,10 @@ import com.geek.umbra.designsystem.UmbraGroupCard
 import com.geek.umbra.designsystem.UmbraIcon
 import com.geek.umbra.designsystem.UmbraIconPaths
 import com.geek.umbra.designsystem.UmbraMotion
+import com.geek.umbra.designsystem.UmbraPrompt
 import com.geek.umbra.designsystem.UmbraRowDivider
 import com.geek.umbra.designsystem.UmbraScreen
 import com.geek.umbra.designsystem.UmbraSectionLabel
-import com.geek.umbra.designsystem.UmbraTextField
 import com.geek.umbra.designsystem.UmbraTheme
 import com.geek.umbra.designsystem.UmbraTopBarIcon
 import com.geek.umbra.designsystem.UmbraType
@@ -186,12 +183,12 @@ fun MoneyCatsView() {
     }
 
     fun startRename(cat: MoneyCatDTO) {
-        moneyAskText(
+        UmbraPrompt.present(
             key = "money-cat-rename", title = "重命名「${cat.name}」", message = "改名不影响历史数据。",
-            placeholder = "显示名", initial = cat.name, confirmLabel = "保存",
+            placeholder = "显示名", initial = cat.name, confirmLabel = "保存", cancelLabel = "取消",
         ) { text ->
             val name = text.trim()
-            if (name.isEmpty() || name == cat.name) return@moneyAskText
+            if (name.isEmpty() || name == cat.name) return@present
             run("已改名为「$name」") { MoneyStore.updateCat(cat.slug, name = name) }
         }
     }
@@ -203,17 +200,17 @@ fun MoneyCatsView() {
 
     /** 新增分类的第二步：起名字。重名先在本地拦（**跨方向查** —— 两个「宠物」会让流水列表没法读）；服务端还有一道。 */
     fun askName(dir: String) {
-        moneyAskText(
+        UmbraPrompt.present(
             key = "money-cat-add-name", title = "新增${if (dir == "income") "收入" else "支出"}分类",
             // 批次 006 拍板：新建**不加图标步**，这句副文案要把「没丢东西，只是挪了地方」说出来。
             message = "先起个名字。图标和子类都能之后在分类管理里改。",
-            placeholder = "分类名，例如「宠物」", initial = "", confirmLabel = "创建分类",
+            placeholder = "分类名，例如「宠物」", initial = "", confirmLabel = "创建分类", cancelLabel = "取消",
         ) { text ->
             val name = text.trim()
-            if (name.isEmpty()) { AppGraph.router.showToast("分类得有个名字"); return@moneyAskText }
+            if (name.isEmpty()) { AppGraph.router.showToast("分类得有个名字"); return@present }
             if (MoneyStore.cats.value.any { it.name == name }) {
                 AppGraph.router.showToast("已经有一个叫「$name」的分类了")
-                return@moneyAskText
+                return@present
             }
             run("已加上分类「$name」") { MoneyStore.createCat(name, dir) != null }
         }
@@ -578,26 +575,26 @@ fun MoneyCatDetailView(slug: String) {
     // MARK: 子类操作（文案照稿 mcdVM 逐句）
 
     fun askAddSub() {
-        moneyAskText(
+        UmbraPrompt.present(
             key = "money-sub-add", title = "新增子类", message = "加在「${cat?.name ?: ""}」下面。",
-            placeholder = "子类名，例如「夜宵」", initial = "", confirmLabel = "加上",
+            placeholder = "子类名，例如「夜宵」", initial = "", confirmLabel = "加上", cancelLabel = "取消",
         ) { text ->
             val label = text.trim()
-            if (label.isEmpty()) { AppGraph.router.showToast("子类得有个名字"); return@moneyAskText }
-            if (label in subs) { AppGraph.router.showToast("「$label」已经在这个分类里了"); return@moneyAskText }
+            if (label.isEmpty()) { AppGraph.router.showToast("子类得有个名字"); return@present }
+            if (label in subs) { AppGraph.router.showToast("「$label」已经在这个分类里了"); return@present }
             run("已加上「$label」") { MoneyStore.addSub(slug, label) }
         }
     }
 
     fun askRenameSub(old: String) {
-        moneyAskText(
+        UmbraPrompt.present(
             key = "money-sub-rename", title = "子类改名", message = "只影响以后记账，已经记下的账目还写着「$old」。",
-            placeholder = "新名字", initial = old, confirmLabel = "改名",
+            placeholder = "新名字", initial = old, confirmLabel = "改名", cancelLabel = "取消",
         ) { text ->
             val new = text.trim()
-            if (new.isEmpty()) { AppGraph.router.showToast("名字不能空着"); return@moneyAskText }
-            if (new == old) return@moneyAskText
-            if (new in subs) { AppGraph.router.showToast("「$new」已经在这个分类里了"); return@moneyAskText }
+            if (new.isEmpty()) { AppGraph.router.showToast("名字不能空着"); return@present }
+            if (new == old) return@present
+            if (new in subs) { AppGraph.router.showToast("「$new」已经在这个分类里了"); return@present }
             run("已改成「$new」") { MoneyStore.renameSub(slug, old, new) }
         }
     }
@@ -617,12 +614,12 @@ fun MoneyCatDetailView(slug: String) {
     // MARK: 分类级操作（右上角菜单，语义同列表页左滑）
 
     fun askRenameCat(me: MoneyCatDTO) {
-        moneyAskText(
+        UmbraPrompt.present(
             key = "money-cat-rename", title = "分类改名", message = "改名不影响历史数据。",
-            placeholder = "显示名", initial = me.name, confirmLabel = "保存",
+            placeholder = "显示名", initial = me.name, confirmLabel = "保存", cancelLabel = "取消",
         ) { text ->
             val name = text.trim()
-            if (name.isEmpty() || name == me.name) return@moneyAskText
+            if (name.isEmpty() || name == me.name) return@present
             run("已改名为「$name」") { MoneyStore.updateCat(slug, name = name) }
         }
     }
@@ -1081,38 +1078,6 @@ internal fun moneyPresentIcons(current: String, onPick: (MoneyCatArt.Pick) -> Un
     })
 }
 
-/**
- * 起名 / 改名弹层。iOS 用 alert 里的 TextField（iOS 16 起支持）；Android 的 UmbraAlert 只有两颗钮，
- * 所以落成一张带输入框的底部弹层：标题 + 一句说明 + 输入框 + 取消 / 确认。校验在 [onConfirm] 里做（同 iOS 的 commit 函数）。
- */
-internal fun moneyAskText(
-    key: String,
-    title: String,
-    message: String,
-    placeholder: String,
-    initial: String,
-    confirmLabel: String,
-    onConfirm: (String) -> Unit,
-) {
-    AppGraph.router.present(UmbraSheet(key) { dismiss ->
-        val c = UmbraTheme.colors
-        var text by remember { mutableStateOf(initial) }
-        val focus = remember { FocusRequester() }
-        LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
-        Column(
-            Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 16.dp).navigationBarsPadding().imePadding(),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            Text(title, color = c.text, style = TextStyle(fontSize = 17.sp, fontWeight = FontWeight.SemiBold))
-            Text(message, color = c.muted, style = TextStyle(fontSize = 13.sp, lineHeight = 19.sp))
-            UmbraTextField(text, { text = it }, Modifier.focusRequester(focus), placeholder = placeholder)
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                UmbraButton("取消", dismiss, Modifier.weight(1f), kind = UmbraButtonKind.Secondary, height = 44.dp)
-                UmbraButton(confirmLabel, { dismiss(); onConfirm(text) }, Modifier.weight(1f), height = 44.dp)
-            }
-        }
-    })
-}
 
 /** 左滑按钮的底色档：照 iOS `.tint(UmbraColor.danger / .orange / .warning)`。 */
 internal enum class MoneySwipeTone { Danger, Orange, Warning }

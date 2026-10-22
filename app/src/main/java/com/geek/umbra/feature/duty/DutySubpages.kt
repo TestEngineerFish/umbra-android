@@ -57,6 +57,7 @@ import com.geek.umbra.designsystem.UmbraGroupCard
 import com.geek.umbra.designsystem.UmbraIcon
 import com.geek.umbra.designsystem.UmbraIconPaths
 import com.geek.umbra.designsystem.UmbraProgressBar
+import com.geek.umbra.designsystem.UmbraPrompt
 import com.geek.umbra.designsystem.UmbraRevealSwipeRow
 import com.geek.umbra.designsystem.UmbraRowDivider
 import com.geek.umbra.designsystem.UmbraScreen
@@ -387,9 +388,9 @@ private fun askImportance(ctx: Context, tr: DutyTr, f: DutyFollow) {
 
 /** 手动加一个关注话题（iOS 系统 alert 里一格输入；Android 落成带输入框的底部弹层，同早报「城市」那一格）。 */
 private fun askAdd(ctx: Context) {
-    dutyAskText(
-        "follow", ctx.getString(R.string.duty_follow_add), ctx.getString(R.string.duty_follow_addHelp),
-        ctx.getString(R.string.duty_follow_addPlaceholder), "", ctx.getString(R.string.duty_save),
+    UmbraPrompt.present(
+        key = "duty-follow", title = ctx.getString(R.string.duty_follow_add), message = ctx.getString(R.string.duty_follow_addHelp),
+        placeholder = ctx.getString(R.string.duty_follow_addPlaceholder), confirmLabel = ctx.getString(R.string.duty_save),
     ) { raw ->
         val t = raw.trim()
         if (t.isNotEmpty()) write { DutyStore.addFollow(t) }

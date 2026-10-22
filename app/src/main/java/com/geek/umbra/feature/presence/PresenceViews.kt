@@ -53,16 +53,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.geek.umbra.R
 import com.geek.umbra.app.AppGraph
-import com.geek.umbra.designsystem.UmbraButton
 import com.geek.umbra.designsystem.UmbraExtraIcons
 import com.geek.umbra.designsystem.UmbraFieldLabel
 import com.geek.umbra.designsystem.UmbraIcon
 import com.geek.umbra.designsystem.UmbraIconPaths
+import com.geek.umbra.designsystem.UmbraNotice
 import com.geek.umbra.designsystem.UmbraPresenceHeat
 import com.geek.umbra.designsystem.UmbraTheme
 import com.geek.umbra.designsystem.UmbraType
 import com.geek.umbra.navigation.UmbraAlert
-import com.geek.umbra.navigation.UmbraSheet
 import com.geek.umbra.net.ApiResult
 import com.geek.umbra.net.HttpResult
 import com.geek.umbra.net.ServerSettings
@@ -257,13 +256,7 @@ private fun Header(model: PresenceRecordModel) {
                 DropdownMenuItem(text = { Text(aboutTitle, color = c.text) }, onClick = {
                     moreOpen = false
                     // 只有一颗「知道了」：系统弹窗那一档总带「取消」，这里用底部弹层。
-                    AppGraph.router.present(UmbraSheet("presence-about") { dismiss ->
-                        Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text(aboutTitle, color = c.text, style = UmbraType.sectionTitle)
-                            Text(aboutBody, color = c.muted, style = TextStyle(fontSize = 14.sp, lineHeight = 21.sp))
-                            UmbraButton(ok, dismiss, Modifier.fillMaxWidth())
-                        }
-                    })
+                    UmbraNotice.present(aboutTitle, aboutBody, ok, key = "presence-about")
                 })
                 DropdownMenuItem(text = { Text(stringResource(if (learn) R.string.presence_stop else R.string.presence_resume), color = c.text) }, onClick = {
                     moreOpen = false

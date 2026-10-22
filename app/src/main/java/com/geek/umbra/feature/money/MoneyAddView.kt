@@ -11,6 +11,7 @@ package com.geek.umbra.feature.money
 
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
+import com.geek.umbra.designsystem.UmbraPrompt
 import com.geek.umbra.designsystem.UmbraWhenTab
 import com.geek.umbra.designsystem.UmbraPickers
 import androidx.compose.foundation.background
@@ -33,12 +34,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberDatePickerState
-import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -57,7 +54,6 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.semantics.Role
@@ -82,7 +78,6 @@ import com.geek.umbra.designsystem.UmbraScreen
 import com.geek.umbra.designsystem.UmbraSegment
 import com.geek.umbra.designsystem.UmbraSegmentedControl
 import com.geek.umbra.designsystem.UmbraSkeleton
-import com.geek.umbra.designsystem.UmbraTextField
 import com.geek.umbra.designsystem.UmbraTheme
 import com.geek.umbra.designsystem.UmbraTone
 import com.geek.umbra.designsystem.UmbraTopBarIcon
@@ -126,8 +121,6 @@ internal class MoneyAddForm(val id: String?, val focusAccount: Boolean) {
     var busy by mutableStateOf(false)
     var failed by mutableStateOf(false)
     /** 记账半路新增分类的名字弹层。 */
-    var addingCat by mutableStateOf(false)
-    var addText by mutableStateOf("")
     /**
      * 编辑态只在**进页那一刻**灌一次值 —— save 之后 store 会静默重拉，不挡住的话再灌一次会把用户正在改的草稿冲掉。
      * ⚠️ 只在真的灌进了值之后才置（umbra-ios#37）：那一笔晚到时第一次 seed 落空，数据到了还要再灌。
@@ -342,9 +335,8 @@ internal class MoneyAddForm(val id: String?, val focusAccount: Boolean) {
     }
 
     /** 建好立刻选中 —— 用户在记账半路建分类，十有八九就是要给这一笔用。iOS: MoneyAddView.swift:844 */
-    fun commitAddCat() {
-        addingCat = false
-        val name = addText.trim()
+    fun commitAddCat(raw: String) {
+        val name = raw.trim()
         if (name.isEmpty()) { router.showToast("分类得有个名字"); return }
         if (MoneyStore.cats.value.any { it.name == name }) {
             router.showToast("已经有一个叫「$name」的分类了")
@@ -689,7 +681,6 @@ fun MoneyAddView(id: String?, focusAccount: Boolean) {
         }
     }
 
-    if (form.addingCat) AddCatDialog(form)
     form.whenTab?.let { WhenPicker(form, it) }
 }
 
@@ -874,7 +865,13 @@ private fun CatToolsRow(form: MoneyAddForm) {
     watchMoneyCats() // 「管理「X」的子类」的名字读 cats 快照：编辑深链直达时科目先于分类表到，订阅了分类到了才换成名字
     Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
         val style = TextStyle(fontSize = 12.5.sp, fontWeight = UmbraType.weight560)
-        Box(Modifier.heightIn(min = UmbraDimens.tapMin).clickable(role = Role.Button) { form.addText = ""; form.addingCat = true }, contentAlignment = Alignment.Center) {
+        Box(Modifier.heightIn(min = UmbraDimens.tapMin).clickable(role = Role.Button) {
+            // iOS 是带输入框的 alert；Android 走共用的输入弹层（UmbraPrompt）。
+            UmbraPrompt.present(
+                key = "money-add-cat", title = "新增${if (form.dir == "income") "收入" else "支出"}分类",
+                message = "先起个名字，子类可以之后在分类里加。", placeholder = "分类名，例如「宠物」", confirmLabel = "创建分类", cancelLabel = "取消",
+            ) { form.commitAddCat(it) }
+        }, contentAlignment = Alignment.Center) {
             Text("＋ 新增分类", color = c.muted, style = style)
         }
         form.cat?.let { slug ->
@@ -883,25 +880,6 @@ private fun CatToolsRow(form: MoneyAddForm) {
             }
         }
     }
-}
-
-/** 新增分类的名字弹层（iOS 是带输入框的 alert；router.confirm 不带输入框，这里用 M3 AlertDialog 套 Umbra 颜色）。 */
-@Composable
-private fun AddCatDialog(form: MoneyAddForm) {
-    val c = UmbraTheme.colors
-    AlertDialog(
-        onDismissRequest = { form.addingCat = false },
-        containerColor = c.card,
-        title = { Text("新增${if (form.dir == "income") "收入" else "支出"}分类", color = c.text, style = UmbraType.sectionTitle) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("先起个名字，子类可以之后在分类里加。", color = c.muted, style = UmbraType.rowSub)
-                UmbraTextField(form.addText, { form.addText = it }, placeholder = "分类名，例如「宠物」")
-            }
-        },
-        confirmButton = { TextButton({ form.commitAddCat() }) { Text("创建分类", color = c.orangeText) } },
-        dismissButton = { TextButton({ form.addingCat = false }) { Text("取消", color = c.muted) } },
-    )
 }
 
 /** 子类芯片：子类从服务端来，跟着分类列表一起下发。再点一次取消 —— 二级可跳过。iOS: MoneyAddView.swift:864 */

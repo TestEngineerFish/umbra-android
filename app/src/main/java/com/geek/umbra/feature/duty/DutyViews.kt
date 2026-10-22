@@ -29,6 +29,8 @@ import com.geek.umbra.R
 import com.geek.umbra.app.AppGraph
 import com.geek.umbra.designsystem.UmbraColorScheme
 import com.geek.umbra.designsystem.UmbraDimens
+import com.geek.umbra.designsystem.UmbraNotice
+import com.geek.umbra.designsystem.UmbraPrompt
 import com.geek.umbra.designsystem.UmbraScreen
 import com.geek.umbra.designsystem.UmbraTheme
 import com.geek.umbra.navigation.Route
@@ -240,9 +242,9 @@ private fun briefSection(ctx: Context, tr: DutyTr, c: UmbraColorScheme, list: Du
             value = ctx.getString(if (p.days == "everyday") R.string.duty_days_everyday else R.string.duty_days_workday), chevron = true,
         ) { askDays(ctx, b) },
         DutyRow(ctx.getString(R.string.duty_brief_city), value = p.city.ifEmpty { ctx.getString(R.string.duty_brief_cityAuto) }, chevron = true) {
-            dutyAskText(
-                "city", ctx.getString(R.string.duty_brief_city), ctx.getString(R.string.duty_brief_cityHelp),
-                ctx.getString(R.string.duty_brief_cityPlaceholder), p.city, ctx.getString(R.string.duty_save),
+            UmbraPrompt.present(
+                key = "duty-city", title = ctx.getString(R.string.duty_brief_city), message = ctx.getString(R.string.duty_brief_cityHelp),
+                placeholder = ctx.getString(R.string.duty_brief_cityPlaceholder), initial = p.city, confirmLabel = ctx.getString(R.string.duty_save),
             ) { saveCity(it) }
         },
     )
@@ -387,6 +389,6 @@ internal fun presentWhy(ctx: Context, s: DutyShift) {
     dutyLaunch {
         val r = DutyStore.whyLines(s)
         if (r.failed != null) { AppGraph.router.showToast(r.failed.ifEmpty { ctx.getString(R.string.duty_why_loadFailed) }); return@dutyLaunch }
-        dutyInfo(dutyShiftTitle(s).ifEmpty { ctx.getString(R.string.duty_fb_why) }, r.lines.joinToString("\n"))
+        UmbraNotice.present(dutyShiftTitle(s).ifEmpty { ctx.getString(R.string.duty_fb_why) }, r.lines.joinToString("\n"))
     }
 }

@@ -39,6 +39,7 @@ import com.geek.umbra.designsystem.UmbraHeroCard
 import com.geek.umbra.designsystem.UmbraIconPaths
 import com.geek.umbra.designsystem.UmbraMenuItem
 import com.geek.umbra.designsystem.UmbraMoreMenu
+import com.geek.umbra.designsystem.UmbraPrompt
 import com.geek.umbra.designsystem.UmbraScreen
 import com.geek.umbra.designsystem.UmbraSettingRow
 import com.geek.umbra.designsystem.UmbraTextField
@@ -50,7 +51,6 @@ import com.geek.umbra.feature.me.bleedHorizontal
 import com.geek.umbra.feature.me.footnoteItem
 import com.geek.umbra.feature.me.introItem
 import com.geek.umbra.feature.me.openWebLink
-import com.geek.umbra.feature.me.presentPrompt
 import com.geek.umbra.feature.presence.PresenceRecordSection
 import com.geek.umbra.navigation.Route
 import com.geek.umbra.navigation.UmbraAlert
@@ -289,10 +289,10 @@ private fun androidx.compose.foundation.lazy.LazyListScope.afterSections(devices
 
 /** 改显示名（iOS alert + TextField）。**只改显示名，不碰邮箱和密码**。失败要出声（台账 deactivate-failure-silent 同形）。 */
 private fun editName(user: AuthUser) {
-    presentPrompt(
+    UmbraPrompt.present(
         title = "显示名", message = "可以留空，留空就显示邮箱。改这个不影响邮箱和密码。",
         initial = user.displayName.takeIf { it != user.email }.orEmpty(), placeholder = "留空就显示邮箱",
-        confirmLabel = "保存", allowEmpty = true,
+        confirmLabel = "保存", allowEmpty = true, cancelLabel = "取消",
     ) { name ->
         AppGraph.scope.launch {
             val r = AccountApi.setDisplayName(name)

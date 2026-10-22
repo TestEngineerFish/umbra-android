@@ -35,7 +35,6 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -48,6 +47,7 @@ import com.geek.umbra.designsystem.UmbraIcon
 import com.geek.umbra.designsystem.UmbraIconPaths
 import com.geek.umbra.designsystem.UmbraPhaseFailedCard
 import com.geek.umbra.designsystem.UmbraProgressBar
+import com.geek.umbra.designsystem.UmbraPrompt
 import com.geek.umbra.designsystem.UmbraRowDivider
 import com.geek.umbra.designsystem.UmbraScreen
 import com.geek.umbra.designsystem.UmbraScreenPhase
@@ -63,7 +63,6 @@ import com.geek.umbra.designsystem.umbraPhaseTop
 import com.geek.umbra.feature.me.MeNote
 import com.geek.umbra.feature.me.MeSwipeAction
 import com.geek.umbra.feature.me.MeSwipeRow
-import com.geek.umbra.feature.me.presentPrompt
 import com.geek.umbra.navigation.Route
 import com.geek.umbra.navigation.UmbraAlert
 import kotlinx.coroutines.delay
@@ -154,12 +153,12 @@ private fun KbRow(kb: KbDTO) {
 /** 「+」新建库：起名弹层（iOS alert + TextField）。 */
 private fun askCreate() {
     val ctx = AppGraph.context
-    presentPrompt(
+    UmbraPrompt.present(
         title = ctx.getString(R.string.kb_new), message = ctx.getString(R.string.kb_newBody), initial = "",
         placeholder = ctx.getString(R.string.kb_namePlaceholder), confirmLabel = ctx.getString(R.string.kb_create), allowEmpty = false,
     ) { raw ->
         val name = raw.trim()
-        if (name.isEmpty()) return@presentPrompt
+        if (name.isEmpty()) return@present
         AppGraph.scope.launch {
             val o = KnowledgeRules.outcome(KbNet.createKb(name, ""))
             if (o == KbOutcome.Ok) {

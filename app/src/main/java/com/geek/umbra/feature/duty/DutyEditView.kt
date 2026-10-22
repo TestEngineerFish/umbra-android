@@ -24,6 +24,8 @@ import com.geek.umbra.designsystem.UmbraColorScheme
 import com.geek.umbra.designsystem.UmbraDimens
 import com.geek.umbra.designsystem.UmbraMenuItem
 import com.geek.umbra.designsystem.UmbraMoreMenu
+import com.geek.umbra.designsystem.UmbraNotice
+import com.geek.umbra.designsystem.UmbraPrompt
 import com.geek.umbra.designsystem.UmbraScreen
 import com.geek.umbra.designsystem.UmbraTheme
 import com.geek.umbra.navigation.Route
@@ -371,7 +373,7 @@ private class Editor(
     private fun askFlow(a: DutyAction) {
         val flows = DutyFlowKit.pickable(DutyStore.state.value.flows ?: emptyList())
         if (flows.isEmpty()) {
-            dutyInfo(s(R.string.duty_edit_flowNone), s(R.string.duty_edit_flowNoneBody))
+            UmbraNotice.present(s(R.string.duty_edit_flowNone), s(R.string.duty_edit_flowNoneBody))
             return
         }
         dutyPresentList("edit-flow", s(R.string.duty_edit_flow), s(R.string.duty_edit_flowSub), flows.map { f ->
@@ -426,7 +428,10 @@ private class Editor(
             TextSlot.Brief -> Triple(R.string.duty_edit_brief, R.string.duty_edit_briefPlaceholder, R.string.duty_edit_briefHelp)
             TextSlot.Goal -> Triple(R.string.duty_edit_goal, R.string.duty_edit_goalPlaceholder, R.string.duty_edit_goalHelp)
         }
-        dutyAskText("edit-${slot.name}", s(title), help?.let { s(it) }, s(placeholder), current, s(R.string.duty_edit_done)) { raw ->
+        UmbraPrompt.present(
+            key = "duty-edit-${slot.name}", title = s(title), message = help?.let { s(it) }, placeholder = s(placeholder), initial = current,
+            confirmLabel = s(R.string.duty_edit_done),
+        ) { raw ->
             val t = raw.trim()
             edit {
                 when (slot) {

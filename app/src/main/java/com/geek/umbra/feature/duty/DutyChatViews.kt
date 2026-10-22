@@ -38,6 +38,7 @@ import com.geek.umbra.app.AppGraph
 import com.geek.umbra.designsystem.UmbraDimens
 import com.geek.umbra.designsystem.UmbraIcon
 import com.geek.umbra.designsystem.UmbraIconPaths
+import com.geek.umbra.designsystem.UmbraNotice
 import com.geek.umbra.designsystem.UmbraStripAction
 import com.geek.umbra.designsystem.UmbraTheme
 import com.geek.umbra.designsystem.UmbraType
@@ -246,7 +247,7 @@ internal fun DutyFooterActions(m: DutyMeta) {
             dutyLaunch {
                 val r = DutyStore.whyLines(m)
                 if (r.failed != null) { AppGraph.router.showToast(r.failed.ifEmpty { ctx.getString(R.string.duty_why_loadFailed) }); return@dutyLaunch }
-                dutyInfo(ctx.getString(R.string.duty_fb_why), r.lines.joinToString("\n"))
+                UmbraNotice.present(ctx.getString(R.string.duty_fb_why), r.lines.joinToString("\n"))
             }
         })
     }
