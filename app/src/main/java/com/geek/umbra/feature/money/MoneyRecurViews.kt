@@ -8,6 +8,8 @@
 // 服务端只校 direction 本身合法，「分类属于该方向」这道门就由这个选择器挡。
 package com.geek.umbra.feature.money
 
+import com.geek.umbra.designsystem.UmbraChoice
+import com.geek.umbra.designsystem.UmbraChoiceItem
 import com.geek.umbra.designsystem.UmbraPickers
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -454,19 +456,21 @@ fun MoneyRecurEditView(id: String?) {
     val canSave = name.isNotBlank() && cents != null && endBadText == null && !busy
 
     fun pickWeek() {
-        moneyPresentList(
-            key = "money-recur-week", title = "每周几",
-            items = MoneyRecurFmt.weekNames.mapIndexed { i, w -> MoneySheetItem("周$w", checked = weekDay == i) { weekDay = i } },
+        UmbraChoice.present(
+            title = "每周几",
+            items = MoneyRecurFmt.weekNames.mapIndexed { i, w -> UmbraChoiceItem("周$w", checked = weekDay == i) { weekDay = i } },
+            key = "money-recur-week",
         )
     }
 
     fun pickEnd() {
-        moneyPresentList(
-            key = "money-recur-end", title = "结束",
+        UmbraChoice.present(
+            title = "结束",
             items = listOf(
-                MoneySheetItem("不设结束", checked = !endsOnDate) { endsOnDate = false },
-                MoneySheetItem("到某天结束", checked = endsOnDate) { endsOnDate = true },
+                UmbraChoiceItem("不设结束", checked = !endsOnDate) { endsOnDate = false },
+                UmbraChoiceItem("到某天结束", checked = endsOnDate) { endsOnDate = true },
             ),
+            key = "money-recur-end",
         )
     }
 

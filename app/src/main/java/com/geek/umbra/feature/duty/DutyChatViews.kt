@@ -35,6 +35,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.geek.umbra.R
 import com.geek.umbra.app.AppGraph
+import com.geek.umbra.designsystem.UmbraChoice
+import com.geek.umbra.designsystem.UmbraChoiceItem
 import com.geek.umbra.designsystem.UmbraDimens
 import com.geek.umbra.designsystem.UmbraIcon
 import com.geek.umbra.designsystem.UmbraIconPaths
@@ -236,11 +238,16 @@ internal fun DutyFooterActions(m: DutyMeta) {
             UmbraStripAction(ctx.getString(R.string.duty_fb_up), c.orangeText, { sendFeedback(m, "up", null) })
             UmbraStripAction(ctx.getString(R.string.duty_fb_mute), c.muted, {
                 // 「别发这类了」弹三选一：停掉这一条 / 这周先别发 / 只是这次不需要。
-                dutyPresentList("mute-${m.shiftId}", ctx.getString(R.string.duty_fb_mute), m.name.ifEmpty { null }, listOf(
-                    DutySheetItem(ctx.getString(R.string.duty_fb_mute_stop)) { sendFeedback(m, "mute", "stop") },
-                    DutySheetItem(ctx.getString(R.string.duty_fb_mute_week)) { sendFeedback(m, "mute", "week") },
-                    DutySheetItem(ctx.getString(R.string.duty_fb_mute_once)) { sendFeedback(m, "mute", "once") },
-                ))
+                UmbraChoice.present(
+                    title = ctx.getString(R.string.duty_fb_mute),
+                    items = listOf(
+                    UmbraChoiceItem(ctx.getString(R.string.duty_fb_mute_stop)) { sendFeedback(m, "mute", "stop") },
+                    UmbraChoiceItem(ctx.getString(R.string.duty_fb_mute_week)) { sendFeedback(m, "mute", "week") },
+                    UmbraChoiceItem(ctx.getString(R.string.duty_fb_mute_once)) { sendFeedback(m, "mute", "once") },
+                ),
+                    subtitle = m.name.ifEmpty { null },
+                    key = "duty-mute-${m.shiftId}",
+                )
             })
         }
         UmbraStripAction(ctx.getString(R.string.duty_fb_why), c.muted, {

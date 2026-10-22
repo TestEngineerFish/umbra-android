@@ -20,6 +20,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.geek.umbra.R
 import com.geek.umbra.app.AppGraph
+import com.geek.umbra.designsystem.UmbraChoice
+import com.geek.umbra.designsystem.UmbraChoiceItem
 import com.geek.umbra.designsystem.UmbraColorScheme
 import com.geek.umbra.designsystem.UmbraDimens
 import com.geek.umbra.designsystem.UmbraMenuItem
@@ -241,11 +243,15 @@ private class Editor(
 
     private fun askTriggerType(cur: String) {
         val now = System.currentTimeMillis()
-        dutyPresentList("edit-trigger", s(R.string.duty_edit_trigger), null, listOf("recur", "at", "window", "interval").map { k ->
-            DutySheetItem(tr.k("duty.edit.trigger.$k"), note = tr.k("duty.edit.trigger.$k.note"), checked = cur == k) {
+        UmbraChoice.present(
+            title = s(R.string.duty_edit_trigger),
+            items = listOf("recur", "at", "window", "interval").map { k ->
+            UmbraChoiceItem(tr.k("duty.edit.trigger.$k"), note = tr.k("duty.edit.trigger.$k.note"), checked = cur == k) {
                 edit { it.setTriggerType(k, now) }
             }
-        })
+        },
+            key = "duty-edit-trigger",
+        )
     }
 
     private fun askRecurKind(d: DutyDraft) {
@@ -255,54 +261,72 @@ private class Editor(
             DutyDraft.RecurKind.Workday to s(R.string.duty_days_workday),
             DutyDraft.RecurKind.Weekly to s(R.string.duty_edit_weekly),
         )
-        dutyPresentList(
-            "edit-recur", s(R.string.duty_brief_days),
-            if (d.recurKind == DutyDraft.RecurKind.Other) s(R.string.duty_edit_recurOtherSub) else null,
-            kinds.map { (k, label) -> DutySheetItem(label, checked = d.recurKind == k) { edit { it.setRecurKind(k) } } },
+        UmbraChoice.present(
+            title = s(R.string.duty_brief_days),
+            items = kinds.map { (k, label) -> UmbraChoiceItem(label, checked = d.recurKind == k) { edit { it.setRecurKind(k) } } },
+            subtitle = if (d.recurKind == DutyDraft.RecurKind.Other) s(R.string.duty_edit_recurOtherSub) else null,
+            key = "duty-edit-recur",
         )
     }
 
     private fun askWindowDays(t: DutyTrigger) {
-        dutyPresentList("edit-wdays", s(R.string.duty_brief_days), null, listOf(
-            DutySheetItem(s(R.string.duty_days_everyday), checked = t.cycle != "week" && !t.workday_only) {
+        UmbraChoice.present(
+            title = s(R.string.duty_brief_days),
+            items = listOf(
+            UmbraChoiceItem(s(R.string.duty_days_everyday), checked = t.cycle != "week" && !t.workday_only) {
                 edit { it.copy(trigger = it.trigger.copy(cycle = "day", workday_only = false)) }
             },
-            DutySheetItem(s(R.string.duty_days_workday), checked = t.cycle != "week" && t.workday_only) {
+            UmbraChoiceItem(s(R.string.duty_days_workday), checked = t.cycle != "week" && t.workday_only) {
                 edit { it.copy(trigger = it.trigger.copy(cycle = "day", workday_only = true)) }
             },
-            DutySheetItem(s(R.string.duty_edit_weekly), checked = t.cycle == "week") {
+            UmbraChoiceItem(s(R.string.duty_edit_weekly), checked = t.cycle == "week") {
                 edit {
                     val tt = it.trigger.copy(cycle = "week", workday_only = false)
                     it.copy(trigger = if (tt.week_days.isEmpty()) tt.copy(week_days = listOf(0, 1, 2, 3, 4)) else tt)
                 }
             },
-        ))
+        ),
+            key = "duty-edit-wdays",
+        )
     }
 
     /** 巡视的间隔（M2）：那几档之外的值（别的端写的）照样标出当前值 —— 列表里没有就不打勾，problem 会指出越界。 */
     private fun askEvery(t: DutyTrigger) {
-        dutyPresentList("edit-every", s(R.string.duty_edit_every), s(R.string.duty_edit_err_everyMin), DutyKit.intervalOptions.map { m ->
-            DutySheetItem(DutyKit.everyText(m, tr), checked = t.every_min == m) { edit { it.copy(trigger = it.trigger.copy(every_min = m)) } }
-        })
+        UmbraChoice.present(
+            title = s(R.string.duty_edit_every),
+            items = DutyKit.intervalOptions.map { m ->
+            UmbraChoiceItem(DutyKit.everyText(m, tr), checked = t.every_min == m) { edit { it.copy(trigger = it.trigger.copy(every_min = m)) } }
+        },
+            subtitle = s(R.string.duty_edit_err_everyMin),
+            key = "duty-edit-every",
+        )
     }
 
     private fun askSignal(t: DutyTrigger) {
-        dutyPresentList("edit-signal", s(R.string.duty_edit_signal), null, listOf("first_seen_today", "device_online", "none").map { sig ->
-            DutySheetItem(DutyKit.signalText(sig, tr), note = tr.k("duty.edit.signal.$sig"), checked = t.signal == sig) {
+        UmbraChoice.present(
+            title = s(R.string.duty_edit_signal),
+            items = listOf("first_seen_today", "device_online", "none").map { sig ->
+            UmbraChoiceItem(DutyKit.signalText(sig, tr), note = tr.k("duty.edit.signal.$sig"), checked = t.signal == sig) {
                 // 任意一台（选具体哪台本期不做）
                 edit { it.copy(trigger = it.trigger.copy(signal = sig, device_id = if (sig == "device_online") null else it.trigger.device_id)) }
             }
-        })
+        },
+            key = "duty-edit-signal",
+        )
     }
 
     /** 周期型的时间：选一个时刻，或「我通常上线的时候」（契约 §16.1 `time_hhmm = "auto"`）。 */
     private fun askTime(t: DutyTrigger, pickTime: (EditTimeField) -> Unit) {
-        dutyPresentList("edit-time", s(R.string.duty_brief_time), null, listOf(
-            DutySheetItem(s(R.string.duty_edit_pickTime)) { pickTime(EditTimeField.Recur) },
-            DutySheetItem(tr.k("duty.trig.auto"), note = s(R.string.duty_edit_autoNote), checked = t.time_hhmm == DutyTrigger.AUTO) {
+        UmbraChoice.present(
+            title = s(R.string.duty_brief_time),
+            items = listOf(
+            UmbraChoiceItem(s(R.string.duty_edit_pickTime)) { pickTime(EditTimeField.Recur) },
+            UmbraChoiceItem(tr.k("duty.trig.auto"), note = s(R.string.duty_edit_autoNote), checked = t.time_hhmm == DutyTrigger.AUTO) {
                 edit { it.copy(trigger = it.trigger.copy(time_hhmm = DutyTrigger.AUTO)) }
             },
-        ))
+        ),
+            key = "duty-edit-time",
+        )
     }
 
     // MARK: 动作
@@ -337,22 +361,22 @@ private class Editor(
 
     private fun askActionType(a: DutyAction) {
         val items = mutableListOf(
-            DutySheetItem(s(R.string.duty_edit_action_say), note = s(R.string.duty_edit_action_say_note), checked = a.type == "say") { setAction("say") },
-            DutySheetItem(s(R.string.duty_edit_action_task), note = s(R.string.duty_edit_action_task_note), checked = a.type == "task") { setAction("task") },
+            UmbraChoiceItem(s(R.string.duty_edit_action_say), note = s(R.string.duty_edit_action_say_note), checked = a.type == "say") { setAction("say") },
+            UmbraChoiceItem(s(R.string.duty_edit_action_task), note = s(R.string.duty_edit_action_task_note), checked = a.type == "task") { setAction("task") },
         )
         // 「跑一个流程」：老服务端没有流程（列表 null）就不给这一项 —— 选了也存不成。
         // 选中后紧接着弹流程列表：一个没选流程的「跑流程」是存不了的半成品。
         if (st.flows != null) {
-            items += DutySheetItem(s(R.string.duty_edit_action_flow), note = s(R.string.duty_edit_action_flow_note), checked = a.type == "flow") {
+            items += UmbraChoiceItem(s(R.string.duty_edit_action_flow), note = s(R.string.duty_edit_action_flow_note), checked = a.type == "flow") {
                 setAction("flow")
                 if (a.flow_id.isEmpty()) askFlow(a.copy(type = "flow"))
             }
         }
         // workflow 置灰写原因（等 PC「工作流作为设备能力」，本期服务端回 422）。点了只说一句。
-        items += DutySheetItem(s(R.string.duty_edit_action_workflow), note = s(R.string.duty_edit_action_workflow_note)) {
+        items += UmbraChoiceItem(s(R.string.duty_edit_action_workflow), note = s(R.string.duty_edit_action_workflow_note)) {
             AppGraph.router.showToast(s(R.string.duty_edit_err_workflow))
         }
-        dutyPresentList("edit-action", s(R.string.duty_edit_action), null, items)
+        UmbraChoice.present(title = s(R.string.duty_edit_action), items = items, key = "duty-edit-action")
     }
 
     /** 「流程」那一格的值：没选 →「选一个」；找得到 → 名字；列表拉到了却找不到 →「这个流程不在了」；列表没拉到 → 不下结论。 */
@@ -376,12 +400,17 @@ private class Editor(
             UmbraNotice.present(s(R.string.duty_edit_flowNone), s(R.string.duty_edit_flowNoneBody))
             return
         }
-        dutyPresentList("edit-flow", s(R.string.duty_edit_flow), s(R.string.duty_edit_flowSub), flows.map { f ->
-            DutySheetItem(f.name.ifEmpty { s(R.string.duty_edit_unnamed) }, note = DutyFlowKit.listSub(f, tr), checked = a.flow_id == f.id) {
+        UmbraChoice.present(
+            title = s(R.string.duty_edit_flow),
+            items = flows.map { f ->
+            UmbraChoiceItem(f.name.ifEmpty { s(R.string.duty_edit_unnamed) }, note = DutyFlowKit.listSub(f, tr), checked = a.flow_id == f.id) {
                 // 名字还空着就借流程名（用户多半就想叫这个），已经起了名的不动。
                 edit { it.copy(action = it.action.copy(flow_id = f.id), name = it.name.ifEmpty { f.name }) }
             }
-        })
+        },
+            subtitle = s(R.string.duty_edit_flowSub),
+            key = "duty-edit-flow",
+        )
     }
 
     private fun setAction(type: String) = edit {
@@ -400,20 +429,35 @@ private class Editor(
             edit { it.copy(mode = if (it.mode == "judge") "always" else "judge") }
         },
         DutyRow(s(R.string.duty_edit_priority), value = DutyKit.priorityText(d.priority, tr), chevron = true) {
-            dutyPresentList("edit-prio", s(R.string.duty_edit_priority), s(R.string.duty_edit_prioritySub), (5 downTo 1).map { p ->
-                DutySheetItem(DutyKit.priorityText(p, tr), checked = d.priority == p) { edit { it.copy(priority = p) } }
-            })
+            UmbraChoice.present(
+                title = s(R.string.duty_edit_priority),
+                items = (5 downTo 1).map { p ->
+                UmbraChoiceItem(DutyKit.priorityText(p, tr), checked = d.priority == p) { edit { it.copy(priority = p) } }
+            },
+                subtitle = s(R.string.duty_edit_prioritySub),
+                key = "duty-edit-prio",
+            )
         },
         DutyRow(s(R.string.duty_edit_cooldown), value = DutyKit.cooldownText(d.cooldown_min, tr), chevron = true) {
-            dutyPresentList("edit-cool", s(R.string.duty_edit_cooldown), s(R.string.duty_edit_cooldownSub), DutyKit.cooldownOptions.map { m ->
-                DutySheetItem(DutyKit.cooldownText(m, tr), checked = d.cooldown_min == m) { edit { it.copy(cooldown_min = m) } }
-            })
+            UmbraChoice.present(
+                title = s(R.string.duty_edit_cooldown),
+                items = DutyKit.cooldownOptions.map { m ->
+                UmbraChoiceItem(DutyKit.cooldownText(m, tr), checked = d.cooldown_min == m) { edit { it.copy(cooldown_min = m) } }
+            },
+                subtitle = s(R.string.duty_edit_cooldownSub),
+                key = "duty-edit-cool",
+            )
         },
         // 「每天最多几点」（M2 points_cap）：到了这一条当天就不再做，明天再来。
         DutyRow(s(R.string.duty_edit_pointsCap), value = DutyKit.pointsCapText(d.points_cap, tr), chevron = true) {
-            dutyPresentList("edit-cap", s(R.string.duty_edit_pointsCap), s(R.string.duty_edit_pointsCapSub), DutyKit.pointsCapOptions.map { n ->
-                DutySheetItem(DutyKit.pointsCapText(n, tr), checked = d.points_cap == n) { edit { it.copy(points_cap = n) } }
-            })
+            UmbraChoice.present(
+                title = s(R.string.duty_edit_pointsCap),
+                items = DutyKit.pointsCapOptions.map { n ->
+                UmbraChoiceItem(DutyKit.pointsCapText(n, tr), checked = d.points_cap == n) { edit { it.copy(points_cap = n) } }
+            },
+                subtitle = s(R.string.duty_edit_pointsCapSub),
+                key = "duty-edit-cap",
+            )
         },
         DutyRow(s(R.string.duty_edit_quiet), sub = s(R.string.duty_edit_quietSub), toggle = d.respect_quiet) {
             edit { it.copy(respect_quiet = !it.respect_quiet) }

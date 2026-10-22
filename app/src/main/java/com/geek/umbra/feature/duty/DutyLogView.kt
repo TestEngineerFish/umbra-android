@@ -16,6 +16,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.geek.umbra.R
 import com.geek.umbra.app.AppGraph
+import com.geek.umbra.designsystem.UmbraChoice
+import com.geek.umbra.designsystem.UmbraChoiceItem
 import com.geek.umbra.designsystem.UmbraDimens
 import com.geek.umbra.designsystem.UmbraScreen
 import com.geek.umbra.designsystem.UmbraTheme
@@ -41,9 +43,9 @@ internal fun DutyLogView() {
         dutySection(DutySection(
             "filter", footer = ctx.getString(R.string.duty_log_help),
             rows = listOf(DutyRow(ctx.getString(R.string.duty_log_filter), value = filterName, chevron = true) {
-                val items = listOf(DutySheetItem(ctx.getString(R.string.duty_log_filterAll), checked = dutyId == null) { dutyId = null; tick++ }) +
-                    (st.list?.items ?: emptyList()).map { it -> DutySheetItem(it.name, checked = dutyId == it.id) { dutyId = it.id; tick++ } }
-                dutyPresentList("log-filter", ctx.getString(R.string.duty_log_filter), null, items)
+                val items = listOf(UmbraChoiceItem(ctx.getString(R.string.duty_log_filterAll), checked = dutyId == null) { dutyId = null; tick++ }) +
+                    (st.list?.items ?: emptyList()).map { it -> UmbraChoiceItem(it.name, checked = dutyId == it.id) { dutyId = it.id; tick++ } }
+                UmbraChoice.present(title = ctx.getString(R.string.duty_log_filter), items = items, key = "duty-log-filter")
             }),
         ))
         val groups = DutyRules.groupByDay(st.fullLog)

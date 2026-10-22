@@ -1,7 +1,6 @@
 // 「我」「账号」「记忆」「知识库」四个包共用的小件 —— 对应 iOS DesignSystem/UmbraSettingsKit.swift 的
-// `UmbraSettingsPage`（hero / intro / footnote / ⋯ 破坏性动作）与 `UmbraSheet(title:items:)` 那一套。
-// 地基的 designsystem 只有分组与行（UmbraSettingsKit.kt），整页模板、选择弹层、左滑露钮的行都还没有，
-// 这里先在自己包里补上（**不改地基**）；合并时若别的模块也要，可挪进 designsystem。
+// `UmbraSettingsPage`（hero / intro / footnote / ⋯ 破坏性动作）那一套。
+// 选择弹层、一格输入、左滑露钮的行从前也在这里，已收进 designsystem（UmbraChoice / UmbraPrompt / UmbraRevealSwipeRow）。
 package com.geek.umbra.feature.me
 
 import android.content.ClipData
@@ -20,7 +19,6 @@ import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
@@ -29,25 +27,19 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.layout
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.geek.umbra.app.AppGraph
-import com.geek.umbra.designsystem.UmbraButton
-import com.geek.umbra.designsystem.UmbraButtonKind
 import com.geek.umbra.designsystem.UmbraDimens
 import com.geek.umbra.designsystem.UmbraGroupCard
 import com.geek.umbra.designsystem.UmbraIcon
@@ -59,7 +51,6 @@ import com.geek.umbra.designsystem.UmbraSpinningIcon
 import com.geek.umbra.designsystem.UmbraSwitch
 import com.geek.umbra.designsystem.UmbraTheme
 import com.geek.umbra.designsystem.UmbraTone
-import com.geek.umbra.navigation.UmbraSheet
 
 // MARK: - 整页模板里的几块（iOS UmbraSettingsPage 的 intro / footnote / hero）
 
@@ -188,73 +179,6 @@ fun MeRowView(m: MeRow) {
             Spacer(Modifier.width(6.dp))
             UmbraIcon(UmbraIconPaths.chevronRight, c.faint, size = 15.dp)
         }
-    }
-}
-
-// MARK: - 选择弹层（iOS UmbraSheet(title:subtitle:items:)）
-
-/** 选择弹层的一项。`checked` 画对勾；`note` 是右侧那句人话（画质档位的说明）；`destructive` 红字。 */
-data class MeSheetItem(
-    val label: String,
-    val checked: Boolean = false,
-    val note: String? = null,
-    val destructive: Boolean = false,
-    val action: () -> Unit,
-)
-
-/**
- * 弹出一张选择弹层：标题 + 副标题 + 若干项 + 底部「取消」。点一项先关弹层再执行（iOS 同序：先 onClose 再 action）。
- * [onDismissed]：弹层**因为任何原因**离开（选了 / 取消 / 下滑关掉）都会回调一次，带「是不是选了一项」——
- * 知识库同名询问靠它把「下滑关掉」认成取消（iOS KbClashPrompt.sheetsChanged 那一套）。
- */
-fun presentChoice(
-    title: String,
-    items: List<MeSheetItem>,
-    subtitle: String? = null,
-    key: String = "choice-${System.nanoTime()}",
-    onDismissed: ((picked: Boolean) -> Unit)? = null,
-) {
-    AppGraph.router.present(UmbraSheet(key) { dismiss ->
-        var picked by remember { mutableStateOf(false) }
-        androidx.compose.runtime.DisposableEffect(Unit) { onDispose { onDismissed?.invoke(picked) } }
-        ChoiceSheetBody(title, subtitle, items, onPick = { item -> picked = true; dismiss(); item.action() }, onCancel = dismiss)
-    })
-}
-
-@Composable
-private fun ChoiceSheetBody(title: String, subtitle: String?, items: List<MeSheetItem>, onPick: (MeSheetItem) -> Unit, onCancel: () -> Unit) {
-    val c = UmbraTheme.colors
-    Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(start = 16.dp, end = 16.dp, bottom = 16.dp)) {
-        Text(title, color = c.text, style = TextStyle(fontSize = 17.sp, fontWeight = FontWeight.SemiBold), modifier = Modifier.padding(horizontal = 4.dp))
-        if (subtitle != null) {
-            Spacer(Modifier.height(4.dp))
-            Text(subtitle, color = c.muted, style = TextStyle(fontSize = 13.sp, lineHeight = 19.sp), modifier = Modifier.padding(horizontal = 4.dp))
-        }
-        Spacer(Modifier.height(12.dp))
-        UmbraGroupCard {
-            items.forEachIndexed { i, it ->
-                if (i > 0) UmbraRowDivider(Modifier.padding(start = 14.dp))
-                Row(
-                    Modifier.fillMaxWidth().defaultMinSize(minHeight = UmbraDimens.rowMinH).clickable(role = Role.Button) { onPick(it) }
-                        .padding(horizontal = 14.dp, vertical = 11.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        Text(it.label, color = if (it.destructive) c.dangerText else c.text, style = TextStyle(fontSize = 16.sp))
-                        if (it.note != null) {
-                            Spacer(Modifier.height(2.dp))
-                            Text(it.note, color = c.muted, style = TextStyle(fontSize = 12.5.sp, lineHeight = 17.sp))
-                        }
-                    }
-                    if (it.checked) {
-                        Spacer(Modifier.width(8.dp))
-                        UmbraIcon(UmbraIconPaths.check, c.orangeText, size = 17.dp, strokeWidth = 2.2f)
-                    }
-                }
-            }
-        }
-        Spacer(Modifier.height(10.dp))
-        UmbraButton("取消", onCancel, Modifier.fillMaxWidth(), kind = UmbraButtonKind.Secondary, height = 46.dp)
     }
 }
 

@@ -7,6 +7,8 @@ package com.geek.umbra.feature.me
 
 import com.geek.umbra.R
 import com.geek.umbra.app.AppGraph
+import com.geek.umbra.designsystem.UmbraChoice
+import com.geek.umbra.designsystem.UmbraChoiceItem
 import com.geek.umbra.designsystem.UmbraSettingRow
 import com.geek.umbra.net.ApiResult
 import com.geek.umbra.net.ImagePurpose
@@ -57,14 +59,17 @@ fun imageQualityRow(
         return UmbraSettingRow(label = label, sub = AppGraph.context.getString(R.string.imgQ_unknown), tint = null, enabled = false)
     }
     return UmbraSettingRow(label = label, sub = tier.hint(tiers), value = tier.label(), chevron = true, action = {
-        presentChoice(label, ImageTier.entries.map { t ->
-            MeSheetItem(t.label(), checked = t == tier, note = t.hint(tiers)) {
+        UmbraChoice.present(
+            title = label,
+            items = ImageTier.entries.map { t ->
+            UmbraChoiceItem(t.label(), checked = t == tier, note = t.hint(tiers)) {
                 // 已经是这一档就别发请求：一次没有变化的 PUT 看起来像点错了（iOS ImageQualityRow.swift:76）。
                 if (t != tier) AppGraph.scope.launch {
                     val r = ServerSettings.put(mapOf(purpose.settingKey to JsonPrimitive(t.wire)))
                     if (r !is ApiResult.Ok) AppGraph.router.showToast(AppGraph.context.getString(R.string.moneySet_putFailed))
                 }
             }
-        })
+        },
+        )
     })
 }

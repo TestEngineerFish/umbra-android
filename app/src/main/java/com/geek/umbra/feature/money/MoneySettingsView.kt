@@ -21,6 +21,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.geek.umbra.R
 import com.geek.umbra.app.AppGraph
+import com.geek.umbra.designsystem.UmbraChoice
+import com.geek.umbra.designsystem.UmbraChoiceItem
 import com.geek.umbra.designsystem.UmbraErrorCard
 import com.geek.umbra.designsystem.UmbraScreen
 import com.geek.umbra.designsystem.UmbraSettingRow
@@ -99,9 +101,10 @@ fun MoneySettingsView() {
             label = label, value = shown, chevron = true, enabled = key !in busy,
             action = {
                 // 两个选项的选择器不值得一个新页面：iOS 用系统 confirmationDialog，这里用行式底部弹层。
-                moneyPresentList(
-                    key = "money-set-$key", title = pickTitle(key),
-                    items = pickOptions(key).map { (wire, text) -> MoneySheetItem(text) { put(key, JsonPrimitive(wire)) } },
+                UmbraChoice.present(
+                    title = pickTitle(key),
+                    items = pickOptions(key).map { (wire, text) -> UmbraChoiceItem(text) { put(key, JsonPrimitive(wire)) } },
+                    key = "money-set-$key",
                 )
             },
         )
@@ -207,14 +210,15 @@ private fun imageQualityRow(
         label = label, sub = hints[tier], value = labels[tier], chevron = true, enabled = purpose.settingKey !in busyKeys,
         action = {
             // 弹出选择：每一项带那一档的人话，选之前就能比。
-            moneyPresentList(
-                key = "money-set-quality", title = label,
+            UmbraChoice.present(
+                title = label,
                 items = ImageTier.entries.map { t ->
-                    MoneySheetItem(labels.getValue(t), note = hints[t], checked = t == tier) {
+                    UmbraChoiceItem(labels.getValue(t), note = hints[t], checked = t == tier) {
                         // 已经是这一档就别发请求：一次没有变化的 PUT 会让行白灰一下，看起来像点错了。
                         if (t != tier) put(purpose.settingKey, JsonPrimitive(t.wire))
                     }
                 },
+                key = "money-set-quality",
             )
         },
     )

@@ -25,12 +25,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -42,11 +39,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -58,8 +53,6 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.geek.umbra.R
 import com.geek.umbra.app.AppGraph
-import com.geek.umbra.designsystem.UmbraButton
-import com.geek.umbra.designsystem.UmbraButtonKind
 import com.geek.umbra.designsystem.UmbraDimens
 import com.geek.umbra.designsystem.UmbraGroupCard
 import com.geek.umbra.designsystem.UmbraIcon
@@ -68,7 +61,6 @@ import com.geek.umbra.designsystem.UmbraRowDivider
 import com.geek.umbra.designsystem.UmbraSectionLabel
 import com.geek.umbra.designsystem.UmbraSwitch
 import com.geek.umbra.designsystem.UmbraTheme
-import com.geek.umbra.navigation.UmbraSheet
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import java.text.SimpleDateFormat
@@ -233,56 +225,6 @@ internal fun DutyIntro(text: String) {
 }
 
 // MARK: - 弹层
-
-/** 底部选择器的一项（iOS UmbraSheetItem）。 */
-internal data class DutySheetItem(
-    val label: String,
-    val note: String? = null,
-    val checked: Boolean? = null,
-    val destructive: Boolean = false,
-    val onClick: () -> Unit,
-)
-
-/**
- * 行式底部选择器（iOS `UmbraSheet(title:subtitle:items:)`）：标题 + 副标题 + 一张行卡 + 取消。
- * 点一行先收起再执行 —— 执行里常常还要再开一层（确认弹窗 / 下一步选择器）。
- */
-internal fun dutyPresentList(key: String, title: String, subtitle: String? = null, items: List<DutySheetItem>) {
-    AppGraph.router.present(UmbraSheet("duty-$key") { dismiss ->
-        val c = UmbraTheme.colors
-        Column(
-            Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 16.dp)
-                .navigationBarsPadding(),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            Column(Modifier.padding(horizontal = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(title, color = c.text, style = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.SemiBold))
-                if (subtitle != null) Text(subtitle, color = c.muted, style = TextStyle(fontSize = 13.sp, lineHeight = 19.sp))
-            }
-            UmbraGroupCard {
-                items.forEachIndexed { i, it ->
-                    if (i > 0) UmbraRowDivider(Modifier.padding(start = 14.dp))
-                    Row(
-                        Modifier.fillMaxWidth().defaultMinSize(minHeight = 52.dp)
-                            .clickable(role = Role.Button) { dismiss(); it.onClick() }
-                            .padding(horizontal = 14.dp, vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            Text(it.label, color = if (it.destructive) c.dangerText else c.text, style = TextStyle(fontSize = 16.sp))
-                            if (it.note != null) Text(it.note, color = c.muted, style = TextStyle(fontSize = 12.5.sp, lineHeight = 17.sp))
-                        }
-                        if (it.checked == true) {
-                            Spacer(Modifier.width(8.dp))
-                            UmbraIcon(UmbraIconPaths.check, c.orange, size = 17.dp)
-                        }
-                    }
-                }
-            }
-            UmbraButton(stringResource(R.string.duty_cancel), dismiss, Modifier.fillMaxWidth(), kind = UmbraButtonKind.Secondary, height = 50.dp)
-        }
-    })
-}
 
 /** 写操作失败：吐司说服务端那句原话，没有就兜一句。成功什么都不说（开关自己会翻过去）。iOS DutyViews.swift:513 */
 internal fun dutyReport(err: String?) {

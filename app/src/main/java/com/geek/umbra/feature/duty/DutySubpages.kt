@@ -52,6 +52,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.geek.umbra.R
 import com.geek.umbra.app.AppGraph
+import com.geek.umbra.designsystem.UmbraChoice
+import com.geek.umbra.designsystem.UmbraChoiceItem
 import com.geek.umbra.designsystem.UmbraDimens
 import com.geek.umbra.designsystem.UmbraGroupCard
 import com.geek.umbra.designsystem.UmbraIcon
@@ -253,20 +255,30 @@ internal fun DutyRulesView() {
 
 /** 「每天最多主动说几次」（契约 §16.1 `duty.dailyNudges`，回包键名 daily_nudges，2026-10-16 对齐）。 */
 private fun askNudges(ctx: Context, s: DutySettings) {
-    dutyPresentList("nudges", ctx.getString(R.string.duty_nudges), ctx.getString(R.string.duty_nudges_sub), DutyKit.nudgeOptions.map { v ->
-        DutySheetItem(ctx.getString(R.string.duty_nudges_value, "$v"), checked = s.daily_nudges == v) {
+    UmbraChoice.present(
+        title = ctx.getString(R.string.duty_nudges),
+        items = DutyKit.nudgeOptions.map { v ->
+        UmbraChoiceItem(ctx.getString(R.string.duty_nudges_value, "$v"), checked = s.daily_nudges == v) {
             if (!DutyStore.state.value.busy) dutyLaunch { dutyReport(DutyStore.putSettings(buildJsonObject { put("daily_nudges", v) })) }
         }
-    })
+    },
+        subtitle = ctx.getString(R.string.duty_nudges_sub),
+        key = "duty-nudges",
+    )
 }
 
 /** 预算面板。执勤页档位那一块的「调高预算」也开这一张（同一个设置，同一张面板）。iOS DutyRulesView.askBudget */
 internal fun askBudget(ctx: Context, s: DutySettings) {
-    dutyPresentList("budget", ctx.getString(R.string.duty_budget), ctx.getString(R.string.duty_budget_sub), DutyRules.budgetOptions.map { v ->
-        DutySheetItem(ctx.getString(R.string.duty_budget_value, "$v%"), checked = Math.round(s.budget_pct).toInt() == v) {
+    UmbraChoice.present(
+        title = ctx.getString(R.string.duty_budget),
+        items = DutyRules.budgetOptions.map { v ->
+        UmbraChoiceItem(ctx.getString(R.string.duty_budget_value, "$v%"), checked = Math.round(s.budget_pct).toInt() == v) {
             if (!DutyStore.state.value.busy) dutyLaunch { dutyReport(DutyStore.putSettings(buildJsonObject { put("budget_pct", v) })) }
         }
-    })
+    },
+        subtitle = ctx.getString(R.string.duty_budget_sub),
+        key = "duty-budget",
+    )
 }
 
 // MARK: - 关注
@@ -351,17 +363,17 @@ private fun write(op: suspend () -> String?) = dutyLaunch { dutyReport(op()) }
 /** 一条关注的完整操作：改重要度 / 只进早报或恢复 / 结束 / 删除（左滑只放得下三颗，重要度只在这里）。 */
 private fun askFollow(ctx: Context, tr: DutyTr, f: DutyFollow) {
     val items = mutableListOf(
-        DutySheetItem(ctx.getString(R.string.duty_follow_importance), note = DutyKit.priorityText(f.importance, tr)) { askImportance(ctx, tr, f) },
+        UmbraChoiceItem(ctx.getString(R.string.duty_follow_importance), note = DutyKit.priorityText(f.importance, tr)) { askImportance(ctx, tr, f) },
     )
     if (f.state != "ended") {
-        items += if (f.state == "quiet") DutySheetItem(ctx.getString(R.string.duty_follow_unquiet)) { write { DutyStore.patchFollow(f.id, state("active")) } }
-        else DutySheetItem(ctx.getString(R.string.duty_follow_quiet), note = ctx.getString(R.string.duty_follow_quietNote)) { write { DutyStore.patchFollow(f.id, state("quiet")) } }
-        items += DutySheetItem(ctx.getString(R.string.duty_follow_end)) { write { DutyStore.patchFollow(f.id, state("ended")) } }
+        items += if (f.state == "quiet") UmbraChoiceItem(ctx.getString(R.string.duty_follow_unquiet)) { write { DutyStore.patchFollow(f.id, state("active")) } }
+        else UmbraChoiceItem(ctx.getString(R.string.duty_follow_quiet), note = ctx.getString(R.string.duty_follow_quietNote)) { write { DutyStore.patchFollow(f.id, state("quiet")) } }
+        items += UmbraChoiceItem(ctx.getString(R.string.duty_follow_end)) { write { DutyStore.patchFollow(f.id, state("ended")) } }
     } else {
-        items += DutySheetItem(ctx.getString(R.string.duty_follow_restart)) { write { DutyStore.patchFollow(f.id, state("active")) } }
+        items += UmbraChoiceItem(ctx.getString(R.string.duty_follow_restart)) { write { DutyStore.patchFollow(f.id, state("active")) } }
     }
-    items += DutySheetItem(ctx.getString(R.string.duty_follow_delete), destructive = true) { askDelete(ctx, f) }
-    dutyPresentList("follow-${f.id}", f.topic, f.query.ifEmpty { null }, items)
+    items += UmbraChoiceItem(ctx.getString(R.string.duty_follow_delete), destructive = true) { askDelete(ctx, f) }
+    UmbraChoice.present(title = f.topic, items = items, subtitle = f.query.ifEmpty { null }, key = "duty-follow-${f.id}")
 }
 
 /**
@@ -379,11 +391,16 @@ private fun askDelete(ctx: Context, f: DutyFollow) {
 }
 
 private fun askImportance(ctx: Context, tr: DutyTr, f: DutyFollow) {
-    dutyPresentList("importance", ctx.getString(R.string.duty_follow_importance), ctx.getString(R.string.duty_follow_importanceSub), (5 downTo 1).map { v ->
-        DutySheetItem(DutyKit.priorityText(v, tr), checked = f.importance == v) {
+    UmbraChoice.present(
+        title = ctx.getString(R.string.duty_follow_importance),
+        items = (5 downTo 1).map { v ->
+        UmbraChoiceItem(DutyKit.priorityText(v, tr), checked = f.importance == v) {
             write { DutyStore.patchFollow(f.id, buildJsonObject { put("importance", v) }) }
         }
-    })
+    },
+        subtitle = ctx.getString(R.string.duty_follow_importanceSub),
+        key = "duty-importance",
+    )
 }
 
 /** 手动加一个关注话题（iOS 系统 alert 里一格输入；Android 落成带输入框的底部弹层，同早报「城市」那一格）。 */

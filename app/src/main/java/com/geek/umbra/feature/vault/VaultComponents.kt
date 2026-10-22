@@ -18,17 +18,14 @@ import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -71,8 +68,6 @@ import com.geek.umbra.designsystem.UmbraProgressBar
 import com.geek.umbra.designsystem.UmbraRowDivider
 import com.geek.umbra.designsystem.UmbraTheme
 import com.geek.umbra.designsystem.UmbraType
-import com.geek.umbra.app.AppGraph
-import com.geek.umbra.navigation.UmbraSheet
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -233,48 +228,6 @@ fun VaultRecordIcon(value: String?, monogram: String, side: Dp = 28.dp, corner: 
 }
 
 /** 底部选择面板的一项（iOS UmbraSheetItem）。 */
-data class VaultSheetItem(
-    val label: String,
-    val note: String? = null,
-    val checked: Boolean = false,
-    val destructive: Boolean = false,
-    val action: () -> Unit,
-)
-
-/** 弹一张「标题 + 副标题 + 一列选项」的底部面板。点一项先收面板再执行。 */
-fun presentVaultSheet(title: String, subtitle: String? = null, items: List<VaultSheetItem>) {
-    AppGraph.router.present(UmbraSheet("vault-sheet-$title-${System.nanoTime()}") { dismiss ->
-        VaultSheetBody(title, subtitle, items, dismiss)
-    })
-}
-
-@Composable
-private fun VaultSheetBody(title: String, subtitle: String?, items: List<VaultSheetItem>, dismiss: () -> Unit) {
-    val c = UmbraTheme.colors
-    Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = UmbraDimens.pagePadX).padding(bottom = 16.dp).navigationBarsPadding()) {
-        Text(title, color = c.text, style = UmbraType.sectionTitle, maxLines = 2, overflow = TextOverflow.Ellipsis)
-        if (subtitle != null) {
-            Spacer(Modifier.height(4.dp))
-            Text(subtitle, color = c.muted, style = TextStyle(fontSize = 13.sp, lineHeight = 19.sp))
-        }
-        Spacer(Modifier.height(12.dp))
-        VaultRowsCard(rows = items.map { item ->
-            @Composable {
-                Row(
-                    Modifier.fillMaxWidth().heightIn(min = UmbraDimens.rowMinH).clickable { dismiss(); item.action() }.padding(horizontal = 14.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        Text(item.label, color = if (item.destructive) c.dangerText else c.text, style = UmbraType.rowTitle)
-                        if (item.note != null) Text(item.note, color = c.muted, style = UmbraType.rowSub)
-                    }
-                    if (item.checked) UmbraIcon(UmbraIconPaths.check, c.orange, size = 18.dp)
-                }
-            }
-        })
-    }
-}
-
 /**
  * 保险箱输入框：卡片底 / bg 底、圆角 10、1px 描边。`password` 时画圆点；关掉联想 / 自动更正（键盘不记密码）。
  * 长按复制 / 剪切由外层 [VaultFrame] 改道到敏感剪贴板。

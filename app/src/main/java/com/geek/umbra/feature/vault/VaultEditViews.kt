@@ -45,6 +45,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.geek.umbra.app.AppGraph
+import com.geek.umbra.designsystem.UmbraChoice
+import com.geek.umbra.designsystem.UmbraChoiceItem
 import com.geek.umbra.designsystem.UmbraDimens
 import com.geek.umbra.designsystem.UmbraExtraIcons
 import com.geek.umbra.designsystem.UmbraFieldLabel
@@ -195,9 +197,13 @@ internal fun VaultEditContent(id: String?) {
             item("add") {
                 val shape = RoundedCornerShape(11.dp)
                 Box(Modifier.fillMaxWidth().height(48.dp).clip(shape).border(1.dp, c.border, shape).clickable {
-                    presentVaultSheet("添加控件", "图片与文件只能在电脑上添加，这里加了也是空的。", VaultBlockKind.all.map { (t, n) ->
-                        VaultSheetItem(n) { d.blocks = d.blocks + VaultBlockKind.make(t); touchDraft() }
-                    })
+                    UmbraChoice.present(
+                        title = "添加控件",
+                        items = VaultBlockKind.all.map { (t, n) ->
+                        UmbraChoiceItem(n) { d.blocks = d.blocks + VaultBlockKind.make(t); touchDraft() }
+                    },
+                        subtitle = "图片与文件只能在电脑上添加，这里加了也是空的。",
+                    )
                 }, contentAlignment = Alignment.Center) {
                     Text("添加控件", color = c.orangeText, style = TextStyle(fontSize = 15.5.sp, fontWeight = UmbraType.weight560))
                 }
@@ -227,7 +233,7 @@ internal fun VaultEditContent(id: String?) {
 }
 
 private fun pickGroup(cur: String, onPick: (String) -> Unit) {
-    presentVaultSheet("分组", null, VaultStore.s.types.map { t -> VaultSheetItem(t.name, checked = t.id == cur) { onPick(t.id) } })
+    UmbraChoice.present(title = "分组", items = VaultStore.s.types.map { t -> UmbraChoiceItem(t.name, checked = t.id == cur) { onPick(t.id) } })
 }
 
 /** ⒠ 那一个槽：四态共用这一格；「现在就存」/「重试」只在真有未写入的改动（或没存上）时出现。 */

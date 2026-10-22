@@ -42,10 +42,8 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -78,6 +76,8 @@ import androidx.compose.ui.zIndex
 import com.geek.umbra.app.AppGraph
 import com.geek.umbra.designsystem.UmbraButton
 import com.geek.umbra.designsystem.UmbraButtonKind
+import com.geek.umbra.designsystem.UmbraChoice
+import com.geek.umbra.designsystem.UmbraChoiceItem
 import com.geek.umbra.designsystem.UmbraDimens
 import com.geek.umbra.designsystem.UmbraExtraIcons
 import com.geek.umbra.designsystem.UmbraGroupCard
@@ -210,12 +210,14 @@ fun MoneyCatsView() {
 
     /** 稿的两步：先选边，再起名。 */
     fun askAdd() {
-        moneyPresentList(
-            key = "money-cat-add", title = "新增分类", subtitle = "先选记在哪一边。",
+        UmbraChoice.present(
+            title = "新增分类",
             items = listOf(
-                MoneySheetItem("支出分类") { askName("expense") },
-                MoneySheetItem("收入分类") { askName("income") },
+                UmbraChoiceItem("支出分类") { askName("expense") },
+                UmbraChoiceItem("收入分类") { askName("income") },
             ),
+            subtitle = "先选记在哪一边。",
+            key = "money-cat-add",
         )
     }
 
@@ -678,9 +680,11 @@ fun MoneyCatDetailView(slug: String) {
             AppGraph.router.showToast("这个方向下没有别的在用分类可以并进去")
             return
         }
-        moneyPresentList(
-            key = "money-cat-merge", title = "把「${me.name}」并进哪个分类？", subtitle = "旧账会改挂过去，合并不能撤销。",
-            items = targets.map { t -> MoneySheetItem(t.name, note = if (t.locked) "兜底分类" else null) { confirmMerge(me, t) } },
+        UmbraChoice.present(
+            title = "把「${me.name}」并进哪个分类？",
+            items = targets.map { t -> UmbraChoiceItem(t.name, note = if (t.locked) "兜底分类" else null) { confirmMerge(me, t) } },
+            subtitle = "旧账会改挂过去，合并不能撤销。",
+            key = "money-cat-merge",
         )
     }
 
@@ -723,24 +727,24 @@ fun MoneyCatDetailView(slug: String) {
     fun openMenu() {
         val me = MoneyStore.cats.value.firstOrNull { it.slug == slug } ?: return
         val items = mutableListOf(
-            MoneySheetItem("分类改名", note = "不影响历史数据") { askRenameCat(me) },
-            MoneySheetItem("换图标", note = "只换样子，历史不变") {
+            UmbraChoiceItem("分类改名", note = "不影响历史数据") { askRenameCat(me) },
+            UmbraChoiceItem("换图标", note = "只换样子，历史不变") {
                 moneyPresentIcons(me.icon ?: "") { p -> run("已换成「${p.label}」") { MoneyStore.updateCat(slug, icon = p.k) } }
             },
             // 换槽（批次 020 §二）：面板就地展开在这一页上，不再开一层。
-            MoneySheetItem("改色槽", note = "换过来原来那个会变中性灰") { swapPick = me.slot; swapping = true },
+            UmbraChoiceItem("改色槽", note = "换过来原来那个会变中性灰") { swapPick = me.slot; swapping = true },
         )
         if (!me.locked) {
-            items += MoneySheetItem("停用这个分类", note = "选择器里不再出现，历史不变", destructive = true) { confirmDisableCat(me) }
+            items += UmbraChoiceItem("停用这个分类", note = "选择器里不再出现，历史不变", destructive = true) { confirmDisableCat(me) }
             // 批次 020 §四：这一格是**二选一**。没账没子类没规则的才给「删除」，否则给「合并到…」。
             // **拿不到用量时按「有账」处理**：最坏是把「删除」藏起来，反过来会给出一颗按下去必然报错的删除钮。
             if (MoneyStore.catUsage.value[slug]?.isEmpty == true) {
-                items += MoneySheetItem("删除这个分类", note = "没有账、没有子类，删掉就没了", destructive = true) { confirmDeleteCat(me) }
+                items += UmbraChoiceItem("删除这个分类", note = "没有账、没有子类，删掉就没了", destructive = true) { confirmDeleteCat(me) }
             } else {
-                items += MoneySheetItem("合并到…", note = "旧账改挂过去，不能撤销", destructive = true) { askMergeTarget(me) }
+                items += UmbraChoiceItem("合并到…", note = "旧账改挂过去，不能撤销", destructive = true) { askMergeTarget(me) }
             }
         }
-        moneyPresentList(key = "money-cat-menu", title = me.name, items = items)
+        UmbraChoice.present(title = me.name, items = items, key = "money-cat-menu")
     }
 
     val footN = entries.count { it.cat == slug }
@@ -981,56 +985,6 @@ fun MoneyAccountsView() {
 }
 
 // MARK: - 记账几屏共用的浮层与左滑（Android 地基缺件，见文件头）
-
-/** 行式选择器里的一项（对应 iOS UmbraSheetItem）。checked = null 不画勾。 */
-internal class MoneySheetItem(
-    val label: String,
-    val note: String? = null,
-    val destructive: Boolean = false,
-    val checked: Boolean? = null,
-    val onClick: () -> Unit,
-)
-
-/**
- * 行式底部选择器（iOS `UmbraSheet(title:subtitle:items:)`）：标题 + 副标题 + 一张行卡 + 取消。
- * 点一行先收起再执行 —— 执行里常常还要再开一层（确认弹窗 / 下一步选择器）。
- */
-internal fun moneyPresentList(key: String, title: String, subtitle: String? = null, items: List<MoneySheetItem>) {
-    AppGraph.router.present(UmbraSheet(key) { dismiss ->
-        val c = UmbraTheme.colors
-        Column(
-            Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 16.dp)
-                .navigationBarsPadding(),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            Column(Modifier.padding(horizontal = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(title, color = c.text, style = TextStyle(fontSize = 17.sp, fontWeight = FontWeight.SemiBold))
-                if (subtitle != null) Text(subtitle, color = c.muted, style = TextStyle(fontSize = 13.sp, lineHeight = 19.sp))
-            }
-            UmbraGroupCard {
-                items.forEachIndexed { i, it ->
-                    if (i > 0) UmbraRowDivider(Modifier.padding(start = 14.dp))
-                    Row(
-                        Modifier.fillMaxWidth().defaultMinSize(minHeight = UmbraDimens.rowMinH)
-                            .clickable(role = Role.Button) { dismiss(); it.onClick() }
-                            .padding(horizontal = 14.dp, vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            Text(it.label, color = if (it.destructive) c.dangerText else c.text, style = TextStyle(fontSize = 16.sp))
-                            if (it.note != null) Text(it.note, color = c.muted, style = TextStyle(fontSize = 12.5.sp, lineHeight = 17.sp))
-                        }
-                        if (it.checked == true) {
-                            Spacer(Modifier.width(8.dp))
-                            UmbraIcon(UmbraIconPaths.check, c.orange, size = 17.dp)
-                        }
-                    }
-                }
-            }
-            UmbraButton("取消", dismiss, Modifier.fillMaxWidth(), kind = UmbraButtonKind.Secondary)
-        }
-    })
-}
 
 /**
  * 「换图标」sheet（批次 006 稿，iOS `UmbraSheet(icons:)`）：八格网格（一行四格），当前项橙描边；选中即换、就地生效。

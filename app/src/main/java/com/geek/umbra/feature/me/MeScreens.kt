@@ -32,6 +32,8 @@ import com.geek.umbra.BuildConfig
 import com.geek.umbra.R
 import com.geek.umbra.app.AppGraph
 import com.geek.umbra.designsystem.Appearance
+import com.geek.umbra.designsystem.UmbraChoice
+import com.geek.umbra.designsystem.UmbraChoiceItem
 import com.geek.umbra.designsystem.UmbraHeroCard
 import com.geek.umbra.designsystem.UmbraIconPaths
 import com.geek.umbra.designsystem.UmbraMenuItem
@@ -497,11 +499,15 @@ fun GeneralScreen() {
         settingSection("look", "外观与语言", listOf(
             UmbraSettingRow("界面语言", value = langLabel, chevron = true, action = {
                 // 设计稿只列了中文 / English，多一项「跟随系统」—— 系统本来就有这一档，藏起来等于把已有能力关掉。
-                presentChoice("界面语言", listOf(
-                    MeSheetItem("中文", checked = lang == AppLanguage.Chinese) { applyLanguage(AppLanguage.Chinese) },
-                    MeSheetItem("English", checked = lang == AppLanguage.English) { applyLanguage(AppLanguage.English) },
-                    MeSheetItem("跟随系统", checked = lang == AppLanguage.System) { applyLanguage(AppLanguage.System) },
-                ), subtitle = "切换后立即生效。")
+                UmbraChoice.present(
+                    title = "界面语言",
+                    items = listOf(
+                    UmbraChoiceItem("中文", checked = lang == AppLanguage.Chinese) { applyLanguage(AppLanguage.Chinese) },
+                    UmbraChoiceItem("English", checked = lang == AppLanguage.English) { applyLanguage(AppLanguage.English) },
+                    UmbraChoiceItem("跟随系统", checked = lang == AppLanguage.System) { applyLanguage(AppLanguage.System) },
+                ),
+                    subtitle = "切换后立即生效。",
+                )
             }),
             // 外观（含主题）挪成了一页（主题插件化二期，iOS MeViews.swift:565）：这一行推过去，不再就地弹三档。
             UmbraSettingRow("外观", value = look, chevron = true, action = { router.go(Route.SetAppearance) }),

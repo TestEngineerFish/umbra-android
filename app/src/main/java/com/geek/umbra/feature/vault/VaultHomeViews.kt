@@ -57,6 +57,8 @@ import com.geek.umbra.R
 import com.geek.umbra.app.AppGraph
 import com.geek.umbra.designsystem.UmbraButton
 import com.geek.umbra.designsystem.UmbraButtonKind
+import com.geek.umbra.designsystem.UmbraChoice
+import com.geek.umbra.designsystem.UmbraChoiceItem
 import com.geek.umbra.designsystem.UmbraDimens
 import com.geek.umbra.designsystem.UmbraEmptyState
 import com.geek.umbra.designsystem.UmbraFieldLabel
@@ -508,9 +510,9 @@ private fun ProfileCard(st: VaultState, onClick: () -> Unit) {
 
 private fun switchProfile(st: VaultState, onSwitched: () -> Unit) {
     val items = st.vaults.map { v ->
-        VaultSheetItem(v.name, checked = v.id == st.curVaultId) { VaultStore.switchVault(v.id); onSwitched() }
-    } + VaultSheetItem("管理身份库") { AppGraph.router.go(Route.VaultProfiles) }
-    presentVaultSheet("身份库", "身份库之间数据隔离，同一时刻只有一个是当前库。", items)
+        UmbraChoiceItem(v.name, checked = v.id == st.curVaultId) { VaultStore.switchVault(v.id); onSwitched() }
+    } + UmbraChoiceItem("管理身份库") { AppGraph.router.go(Route.VaultProfiles) }
+    UmbraChoice.present(title = "身份库", items = items, subtitle = "身份库之间数据隔离，同一时刻只有一个是当前库。")
 }
 
 /** 安全体检的一行细摘要：22 的小分数环 + 一句话，整行可点。有问题时数字用警示色，没问题时整行都是弱色。 */
@@ -597,30 +599,33 @@ private fun RecordRow(it: VItem, showsGroups: Boolean, typeName: String, query: 
 
 /** 长按菜单：每个账号各给一组（多个时带上用户名）、收藏、移动到分组、删除。 */
 private fun rowMenu(it: VItem, showsGroups: Boolean) {
-    val items = mutableListOf<VaultSheetItem>()
+    val items = mutableListOf<UmbraChoiceItem>()
     val accounts = it.accounts
     for (acc in accounts) {
         val who = if (accounts.size > 1) "（${acc.user.ifEmpty { "未填账号" }}）" else ""
-        if (acc.user.isNotEmpty()) items += VaultSheetItem("复制账号$who") {
+        if (acc.user.isNotEmpty()) items += UmbraChoiceItem("复制账号$who") {
             VaultClipboard.copySensitive(acc.user); AppGraph.router.showToast("已复制账号 · 60 秒后自动清除")
         }
-        if (acc.pwd.isNotEmpty()) items += VaultSheetItem("复制密码$who") {
+        if (acc.pwd.isNotEmpty()) items += UmbraChoiceItem("复制密码$who") {
             VaultClipboard.copySensitive(acc.pwd); AppGraph.router.showToast("已复制密码 · 60 秒后自动清除")
         }
     }
-    items += VaultSheetItem(if (it.favorite == true) "取消收藏" else "加入收藏") { AppGraph.scope.launch { VaultStore.toggleFav(it.id) } }
-    if (showsGroups && !it.isCanvas) items += VaultSheetItem("移动到分组") { movePicker(it) }
-    items += VaultSheetItem("删除", destructive = true) { confirmDelete(it) }
-    presentVaultSheet(it.title, null, items)
+    items += UmbraChoiceItem(if (it.favorite == true) "取消收藏" else "加入收藏") { AppGraph.scope.launch { VaultStore.toggleFav(it.id) } }
+    if (showsGroups && !it.isCanvas) items += UmbraChoiceItem("移动到分组") { movePicker(it) }
+    items += UmbraChoiceItem("删除", destructive = true) { confirmDelete(it) }
+    UmbraChoice.present(title = it.title, items = items)
 }
 
 private fun movePicker(it: VItem) {
-    presentVaultSheet("移动到分组", null, VaultStore.s.types.map { t ->
-        VaultSheetItem(t.name, checked = t.id == it.typeId) {
+    UmbraChoice.present(
+        title = "移动到分组",
+        items = VaultStore.s.types.map { t ->
+        UmbraChoiceItem(t.name, checked = t.id == it.typeId) {
             AppGraph.scope.launch { VaultStore.moveItem(it.id, t.id) }
             AppGraph.router.showToast("已移到「${t.name}」")
         }
-    })
+    },
+    )
 }
 
 /** 「⋯」动作面板：每一行带**当下的真实值**（几项待处理、几个分组、几分钟自动锁）。 */
@@ -631,19 +636,19 @@ private fun presentMoreSheet(audit: VaultAudit) {
     val vaultName = st.vaults.firstOrNull { it.id == st.curVaultId }?.name ?: "默认库"
     val bio = if (se.faceIDEnabled && se.hasBiometricCredential) "${VaultSession.biometryName}已开启" else "只用主密码"
     val items = mutableListOf(
-        VaultSheetItem("安全体检", if (audit.total == 0) "没有发现问题" else "${audit.total} 项需要处理") { r.go(Route.VaultCheck) },
-        VaultSheetItem("密码生成器", "本机随机，不联网") { r.go(Route.VaultGen) },
+        UmbraChoiceItem("安全体检", if (audit.total == 0) "没有发现问题" else "${audit.total} 项需要处理") { r.go(Route.VaultCheck) },
+        UmbraChoiceItem("密码生成器", "本机随机，不联网") { r.go(Route.VaultGen) },
     )
     // 画布版没有分组：types 为空时这一行不给（给了点进去是一页空的）。
-    if (st.types.isNotEmpty()) items += VaultSheetItem("分组", "${st.types.size} 个") { r.go(Route.VaultGroups) }
+    if (st.types.isNotEmpty()) items += UmbraChoiceItem("分组", "${st.types.size} 个") { r.go(Route.VaultGroups) }
     items += listOf(
-        VaultSheetItem("身份库", "当前：$vaultName · 共 ${st.vaults.size} 个") { r.go(Route.VaultProfiles) },
-        VaultSheetItem("回收站", if (st.trashCount > 0) "${st.trashCount} 项" else "保留 30 天") { r.go(Route.VaultTrash) },
-        VaultSheetItem("从别处导入", "这一版在电脑上") { r.go(Route.VaultImport) },
-        VaultSheetItem("保险箱设置", "${se.autoLockMinutes} 分钟自动锁定 · $bio") { r.go(Route.VaultSettings) },
-        VaultSheetItem("立即上锁", "${se.autoLockMinutes} 分钟后也会自动锁") {
+        UmbraChoiceItem("身份库", "当前：$vaultName · 共 ${st.vaults.size} 个") { r.go(Route.VaultProfiles) },
+        UmbraChoiceItem("回收站", if (st.trashCount > 0) "${st.trashCount} 项" else "保留 30 天") { r.go(Route.VaultTrash) },
+        UmbraChoiceItem("从别处导入", "这一版在电脑上") { r.go(Route.VaultImport) },
+        UmbraChoiceItem("保险箱设置", "${se.autoLockMinutes} 分钟自动锁定 · $bio") { r.go(Route.VaultSettings) },
+        UmbraChoiceItem("立即上锁", "${se.autoLockMinutes} 分钟后也会自动锁") {
             VaultStore.lock(); VaultSession.markManualLock(); r.showToast("已重新上锁")
         },
     )
-    presentVaultSheet("保险箱", "${st.items.size} 条记录 · $vaultName", items)
+    UmbraChoice.present(title = "保险箱", items = items, subtitle = "${st.items.size} 条记录 · $vaultName")
 }

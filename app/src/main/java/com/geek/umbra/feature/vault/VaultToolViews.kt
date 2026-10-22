@@ -46,6 +46,8 @@ import com.geek.umbra.app.AppGraph
 import com.geek.umbra.designsystem.UmbraButton
 import com.geek.umbra.designsystem.UmbraButtonKind
 import com.geek.umbra.designsystem.UmbraCard
+import com.geek.umbra.designsystem.UmbraChoice
+import com.geek.umbra.designsystem.UmbraChoiceItem
 import com.geek.umbra.designsystem.UmbraDimens
 import com.geek.umbra.designsystem.UmbraFieldLabel
 import com.geek.umbra.designsystem.UmbraIcon
@@ -398,9 +400,12 @@ internal fun VaultSettingsContent() {
 
     val lockRows = buildList {
         add(UmbraSettingRow("自动锁定", value = "${se.autoLockMinutes} 分钟", chevron = true) {
-            presentVaultSheet(VaultLockNote.PICKER_TITLE, null, listOf(1, 5, 10, 30).map { m ->
-                VaultSheetItem("$m 分钟", checked = se.autoLockMinutes == m) { VaultSession.setAutoLockMinutes(m) }
-            })
+            UmbraChoice.present(
+                title = VaultLockNote.PICKER_TITLE,
+                items = listOf(1, 5, 10, 30).map { m ->
+                UmbraChoiceItem("$m 分钟", checked = se.autoLockMinutes == m) { VaultSession.setAutoLockMinutes(m) }
+            },
+            )
         })
         // Android 上「遮盖」落成 FLAG_SECURE：切走时任务切换器里看不到内容，也截不了屏。
         add(UmbraSettingRow("切到后台立即遮盖", sub = "App 切走时遮住内容，也不许截屏", toggle = se.maskEnabled, onToggle = { VaultSession.setMaskEnabled(it) }))

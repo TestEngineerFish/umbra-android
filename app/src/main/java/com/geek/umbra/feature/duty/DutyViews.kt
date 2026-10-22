@@ -27,6 +27,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.geek.umbra.R
 import com.geek.umbra.app.AppGraph
+import com.geek.umbra.designsystem.UmbraChoice
+import com.geek.umbra.designsystem.UmbraChoiceItem
 import com.geek.umbra.designsystem.UmbraColorScheme
 import com.geek.umbra.designsystem.UmbraDimens
 import com.geek.umbra.designsystem.UmbraNotice
@@ -212,9 +214,14 @@ private fun askPause(ctx: Context) {
         "hour" to R.string.duty_pause_hour, "today" to R.string.duty_pause_today,
         "week" to R.string.duty_pause_week, "forever" to R.string.duty_pause_forever,
     )
-    dutyPresentList("pause", ctx.getString(R.string.duty_pause), ctx.getString(R.string.duty_pause_sub), DutyRules.pauseSpans.map { span ->
-        DutySheetItem(labels[span]?.let { ctx.getString(it) } ?: span) { dutyLaunch { dutyReport(DutyStore.pause(span)) } }
-    })
+    UmbraChoice.present(
+        title = ctx.getString(R.string.duty_pause),
+        items = DutyRules.pauseSpans.map { span ->
+        UmbraChoiceItem(labels[span]?.let { ctx.getString(it) } ?: span) { dutyLaunch { dutyReport(DutyStore.pause(span)) } }
+    },
+        subtitle = ctx.getString(R.string.duty_pause_sub),
+        key = "duty-pause",
+    )
 }
 
 /**
@@ -310,7 +317,7 @@ private fun askNew(ctx: Context, list: DutyListDTO) {
         // 早报每人一条：已经有了就不在这里再给。
         val presets = DutyStore.state.value.presets.filter { !(it.preset == DutyRules.MORNING_BRIEF && list.brief != null) }
         val items = presets.map { pr ->
-            DutySheetItem(pr.name, note = pr.desc.ifEmpty { null }) {
+            UmbraChoiceItem(pr.name, note = pr.desc.ifEmpty { null }) {
                 if (pr.preset == DutyRules.MORNING_BRIEF) {
                     create(ctx, list) { DutyStore.createBrief() }
                 } else {
@@ -321,18 +328,22 @@ private fun askNew(ctx: Context, list: DutyListDTO) {
                     }
                 }
             }
-        } + DutySheetItem(ctx.getString(R.string.duty_new_custom), note = ctx.getString(R.string.duty_new_customNote)) {
+        } + UmbraChoiceItem(ctx.getString(R.string.duty_new_custom), note = ctx.getString(R.string.duty_new_customNote)) {
             AppGraph.router.go(Route.MeDutyEdit(null))
         }
-        dutyPresentList("new", ctx.getString(R.string.duty_new), ctx.getString(R.string.duty_new_sub), items)
+        UmbraChoice.present(title = ctx.getString(R.string.duty_new), items = items, subtitle = ctx.getString(R.string.duty_new_sub), key = "duty-new")
     }
 }
 
 private fun askDays(ctx: Context, b: DutyItem) {
-    dutyPresentList("days", ctx.getString(R.string.duty_brief_days), null, listOf(
-        DutySheetItem(ctx.getString(R.string.duty_days_workday), checked = b.params.days != "everyday") { patchParams(b) { it.copy(days = "workday") } },
-        DutySheetItem(ctx.getString(R.string.duty_days_everyday), checked = b.params.days == "everyday") { patchParams(b) { it.copy(days = "everyday") } },
-    ))
+    UmbraChoice.present(
+        title = ctx.getString(R.string.duty_brief_days),
+        items = listOf(
+        UmbraChoiceItem(ctx.getString(R.string.duty_days_workday), checked = b.params.days != "everyday") { patchParams(b) { it.copy(days = "workday") } },
+        UmbraChoiceItem(ctx.getString(R.string.duty_days_everyday), checked = b.params.days == "everyday") { patchParams(b) { it.copy(days = "everyday") } },
+    ),
+        key = "duty-days",
+    )
 }
 
 private fun saveCity(raw: String) {

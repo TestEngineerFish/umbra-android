@@ -6,6 +6,8 @@ import android.net.Uri
 import android.provider.OpenableColumns
 import com.geek.umbra.R
 import com.geek.umbra.app.AppGraph
+import com.geek.umbra.designsystem.UmbraChoice
+import com.geek.umbra.designsystem.UmbraChoiceItem
 import com.geek.umbra.navigation.Route
 import com.geek.umbra.net.BackgroundWork
 import kotlinx.coroutines.CancellationException
@@ -18,8 +20,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import com.geek.umbra.feature.me.MeSheetItem
-import com.geek.umbra.feature.me.presentChoice
 
 /** 库列表（iOS KbListModel）。最近一次的档：disabled 时错误卡说「没启用」，不说「拿不到」。 */
 object KbListStore {
@@ -190,21 +190,21 @@ class KbDocsModel(val kbId: String) {
         val key = "kbclash-${System.nanoTime()}"
         withContext(Dispatchers.Main) {
             if (check is KbNameCheck.Clash) {
-                presentChoice(
-                    ctx.getString(R.string.kb_clash_title, check.existing),
-                    listOf(
+                UmbraChoice.present(
+                    title = ctx.getString(R.string.kb_clash_title, check.existing),
+                    items = listOf(
                         // 「覆盖」标破坏性：库里那份的内容被换掉，手机上找不回旧版本（只在服务端 git 历史里）。
-                        MeSheetItem(ctx.getString(R.string.kb_clash_overwrite), destructive = true) { d.complete(KbClashChoice.Overwrite) },
-                        MeSheetItem(ctx.getString(R.string.kb_clash_keepBoth)) { d.complete(KbClashChoice.KeepBoth) },
+                        UmbraChoiceItem(ctx.getString(R.string.kb_clash_overwrite), destructive = true) { d.complete(KbClashChoice.Overwrite) },
+                        UmbraChoiceItem(ctx.getString(R.string.kb_clash_keepBoth)) { d.complete(KbClashChoice.KeepBoth) },
                     ),
                     subtitle = ctx.getString(R.string.kb_clash_keepBothNote, KnowledgeRules.keepBothName(picked, existing)),
                     key = key,
                     onDismissed = { if (!it) d.complete(KbClashChoice.Cancel) },
                 )
             } else {
-                presentChoice(
-                    ctx.getString(R.string.kb_clash_unknownTitle, picked),
-                    listOf(MeSheetItem(ctx.getString(R.string.kb_clash_uploadAnyway), destructive = true) { d.complete(KbClashChoice.Overwrite) }),
+                UmbraChoice.present(
+                    title = ctx.getString(R.string.kb_clash_unknownTitle, picked),
+                    items = listOf(UmbraChoiceItem(ctx.getString(R.string.kb_clash_uploadAnyway), destructive = true) { d.complete(KbClashChoice.Overwrite) }),
                     subtitle = ctx.getString(R.string.kb_clash_unknownBody),
                     key = key,
                     onDismissed = { if (!it) d.complete(KbClashChoice.Cancel) },
