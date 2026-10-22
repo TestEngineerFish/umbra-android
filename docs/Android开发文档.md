@@ -198,10 +198,6 @@ R8 的问题只在运行时暴露（序列化类被裁、反射找不到），�
 - 主题许可证：iOS 本机许可证整机一份、读取时不核账号（同 PC #128）；Android 登出 / 换号即清、读取核 `sub` 与记下的账号。
 - 主题试用到点：iOS 开着编辑页时多等 3 秒再退（SwiftUI 换根视图身份会丢草稿）；Compose 换配色只重组、不丢状态，Android 不用等。
 
-### iOS 待修（iOS 修完后删掉这一小节）
-- 选择列表底部「取消」：iOS `UmbraSheetLayer` 写死中文「取消」，英文界面也是中文 —— **这是 iOS 的缺陷，已派 iOS 修**，不是两端有意不同。
-  Android 的 `UmbraChoice` 走 `common_cancel`（英文 Cancel），有用例 `DesignSystemCopyTest` 守着。
-
 ### 技术债
 
 **2026-10-22 已收口的五项**（每项单独提交，纯重构为主；界面上的变化另报 Claude Design）：
