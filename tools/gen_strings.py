@@ -8,8 +8,8 @@ iOS 改了文案重跑一次即可同步，不会各改各的。
   移植时按中文原文查资源名；
 - 格式符：%@ → %s，%lld/%ld → %d；一句里有多个参数时一律补成位置参数（%1$s），否则 lint 报错；
 - 只有中文没有英文的条目只写进 values/，英文模式下回落中文（与 iOS 行为一致）；
-- 产品名：iOS 文案里的占位符 {brand}（iOS 品牌收口 5fe6fcc 起，取字入口统一替换）和残留的整词「Umbra」
-  都换成 app/Brand.kt 的产品名，中文表用 productName、英文表用 productNameEn。生成时就换掉，不映射成 %s：
+- 产品名（英文表用 displayNameEn，英文名定之前就是中文名）：iOS 文案里的占位符 {brand}（iOS 品牌收口 5fe6fcc 起，取字入口统一替换）和残留的整词「Umbra」
+  都换成 app/Brand.kt 的产品名，中文表用 productName、英文表用 displayNameEn；换完按空格规则去掉名字与中文之间的空格。生成时就换掉，不映射成 %s：
   Android 资源里一句话没法引用另一条资源，映射成 %s 就得让每个调用处都补一个参数。
   key 不动（中文字面 key 的资源名仍按 iOS 原文算），所以 Kotlin 里的 R.string 引用不受改名影响。
 用法：python3 -I tools/gen_strings.py   （UmbraAndroid 根目录，要求 ../UmbraiOS 并排；在 worktree 里跑时用 UMBRA_IOS=<iOS 仓路径> 指定）
@@ -32,10 +32,18 @@ BRAND = _gb.load()
 # 整词匹配：UmbraPC、X-Umbra-Session 这类标识符里的不算（前后是字母或连字符就不换）。
 CODENAME = re.compile(r"(?<![A-Za-z\-])" + re.escape(BRAND["codename"]) + r"(?![A-Za-z\-])")
 
+# 中文字符与中文标点（「」、。在 CJK 符号区，，：；（）！？在全角区）。「·」「›」不在里面：分隔符带的空格照留。
+CJK = r"[\u4e00-\u9fff\u3000-\u303f\uff00-\uffef]"
+
 def brand(s: str, lang: str) -> str:
-    name = BRAND["productName"] if lang == "zh" else BRAND["productNameEn"]
+    # 英文表读 displayNameEn：英文名定下来之前英文界面也显示中文名（sam 10-22）。
+    name = BRAND["productName"] if lang == "zh" else BRAND["displayNameEn"]
     # 残留的整词代号：iOS 以中文原文作 key、没有译文的那批旧条目里还写着 Umbra。
-    return CODENAME.sub(name, s.replace("{brand}", name))
+    s = CODENAME.sub(name, s.replace("{brand}", name))
+    # 空格规则：产品名挨着汉字或中文标点时两边不留空格（「用 Umbra 账号」这种旧句子换名后会留下两个多余的空格）。
+    n = re.escape(name)
+    s = re.sub(rf"(?<={CJK}) +(?={n})", "", s)
+    return re.sub(rf"(?<={n}) +(?={CJK})", "", s)
 
 FMT = re.compile(r"%(\d+\$)?(@|lld|ld|d|lf|f|%)")
 

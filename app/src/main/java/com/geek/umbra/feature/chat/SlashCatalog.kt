@@ -20,7 +20,7 @@ object SlashCatalog {
             SlashAction("rem", "建提醒", "时间 + 要提醒你做什么", "时间 要提醒你做什么", UmbraIconPaths.bell),
         )),
         SlashGroup("任务", listOf(
-            SlashAction("task", "创建任务", "描述目标，${Brand.productName} 拆步骤去做", "要它做什么", UmbraIconPaths.task),
+            SlashAction("task", "创建任务", "描述目标，${Brand.productName}拆步骤去做", "要它做什么", UmbraIconPaths.task),
         )),
     )
 

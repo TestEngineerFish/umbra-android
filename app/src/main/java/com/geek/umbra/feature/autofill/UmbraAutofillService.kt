@@ -116,7 +116,7 @@ class UmbraAutofillService : AutofillService() {
         }
         // 末尾那条：要认证的 dataset，点了拉起解锁 / 挑选面板。上锁时只出这一条（设计侧 199 答复第 12 条定稿文字）。
         val ds = Dataset.Builder(
-            if (open) presentation(this, "${Brand.productName} 密码保险箱", "挑别的账号") else presentation(this, "${Brand.productName} 密码保险箱", "解锁后选账号"),
+            if (open) presentation(this, "${Brand.productName}密码保险箱", "挑别的账号") else presentation(this, "${Brand.productName}密码保险箱", "解锁后选账号"),
         )
         for (id in parsed.all) ds.setValue(id, null)
         ds.setAuthentication(AutofillActivity.intentSender(this, parsed))

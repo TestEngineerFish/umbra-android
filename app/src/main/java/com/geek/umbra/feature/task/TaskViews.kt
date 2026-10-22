@@ -198,7 +198,7 @@ fun TaskListView() {
                             }
                             val body = when {
                                 q.isNotEmpty() -> "换个词，或者清掉筛选试试。"
-                                filter == null -> "在聊天里描述目标，${Brand.productName} 会自动建任务。"
+                                filter == null -> "在聊天里描述目标，${Brand.productName}会自动建任务。"
                                 else -> "清掉筛选就能看到全部。"
                             }
                             if (isFiltered) {

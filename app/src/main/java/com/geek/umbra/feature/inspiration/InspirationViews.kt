@@ -516,7 +516,7 @@ private fun InspDetailBottomBar(i: Inspiration) {
     Column(Modifier.fillMaxWidth().background(c.bg)) {
         Box(Modifier.fillMaxWidth().height(1.dp).background(c.borderSoft))
         Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 14.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-            UmbraButton("让 ${Brand.productName} 去做这件事", {
+            UmbraButton("让${Brand.productName}去做这件事", {
                 // 跳到与秘书的会话，挂「创建任务」芯片 + 填灵感原文 + 亮来源横幅。**不自动发送** —— 发之前让用户能改一句。
                 ChatApi.startDraft(
                     i.raw.ifEmpty { i.title },

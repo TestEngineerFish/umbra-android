@@ -15,13 +15,18 @@ LABELS = {
     "app_name": ("{name}", "{name}"),
     "brand_name": ("{name}", "{name}"),
     # 系统分享面板里那一项（AndroidManifest ShareActivity 的 label），面板标题也用它。
-    "share_insp_title": ("记到 {name} 灵感", "Save to {name}"),
+    "share_insp_title": ("记到{name}灵感", "Save to {name}"),
 }
 
 def load() -> dict:
-    """读 Brand.kt 里的 const val；返回 {productName, productNameEn, codename}。"""
-    vals = dict(re.findall(r'const val (\w+) = "([^"]*)"', BRAND_KT.read_text()))
-    for k in ("productName", "productNameEn", "codename"):
+    """读 Brand.kt 里的 const val；返回 {productName, productNameEn, displayNameEn, codename, ...}。
+    displayNameEn 写的是另一个常量名（= productName），这里顺着解开。"""
+    src = BRAND_KT.read_text()
+    vals = dict(re.findall(r'const val (\w+) = "([^"]*)"', src))
+    for k, ref in re.findall(r'const val (\w+) = (\w+)\s*$', src, re.M):
+        if ref in vals:
+            vals[k] = vals[ref]
+    for k in ("productName", "productNameEn", "displayNameEn", "codename"):
         if not vals.get(k):
             sys.exit(f"Brand.kt 里缺 {k}")
     return vals
@@ -32,7 +37,8 @@ def esc(s: str) -> str:
 if __name__ == "__main__":
     b = load()
     head = '<?xml version="1.0" encoding="utf-8"?>\n<!-- 自动生成，请勿手改：tools/gen_brand.py ← app/Brand.kt -->\n<resources>\n'
-    for d, i, name in (("values", 0, b["productName"]), ("values-en", 1, b["productNameEn"])):
+    # 英文表读 displayNameEn：英文名定下来之前英文界面也显示中文名（sam 10-22），productNameEn 不上界面。
+    for d, i, name in (("values", 0, b["productName"]), ("values-en", 1, b["displayNameEn"])):
         rows = [f'    <string name="{k}">{esc(v[i].format(name=name))}</string>' for k, v in LABELS.items()]
         (root / f"app/src/main/res/{d}/brand.xml").write_text(head + "\n".join(rows) + "\n</resources>\n")
-    print(f"brand.xml：{b['productName']} / {b['productNameEn']}")
+    print(f"brand.xml：{b['productName']} / {b['displayNameEn']}")

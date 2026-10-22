@@ -261,7 +261,7 @@ internal fun VaultCreateContent() {
         } else {
             item("form") {
                 Column(verticalArrangement = Arrangement.spacedBy(UmbraDimens.sp4)) {
-                    VaultNote("设一个主密码。它不保存、不上传，忘了无法找回；主密码和 Secret Key 一起才能解开数据。建好的库先存在这台手机上，登录 ${Brand.productName} 账号后自动同步到云端。", size = 12.5f)
+                    VaultNote("设一个主密码。它不保存、不上传，忘了无法找回；主密码和 Secret Key 一起才能解开数据。建好的库先存在这台手机上，登录${Brand.productName}账号后自动同步到云端。", size = 12.5f)
                     UmbraFieldLabel("主密码（至少 6 位）")
                     VaultInput(password, { password = it }, placeholder = "主密码", password = true)
                     UmbraFieldLabel("再输一遍")
@@ -555,7 +555,7 @@ internal fun VaultAutofillContent() {
                         UmbraIcon(if (enabled == true) UmbraIconPaths.shieldCheck else UmbraIconPaths.key, if (enabled == true) c.success else c.muted, size = 17.dp)
                     }
                     Spacer(Modifier.width(12.dp))
-                    Text(when (enabled) { null -> "启用状态查询中…"; true -> "系统里已选 ${Brand.productName} 作为自动填充服务"; false -> "还没在系统里选 ${Brand.productName}" },
+                    Text(when (enabled) { null -> "启用状态查询中…"; true -> "系统里已选${Brand.productName}作为自动填充服务"; false -> "还没在系统里选${Brand.productName}" },
                         color = c.text, style = UmbraType.rowTitle)
                 }
             }
@@ -568,11 +568,11 @@ internal fun VaultAutofillContent() {
             }, Modifier.fillMaxWidth(), height = 52.dp, external = true)
         }
         settingSection("how", "它怎么工作", listOf(
-            UmbraSettingRow("1. 在别的 App 或浏览器里点账号 / 密码框", sub = "输入框下方会出现 ${Brand.productName} 的建议"),
+            UmbraSettingRow("1. 在别的 App 或浏览器里点账号 / 密码框", sub = "输入框下方会出现${Brand.productName}的建议"),
             UmbraSettingRow("2. 同一网站 / 同一 App 的账号排在最前", sub = "按域名标签边界比，不按子串（防钓鱼）"),
             UmbraSettingRow("3. 保险箱锁着时先解锁", sub = "主密码或已开启的生物识别；解开后直接填进去"),
-        ), footer = "填充只读这台手机上的保险箱，不联网取密码；没登录 ${Brand.productName} 账号也能填。", footerTone = null)
-        item("tail") { VaultNote("Android 没有 iOS 那种「预先登记账号、键盘上直接建议」的系统身份库，每次由 ${Brand.productName} 当场按网站 / App 匹配。") }
+        ), footer = "填充只读这台手机上的保险箱，不联网取密码；没登录${Brand.productName}账号也能填。", footerTone = null)
+        item("tail") { VaultNote("Android 没有 iOS 那种「预先登记账号、键盘上直接建议」的系统身份库，每次由${Brand.productName}当场按网站 / App 匹配。") }
     }
 }
 

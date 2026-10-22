@@ -195,7 +195,7 @@ private fun AutofillPanel(activity: FragmentActivity, parsed: ParsedFields, onPi
         if (!unlocked) {
             Column(Modifier.verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 // 设计侧 199 答复第 12 条：解锁页那句改为这一句
-                Text(if (faceAvailable) "解锁后才能填充。生物识别通过即可，不用打开 ${Brand.productName}。" else "解锁后才能填充。主密码不保存、不上传 —— 填充时也一样。",
+                Text(if (faceAvailable) "解锁后才能填充。生物识别通过即可，不用打开${Brand.productName}。" else "解锁后才能填充。主密码不保存、不上传 —— 填充时也一样。",
                     color = c.muted, style = TextStyle(fontSize = 13.sp, lineHeight = 20.sp))
                 if (faceAvailable) {
                     UmbraButton(if (faceScanning) "识别中…" else "用${name}解锁", { startFace() }, Modifier.fillMaxWidth(), enabled = !faceScanning, height = 46.dp)

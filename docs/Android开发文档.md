@@ -220,14 +220,15 @@ R8 的问题只在运行时暴露（序列化类被裁、反射找不到），�
 
 ### 品牌名（sam 10-22 拍板：对外「悠蜗」，Umbra 只作内部代号）
 
-**单一来源 `app/Brand.kt`**（productName 悠蜗 / productNameEn Youwo（占位）/ codename Umbra）。改名只改它，然后重跑两个脚本：
+**单一来源 `app/Brand.kt`**（productName 悠蜗 / productNameEn Youwo（占位，只给写不了中文的地方用）/ displayNameEn（英文界面显示的名字，英文名定之前 = productName，sam 10-22）/ codename Umbra）。改名只改它，然后重跑两个脚本：
 - `python3 -I tools/gen_brand.py` → `res/values*/brand.xml`：app_name、brand_name，以及 manifest 里没法带 %s 的整句 label（分享面板「记到 悠蜗 灵感」）；
 - `python3 -I tools/gen_strings.py` → 生成 `strings_ios.xml` 时把 iOS 文案里的占位符 `{brand}`（iOS 5fe6fcc 起）和残留的整词「Umbra」换成该语言的产品名（key 不动，`R.string.s_xxx` 不受影响）。⚠️ 生成器读的是 `../UmbraiOS` 的**工作区**：iOS 那边改到一半时别跑，要对某个分支就先 `git show <提交>:UmbraiOS/Resources/Localizable.xcstrings` 取到别处、用 `UMBRA_IOS=` 指过去；
 - 手写资源里带产品名的句子写 `%1$s`，调用处传 `stringResource(R.string.brand_name)`；Kotlin 写死中文的句子用 `${Brand.productName}`；
-- 安装包文件名由 `app/build.gradle.kts` 正则读 productNameEn：`Youwo-<版本>-<类型>.apk`；
+- 安装包文件名由 `app/build.gradle.kts` 正则读 productNameEn：`Youwo-<版本>-<类型>.apk` —— **Android 侧 productNameEn 唯一的用处**（文件名要 ASCII）；英文界面一律读 displayNameEn；
+- 空格规则（全端统一）：产品名挨着汉字或中文标点时两边不留空格，挨着英文或数字时留一个；「 · 」「 › 」分隔符带的空格照留。gen_strings.py 生成时按这条去空格；
 - 单独显示的名字（登录页标题、关于、主题作者兜底）按界面语言取 `R.string.brand_name`；字母标 `Brand.monogram`（仍是 U，换不换由设计定）；记账导出文件名 `悠蜗-账目-…`，旧前缀 `umbra-账目-` 仍在清理名单里。
 
-`BrandTest` 守着：brand.xml 与 Brand.kt 一致；所有字符串资源的值里没有代号、没有残留的 `{brand}`；产品名不在 Brand.kt / 生成文件之外写死；Kotlin 界面文案里没有代号。`DesignSystemCopyTest.noHardcodedBrandInDesignSystem` 守公共件。
+`BrandTest` 守着：brand.xml 与 Brand.kt 一致；所有字符串资源的值里没有代号、没有残留的 `{brand}`、英文名定之前没有 productNameEn；产品名和中文之间没有空格；产品名不在 Brand.kt / 生成文件之外写死；Kotlin 界面文案里没有代号。`DesignSystemCopyTest.noHardcodedBrandInDesignSystem` 守公共件。
 
 **有意不改的（用户看不见，或改了会断数据 / 断对端）**：
 | 类别 | 现状 | 不改的理由 |

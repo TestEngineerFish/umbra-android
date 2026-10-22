@@ -599,7 +599,7 @@ private fun EmptyState(isAssistant: Boolean, title: String) {
     Column(Modifier.fillMaxWidth().padding(vertical = 60.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Column(Modifier.widthIn(max = 250.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(if (isAssistant) "跟秘书说点什么" else "直接吩咐「$title」做事", color = c.text, style = TextStyle(fontSize = 15.sp, fontWeight = UmbraType.weight560), textAlign = TextAlign.Center)
-            Text(if (isAssistant) "描述你的目标就行，${Brand.productName} 会拆活、派活。" else "秘书会把任务派给这台设备。", color = c.muted, style = TextStyle(fontSize = 13.sp, lineHeight = 20.8.sp), textAlign = TextAlign.Center)
+            Text(if (isAssistant) "描述你的目标就行，${Brand.productName}会拆活、派活。" else "秘书会把任务派给这台设备。", color = c.muted, style = TextStyle(fontSize = 13.sp, lineHeight = 20.8.sp), textAlign = TextAlign.Center)
         }
     }
 }
