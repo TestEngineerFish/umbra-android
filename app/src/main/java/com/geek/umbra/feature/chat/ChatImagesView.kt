@@ -69,6 +69,7 @@ import androidx.compose.ui.window.DialogProperties
 import coil3.compose.SubcomposeAsyncImage
 import com.geek.umbra.R
 import com.geek.umbra.app.AppGraph
+import com.geek.umbra.designsystem.UmbraAttGonePlaceholder
 import com.geek.umbra.designsystem.UmbraDimens
 import com.geek.umbra.designsystem.UmbraFixedColors
 import com.geek.umbra.designsystem.UmbraIcon
@@ -158,14 +159,6 @@ fun rememberLocalBitmap(data: ByteArray): ImageBitmap? {
     return bmp
 }
 
-/** 取不到的服务端图：灰底 +「附件已删除」（不留一个空格子让人以为还在加载）。 */
-@Composable
-private fun AttGone() {
-    val c = UmbraTheme.colors
-    Box(Modifier.fillMaxSize().background(c.chip), contentAlignment = Alignment.Center) {
-        Text(stringResource(R.string.common_attGone), color = c.faint, style = TextStyle(fontSize = 11.sp))
-    }
-}
 
 /** 一条图片消息的气泡：单图按比例长边 220；多图 3 列固定 68 格外套一层气泡底。 */
 @Composable
@@ -208,7 +201,7 @@ private fun Cell(b: ChatBlock.Image, i: Int, single: Boolean, onOpen: (Int) -> U
             SubcomposeAsyncImage(
                 model = UmbraImages.fileUrl(b.atts[i]), imageLoader = UmbraImages.loader, contentDescription = null,
                 contentScale = if (single) ContentScale.Fit else ContentScale.Crop, modifier = Modifier.fillMaxSize(),
-                error = { AttGone() },
+                error = { UmbraAttGonePlaceholder() },
             )
         } else if (i < b.data.size) {
             rememberLocalBitmap(b.data[i])?.let {
@@ -407,7 +400,7 @@ fun ImageViewer(group: ViewerGroup, onClose: () -> Unit) {
                             }
                         }
                         .graphicsLayer { scaleX = scale; scaleY = scale; translationX = offset.x; translationY = offset.y },
-                    error = { AttGone() },
+                    error = { UmbraAttGonePlaceholder() },
                 )
             }
             Row(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {

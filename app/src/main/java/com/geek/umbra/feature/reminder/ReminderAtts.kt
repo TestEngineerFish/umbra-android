@@ -60,6 +60,7 @@ import androidx.core.content.FileProvider
 import coil3.compose.SubcomposeAsyncImage
 import com.geek.umbra.R
 import com.geek.umbra.app.AppGraph
+import com.geek.umbra.designsystem.UmbraAttGonePlaceholder
 import com.geek.umbra.designsystem.UmbraErrorCard
 import com.geek.umbra.designsystem.UmbraErrorStrip
 import com.geek.umbra.designsystem.UmbraFieldLabel
@@ -136,11 +137,7 @@ internal fun ReminderRemoteImage(fileId: String, size: Dp, radius: Dp, modifier:
         contentScale = ContentScale.Crop,
         modifier = modifier.size(size).clip(shape).border(UmbraDimens.borderW, c.border, shape),
         loading = { Box(Modifier.fillMaxSize().background(c.chip), contentAlignment = Alignment.Center) { UmbraIcon(UmbraIconPaths.image, c.faint, size = 18.dp, strokeWidth = 1.8f) } },
-        error = {
-            Box(Modifier.fillMaxSize().background(c.chip), contentAlignment = Alignment.Center) {
-                Text(stringResource(R.string.common_attGone), color = c.faint, style = TextStyle(fontSize = 10.5.sp))
-            }
-        },
+        error = { UmbraAttGonePlaceholder() },
     )
 }
 

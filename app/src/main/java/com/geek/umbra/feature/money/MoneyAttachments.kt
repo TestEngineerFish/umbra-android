@@ -47,7 +47,6 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -56,8 +55,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
 import coil3.compose.SubcomposeAsyncImage
-import com.geek.umbra.R
 import com.geek.umbra.app.AppGraph
+import com.geek.umbra.designsystem.UmbraAttGonePlaceholder
 import com.geek.umbra.designsystem.UmbraDimens
 import com.geek.umbra.designsystem.UmbraErrorCard
 import com.geek.umbra.designsystem.UmbraErrorStrip
@@ -377,23 +376,6 @@ private fun ThumbPlaceholder() {
     }
 }
 
-/**
- * 「附件已删除」占位（iOS UmbraAttGone.swift）：服务端已经没有这张（在「管理存储」里删掉了）—— 灰底 + 那句话，不画成「还在加载」。
- * 404 和断网在加载失败那一档里分不开，所以断网时也会出现；断网时屏上别处已经有离线条说明。
- */
-@Composable
-private fun AttGonePlaceholder() {
-    val c = UmbraTheme.colors
-    Column(
-        Modifier.fillMaxSize().background(c.chip).padding(4.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterVertically),
-    ) {
-        UmbraIcon(UmbraIconPaths.image, c.faint, size = 16.dp, strokeWidth = 1.8f)
-        // 这一句是在回答「图呢」：用 muted，不是装饰用的 faint（227 §二2）。
-        Text(stringResource(R.string.common_attGone), color = c.muted, maxLines = 1, overflow = TextOverflow.Ellipsis, style = TextStyle(fontSize = 10.5.sp))
-    }
-}
 
 /**
  * 编辑态缩略图右上角的删除角标（iOS UmbraPrimitives.swift:109 UmbraAttachRemoveBadge）：视觉圆 20、贴角撑 44，
@@ -422,7 +404,7 @@ private fun AttThumb(e: MoneyEntryDTO, a: MoneyAttDTO) {
             // 44 的 × 钉在 78 的图上会把图的正中心划进删除区。原始截图没有删除键，冲突不存在。
             SubcomposeAsyncImage(
                 model = model, imageLoader = UmbraImages.loader, contentDescription = null, contentScale = ContentScale.Crop,
-                loading = { ThumbPlaceholder() }, error = { AttGonePlaceholder() },
+                loading = { ThumbPlaceholder() }, error = { UmbraAttGonePlaceholder() },
                 modifier = Modifier.size(THUMB).clip(shape).border(UmbraDimens.borderW, c.border, shape)
                     .then(if (a.origin) Modifier.clickable(role = Role.Image) { previewOrigin(a.file_id) } else Modifier),
             )
@@ -448,7 +430,7 @@ private fun previewOrigin(fileId: String) {
             SubcomposeAsyncImage(
                 model = attModel(fileId), imageLoader = UmbraImages.loader, contentDescription = "原始截图", contentScale = ContentScale.Fit,
                 loading = { Box(Modifier.fillMaxWidth().heightIn(min = 200.dp)) { ThumbPlaceholder() } },
-                error = { Box(Modifier.fillMaxWidth().heightIn(min = 200.dp)) { AttGonePlaceholder() } },
+                error = { Box(Modifier.fillMaxWidth().heightIn(min = 200.dp)) { UmbraAttGonePlaceholder() } },
                 modifier = Modifier.fillMaxWidth().heightIn(max = 560.dp).clip(RoundedCornerShape(UmbraDimens.radiusShot)),
             )
         }

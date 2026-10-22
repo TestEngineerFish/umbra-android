@@ -44,7 +44,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -55,8 +54,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil3.compose.SubcomposeAsyncImage
-import com.geek.umbra.R
 import com.geek.umbra.app.AppGraph
+import com.geek.umbra.designsystem.UmbraAttGonePlaceholder
 import com.geek.umbra.designsystem.UmbraButton
 import com.geek.umbra.designsystem.UmbraButtonKind
 import com.geek.umbra.designsystem.UmbraDimens
@@ -265,17 +264,7 @@ private fun MoneyAttImage(fileId: String, modifier: Modifier, radius: Dp, scale:
                 UmbraIcon(UmbraIconPaths.image, c.faint, size = 18.dp, strokeWidth = 1.8f)
             }
         },
-        error = {
-            Column(
-                Modifier.fillMaxSize().clip(RoundedCornerShape(radius)).background(c.chip).padding(4.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterVertically),
-            ) {
-                UmbraIcon(UmbraIconPaths.image, c.faint, size = 16.dp, strokeWidth = 1.8f)
-                // 这一句是在回答「图呢」：用 muted，不是装饰用的 faint（227 §二2）。
-                MoneyFitText(stringResource(R.string.common_attGone), c.muted, 10.5.sp, minScale = 0.8f)
-            }
-        },
+        error = { UmbraAttGonePlaceholder(radius) },
     )
 }
 
