@@ -1,5 +1,6 @@
 package com.geek.umbra.designsystem
 
+import com.geek.umbra.app.Brand
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -54,5 +55,21 @@ class DesignSystemCopyTest {
             val hits = code.mapIndexedNotNull { i, line -> cjk.find(line)?.let { "${i + 1}: ${it.value}" } }
             assertTrue("$name 里写死了中文：$hits", hits.isEmpty())
         }
+    }
+
+    /**
+     * 公共件全 App 共用，产品名写死一处就是全 App 一起错（品牌收口 10-22）：designsystem 下所有文件的字面量里
+     * 不许有产品名或代号（整词，UmbraTheme 这类标识符不算）。要用产品名走 Brand.productName / R.string.brand_name。
+     */
+    @Test fun noHardcodedBrandInDesignSystem() {
+        val literal = Regex("\"(?:[^\"\\\\]|\\\\.)*\"")
+        val brand = Regex("(?<![A-Za-z\\-.])(${Brand.codename}|${Brand.productNameEn})(?![A-Za-z\\-])|${Brand.productName}")
+        val hits = file("src/main/java/com/geek/umbra/designsystem").walk().filter { it.extension == "kt" }.flatMap { f ->
+            f.readLines().mapIndexedNotNull { i, line ->
+                val code = if (line.trimStart().startsWith("*")) "" else line.substringBefore("//")
+                literal.findAll(code).firstOrNull { brand.containsMatchIn(it.value) }?.let { "${f.name}:${i + 1} ${it.value}" }
+            }
+        }.toList()
+        assertTrue("公共件里写死了产品名：$hits", hits.isEmpty())
     }
 }

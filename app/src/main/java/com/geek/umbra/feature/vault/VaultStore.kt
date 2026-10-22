@@ -8,6 +8,7 @@
 // 推之前的编码（encodeForPush）刻意同步做：它和「落盘序号」「代次」必须在同一拍里，拆成异步就要再造一套锁。
 package com.geek.umbra.feature.vault
 
+import com.geek.umbra.app.Brand
 import com.geek.umbra.app.AppGraph
 import com.geek.umbra.model.TrashList
 import com.geek.umbra.net.HttpResult
@@ -201,7 +202,7 @@ object VaultStore {
             is HttpResult.Offline -> fallBackToCache("连不上服务器：${r.message}")
             is HttpResult.Fail -> when (r.status) {
                 // 401 / 403 只剩一种成因：这台手机的登录服务端不认。出口是账号页（解锁页按「登录」二字给「去账号」）。
-                401, 403 -> set { it.copy(error = "还没登录 Umbra 账号，或登录已失效。去「我 › 账号」登录后再试。") }
+                401, 403 -> set { it.copy(error = "还没登录 ${Brand.productName} 账号，或登录已失效。去「我 › 账号」登录后再试。") }
                 404 -> fallBackToCache("服务器未部署同步接口（请更新并重启服务端）")
                 else -> fallBackToCache("服务器返回 ${r.status}")
             }

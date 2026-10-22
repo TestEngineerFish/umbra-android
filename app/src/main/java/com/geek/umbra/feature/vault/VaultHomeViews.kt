@@ -53,6 +53,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.geek.umbra.app.Brand
 import com.geek.umbra.R
 import com.geek.umbra.app.AppGraph
 import com.geek.umbra.designsystem.UmbraButton
@@ -382,7 +383,7 @@ private fun ErrorCard(why: String, wrongCount: Int, onClear: () -> Unit) {
             Text("没能解锁", color = c.dangerText, style = TextStyle(fontSize = 14.5.sp, fontWeight = UmbraType.weight560))
         }
         Text(
-            if (wrongCount >= 3 && !isConnectionProblem(why)) "已经错了 $wrongCount 次。忘记主密码只能用 Secret Key 恢复，Umbra 这边没有备份。" else why,
+            if (wrongCount >= 3 && !isConnectionProblem(why)) "已经错了 $wrongCount 次。忘记主密码只能用 Secret Key 恢复，${Brand.productName} 这边没有备份。" else why,
             color = c.dangerText, style = TextStyle(fontSize = 13.sp, lineHeight = 20.sp),
         )
         Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {

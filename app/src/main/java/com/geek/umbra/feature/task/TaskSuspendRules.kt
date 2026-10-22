@@ -5,6 +5,7 @@
 // 纯 Kotlin，配 JUnit 用例（TaskSuspendRulesTest.kt + 两端共享夹具 TaskSuspendFixtureTest.kt）。
 package com.geek.umbra.feature.task
 
+import com.geek.umbra.app.Brand
 import com.geek.umbra.model.TaskItem
 import com.geek.umbra.model.TaskWaitingDevice
 import com.geek.umbra.net.UmbraUrl
@@ -45,7 +46,7 @@ object TaskSuspendCopy {
     const val copyDetail = "复制详情"
 
     /** 手机上接不了 PC 的程序，所以不出「接入能力」，改说这件事去哪做（iOS 独有那句，Android 同样适用）。 */
-    const val iosCapabilityHint = "在电脑上打开 Umbra 的「能力」页接上。"
+    const val iosCapabilityHint = "在电脑上打开 ${Brand.productName} 的「能力」页接上。"
 
     // 可以接着跑了（resume_ready: true，批次 224）
     const val readyDeviceTitle = "「{{device}}」上线了，要接着跑吗？"

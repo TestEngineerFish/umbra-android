@@ -7,7 +7,9 @@ iOS 改了文案重跑一次即可同步，不会各改各的。
 - 中文字面 key（iOS 里 key 本身就是中文）：资源名 `s_<sha1 前 8 位>`，映射表写到 docs/reference/strings-map.tsv，
   移植时按中文原文查资源名；
 - 格式符：%@ → %s，%lld/%ld → %d；一句里有多个参数时一律补成位置参数（%1$s），否则 lint 报错；
-- 只有中文没有英文的条目只写进 values/，英文模式下回落中文（与 iOS 行为一致）。
+- 只有中文没有英文的条目只写进 values/，英文模式下回落中文（与 iOS 行为一致）；
+- 产品名：iOS 文案里的「Umbra」（整词）换成 app/Brand.kt 的产品名，中文表用 productName、英文表用 productNameEn。
+  key 不动（中文字面 key 的资源名仍按 iOS 原文算），所以 Kotlin 里的 R.string 引用不受改名影响。
 用法：python3 -I tools/gen_strings.py   （UmbraAndroid 根目录，要求 ../UmbraiOS 并排；在 worktree 里跑时用 UMBRA_IOS=<iOS 仓路径> 指定）
 """
 import os, hashlib, json, pathlib, re, sys
@@ -18,6 +20,18 @@ src = ios / "UmbraiOS/Resources/Localizable.xcstrings"
 if not src.exists():
     sys.exit(f"找不到 {src}")
 data = json.loads(src.read_text())["strings"]
+
+# 产品名只在 Brand.kt 一处（tools/gen_brand.py 的 load()）。-I 模式下脚本目录不在 sys.path，按路径加载。
+import importlib.util
+sys.dont_write_bytecode = True  # 别在 tools/ 下留 __pycache__
+_spec = importlib.util.spec_from_file_location("gen_brand", root / "tools/gen_brand.py")
+_gb = importlib.util.module_from_spec(_spec); _spec.loader.exec_module(_gb)
+BRAND = _gb.load()
+# 整词匹配：UmbraPC、X-Umbra-Session 这类标识符里的不算（前后是字母或连字符就不换）。
+CODENAME = re.compile(r"(?<![A-Za-z\-])" + re.escape(BRAND["codename"]) + r"(?![A-Za-z\-])")
+
+def brand(s: str, lang: str) -> str:
+    return CODENAME.sub(BRAND["productName"] if lang == "zh" else BRAND["productNameEn"], s)
 
 FMT = re.compile(r"%(\d+\$)?(@|lld|ld|d|lf|f|%)")
 
@@ -64,10 +78,10 @@ for key in sorted(data):
     z = val(e, "zh-Hans") or key
     has_fmt = bool([m for m in FMT.finditer(z) if m.group(2) != "%"])
     attr = "" if has_fmt else ' formatted="false"' if "%" in z else ""
-    zh.append(f'    <string name="{n}"{attr}>{esc(conv_fmt(z))}</string>')
+    zh.append(f'    <string name="{n}"{attr}>{esc(conv_fmt(brand(z, "zh")))}</string>')
     v = val(e, "en")
     if v:
-        en.append(f'    <string name="{n}"{attr}>{esc(conv_fmt(v))}</string>')
+        en.append(f'    <string name="{n}"{attr}>{esc(conv_fmt(brand(v, "en")))}</string>')
     if n.startswith("s_"):
         mapping.append(f"{n}\t{key}")
 

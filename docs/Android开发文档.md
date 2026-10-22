@@ -84,7 +84,7 @@ UmbraAndroid/
 export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
 ./gradlew :app:compileDebugKotlin   # 最快的编译检查
 ./gradlew :app:testDebugUnitTest    # 纯判据用例
-./gradlew :app:assembleDebug        # 编出 app/build/outputs/apk/debug/app-debug.apk
+./gradlew :app:assembleDebug        # 编出 app/build/outputs/apk/debug/Youwo-<版本>-debug.apk（文件名取 Brand.productNameEn）
 ./gradlew :app:assembleRelease      # R8 压缩混淆；改了序列化模型 / 加了依赖必须编一次并装到模拟器上跑
 ./gradlew :app:lintDebug            # Android Lint
 ```
@@ -217,6 +217,29 @@ R8 的问题只在运行时暴露（序列化类被裁、反射找不到），�
 | 「附件已删除」占位聊天、提醒、记账各一份 | c5d5e6c | `designsystem/UmbraAttGone.kt`（照 iOS `UmbraAttGonePlaceholder`） |
 | 选择弹层四份（我 / 记账 / 执勤 / 保险箱） | 87aada8 | `designsystem/UmbraSheets.kt` 的 `UmbraChoice`（照 iOS `UmbraSheetLayer`） |
 | 提醒列表、任务详情、记忆、记账设置、存储用量自写三态 | 173e4c0 | 都走 `UmbraScreenPhase` / `UmbraPhaseFailedCard`；任务详情的四档判据仍在 `TaskDetailRules`（多「不存在」一档，同 iOS） |
+
+### 品牌名（sam 10-22 拍板：对外「悠蜗」，Umbra 只作内部代号）
+
+**单一来源 `app/Brand.kt`**（productName 悠蜗 / productNameEn Youwo（占位）/ codename Umbra）。改名只改它，然后重跑两个脚本：
+- `python3 -I tools/gen_brand.py` → `res/values*/brand.xml`：app_name、brand_name，以及 manifest 里没法带 %s 的整句 label（分享面板「记到 悠蜗 灵感」）；
+- `python3 -I tools/gen_strings.py` → 生成 `strings_ios.xml` 时把 iOS 文案里整词的「Umbra」换成该语言的产品名（key 不动，`R.string.s_xxx` 不受影响）；
+- 手写资源里带产品名的句子写 `%1$s`，调用处传 `stringResource(R.string.brand_name)`；Kotlin 写死中文的句子用 `${Brand.productName}`；
+- 安装包文件名由 `app/build.gradle.kts` 正则读 productNameEn：`Youwo-<版本>-<类型>.apk`。
+
+`BrandTest` 守着：brand.xml 与 Brand.kt 一致；所有字符串资源的值里没有代号；产品名不在 Brand.kt / 生成文件之外写死；Kotlin 界面文案里没有代号。`DesignSystemCopyTest.noHardcodedBrandInDesignSystem` 守公共件。
+
+**有意不改的（用户看不见，或改了会断数据 / 断对端）**：
+| 类别 | 现状 | 不改的理由 |
+| --- | --- | --- |
+| applicationId / namespace / 包名 | `com.geek.umbra` | 改了是另一个 App：装不上覆盖、数据全丢；推送 / 统计按它认端 |
+| 类名、样式名、资源文件名 | `Umbra*`（UmbraApp、UmbraTheme、Theme.Umbra、umbra_autofill_service.xml…） | 代码标识符；自动填充服务的类名还登记在系统设置里，改了用户要重新选 |
+| 资源 key | `R.string.Umbra` 等（iOS key 原样） | key 跟 iOS 走，值已换成产品名 |
+| Prefs / DataStore 键、filesDir 子目录、Keystore 别名 | 沿用 iOS 键名 | 改了读不到旧数据 |
+| 通知渠道 ID | 原样 | 改 ID 等于新建渠道，用户关过的通知设置会丢；渠道**显示名**来自资源，本来就不含产品名 |
+| 请求头 | `X-Umbra-Session` / `X-Umbra-Error` / `X-Umbra-Initiator` | 服务端协议 |
+| 剪贴板 label | `ClipData.newPlainText("Umbra", …)`（4 处） | 系统不展示 label |
+| 测试夹具 | `taskSuspendCases.json`、主题夹具 author | PC / 服务端仓的原样拷贝；比较前用 Brand 换掉 |
+| ⚠️ 相册目录 | `Pictures/Umbra`（聊天存图）、`<目录>/Umbra`（格式转换） | **拿不准，待 sam 定**：相册里看得见，但改名会把旧图和新图拆成两个相册 |
 
 ## 六、需要服务端配合
 

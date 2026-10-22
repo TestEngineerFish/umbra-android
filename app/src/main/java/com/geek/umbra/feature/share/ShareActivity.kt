@@ -152,7 +152,10 @@ private fun ConvertCard(cm: ConvertModel, onClose: () -> Unit, switcher: @Compos
     }
 }
 
-/** key → 那一句。分享面板的文案在 strings_share.xml（iOS 扩展自己的字符串表）。 */
+/**
+ * key → 那一句。分享面板的文案在 strings_share.xml（iOS 扩展自己的字符串表）。
+ * 带产品名的几句写成 %1$s，这里统一传 brand_name（按界面语言取中文名 / 英文名，见 app/Brand.kt）；不带占位的句子多一个参数无妨。
+ */
 @Composable
 private fun shareText(key: String): String = stringResource(
     when (key) {
@@ -167,6 +170,7 @@ private fun shareText(key: String): String = stringResource(
         "share.insp.renewInApp" -> R.string.share_insp_renewInApp
         else -> R.string.share_insp_failed
     },
+    stringResource(R.string.brand_name),
 )
 
 /** 面板本体：标题栏（取消 / 标题 / 保存）、失败那一句、正文、缩略图、「帮我查查」。 */
@@ -232,7 +236,7 @@ private fun ShareSheet(model: ShareModel, onCancel: () -> Unit, onOpenApp: () ->
                 // Android 独有：未登录时给一颗「打开 Umbra」（iOS 扩展打不开宿主 App，只能说一句）。
                 if (model.messageKey == "share.insp.signedOut") {
                     Spacer(Modifier.height(UmbraDimens.sp4))
-                    UmbraButton(stringResource(R.string.share_insp_openApp), onOpenApp, Modifier.fillMaxWidth(), kind = UmbraButtonKind.Secondary)
+                    UmbraButton(stringResource(R.string.share_insp_openApp, stringResource(R.string.brand_name)), onOpenApp, Modifier.fillMaxWidth(), kind = UmbraButtonKind.Secondary)
                 }
             }
             switcher()

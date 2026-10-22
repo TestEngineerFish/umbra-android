@@ -43,6 +43,14 @@ kotlin {
     jvmToolchain(17)
 }
 
+// 安装包文件名用对外英文名（Youwo-0.1.0-release.apk）：产品名只在 app/Brand.kt 一处，这里正则读它，不另写一份。
+// 不用中文名：非 ASCII 文件名在上传、命令行、部分分发平台上会出问题。
+val brandEn: String = Regex("""const val productNameEn = "([^"]+)"""")
+    .find(file("src/main/java/com/geek/umbra/app/Brand.kt").readText())!!.groupValues[1]
+base {
+    archivesName.set("$brandEn-${android.defaultConfig.versionName}")
+}
+
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)

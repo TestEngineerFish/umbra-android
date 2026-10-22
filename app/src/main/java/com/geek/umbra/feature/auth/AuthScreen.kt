@@ -44,6 +44,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.geek.umbra.app.Brand
 import com.geek.umbra.app.AppGraph
 import com.geek.umbra.designsystem.UmbraButton
 import com.geek.umbra.designsystem.UmbraCard
@@ -152,7 +153,7 @@ fun AuthScreen(gate: Gate) {
                 fail?.let { FailCard(it, lockLeft) }
                 when {
                     oidc -> {
-                        Text("用 Umbra 账号登录", color = c.text, style = UmbraType.sectionTitle)
+                        Text("用 ${Brand.productName} 账号登录", color = c.text, style = UmbraType.sectionTitle)
                         Text(
                             if (waitingOidc) "等登录页那边登录…  登录页没有自动打开的话，再按一次。"
                             else "会打开系统的登录页，在那里登录；没有账号的话在那一页注册。登录完成后自动回到这里。",
@@ -253,7 +254,7 @@ fun AuthScreen(gate: Gate) {
                     modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable { auth.useStandalone(); AppGraph.router.tab = com.geek.umbra.navigation.Tab.standaloneHome }.padding(horizontal = 12.dp, vertical = 12.dp),
                 )
                 Text(
-                    "提醒、保险箱、常用语这些本机功能不用登录；聊天、任务要登录 Umbra 账号，到时在「我 › 账号」里登。",
+                    "提醒、保险箱、常用语这些本机功能不用登录；聊天、任务要登录 ${Brand.productName} 账号，到时在「我 › 账号」里登。",
                     color = c.muted, style = TextStyle(fontSize = 12.sp, lineHeight = 17.sp), textAlign = TextAlign.Center,
                 )
             }
@@ -270,7 +271,7 @@ private fun Wordmark() {
             Text("U", color = c.onAccent, style = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.SemiBold))
         }
         Spacer(Modifier.width(10.dp))
-        Text("Umbra", color = c.text, style = TextStyle(fontSize = 17.sp, fontWeight = UmbraType.weight560))
+        Text(Brand.productName, color = c.text, style = TextStyle(fontSize = 17.sp, fontWeight = UmbraType.weight560))
     }
 }
 

@@ -28,6 +28,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import com.geek.umbra.app.Brand
 import com.geek.umbra.BuildConfig
 import com.geek.umbra.R
 import com.geek.umbra.app.AppGraph
@@ -168,8 +169,8 @@ fun DevicesScreen() {
         title = "设备与能力", onBack = { router.back() }, refreshing = refreshing,
         onRefresh = { scope.launch { refreshing = true; DevicesStore.reload(); refreshing = false } },
     ) {
-        introItem("装了 Umbra 客户端的机器就是执行设备。Android 手机不是执行设备，这里只看状态。")
-        val footer = if (devices.isEmpty()) "还没有设备注册上来。在电脑上装好 Umbra 客户端并填上同一个服务端地址就会出现。"
+        introItem("装了 ${Brand.productName} 客户端的机器就是执行设备。Android 手机不是执行设备，这里只看状态。")
+        val footer = if (devices.isEmpty()) "还没有设备注册上来。在电脑上装好 ${Brand.productName} 客户端并填上同一个服务端地址就会出现。"
         else "能力、授权都在设备详情里只读查看。"
         if (devices.isEmpty()) {
             item(key = "none") { MeNote(footer) }
@@ -527,7 +528,7 @@ fun AboutScreen() {
     val version = "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE}) · Android"
     UmbraScreen(title = "关于", onBack = { router.back() }) {
         settingSection("about", null, listOf(
-            UmbraSettingRow("Umbra", value = version),
+            UmbraSettingRow(Brand.productName, value = version),
             UmbraSettingRow("客户端 ID", value = AppGraph.prefs.clientId, mono = true, action = {
                 copyPlainText(AppGraph.prefs.clientId); router.showToast("已复制")
             }),

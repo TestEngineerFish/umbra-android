@@ -6,20 +6,19 @@
     <string name="share_insp_empty">Not saved: there\'s nothing to save. Add some text or an image.</string>
     <string name="share_insp_failed">Not saved. Your text is still here — try again.</string>
     <string name="share_insp_image">Shared image</string>
-    <string name="share_insp_notConfigured">Not saved: no server is set up. Open Umbra to connect first.</string>
+    <string name="share_insp_notConfigured">Not saved: no server is set up. Open %1$s to connect first.</string>
     <string name="share_insp_offline">Not saved: couldn\'t reach the server. Your text is still here — try Save again later.</string>
     <string name="share_insp_placeholder">Write something…</string>
     <string name="share_insp_rejected">Not saved: the server didn\'t accept it. Retrying as-is won\'t help.</string>
     <string name="share_insp_removeImage">Remove image</string>
-    <string name="share_insp_renewInApp">Can\'t save: your sign-in needs a refresh. Open Umbra once, then share again.</string>
+    <string name="share_insp_renewInApp">Can\'t save: your sign-in needs a refresh. Open %1$s once, then share again.</string>
     <string name="share_insp_research">Look into it</string>
     <string name="share_insp_save">Save</string>
     <string name="share_insp_saved">Saved.</string>
     <string name="share_insp_serverError">Not saved: the server ran into an error. Your text is still here — try again later.</string>
-    <string name="share_insp_signedOut">Can\'t save: you\'re signed out. Open Umbra to sign in, then share again.</string>
-    <string name="share_insp_title">Save to Umbra</string>
+    <string name="share_insp_signedOut">Can\'t save: you\'re signed out. Open %1$s to sign in, then share again.</string>
     <string name="share_insp_tooLarge">Not saved: one image is over the server\'s size limit. Remove it and try again.</string>
-    <string name="share_insp_openApp">Open Umbra</string>
+    <string name="share_insp_openApp">Open %1$s</string>
     <!-- 分享进来的是图时底部那个切换（iOS share.conv.modeInsp / modeConvert，扩展表）。 -->
     <string name="share_conv_modeInsp">Save as Idea</string>
     <string name="share_conv_modeConvert">Convert on Computer</string>

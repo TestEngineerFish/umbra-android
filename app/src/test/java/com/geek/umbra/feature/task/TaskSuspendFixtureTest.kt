@@ -1,5 +1,6 @@
 package com.geek.umbra.feature.task
 
+import com.geek.umbra.app.Brand
 import com.geek.umbra.net.UmbraJson
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonNull
@@ -48,7 +49,8 @@ class TaskSuspendFixtureTest {
             assertEquals("$name·详情的钮", detailButtons, (if (ready) listOf(TaskSuspendCopy.resume) else emptyList()) + listOf(TaskSuspendCopy.stop, TaskSuspendCopy.copyDetail))
             val chatButtons = (e["chatButtons"] as? JsonArray)?.map { str(it) } ?: emptyList()
             assertEquals("$name·聊天的钮", chatButtons, if (ready) listOf(TaskSuspendCopy.resume) else emptyList())
-            assertEquals("$name·iOS 独有那句", str((e["ios"] as? JsonObject)?.get("hint")), d?.iosHint)
+            // 夹具是 PC 仓的原样拷贝，句子里写的是代号；对外产品名以 Brand 为准（品牌收口 10-22），比之前换掉。
+            assertEquals("$name·iOS 独有那句", str((e["ios"] as? JsonObject)?.get("hint"))?.replace(Brand.codename, Brand.productName), d?.iosHint)
         }
 
         for (c in resumes) {

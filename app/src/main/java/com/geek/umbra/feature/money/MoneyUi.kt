@@ -27,6 +27,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.geek.umbra.app.Brand
 import com.geek.umbra.app.AppGraph
 import com.geek.umbra.designsystem.UmbraDimens
 import com.geek.umbra.designsystem.UmbraErrorCard
@@ -73,7 +74,7 @@ fun MoneyCardNoData(icon: String, title: String) {
 fun MoneyNeedLogin() {
     Column(Modifier.fillMaxWidth().padding(top = 40.dp)) {
         UmbraErrorCard(
-            title = "这个功能要登录 Umbra 账号",
+            title = "这个功能要登录 ${Brand.productName} 账号",
             body = "它的数据在服务器上：聊天、任务、记账、灵感、知识库、设备都是。提醒、保险箱、常用语这些本机功能照常用，要用这些就登录一下。",
             tone = UmbraTone.Warning,
             actions = listOf("去登录" to { AppGraph.auth.goToLogin() }),

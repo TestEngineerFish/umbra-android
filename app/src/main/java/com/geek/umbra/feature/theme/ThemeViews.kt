@@ -61,6 +61,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.geek.umbra.app.Brand
 import com.geek.umbra.R
 import com.geek.umbra.app.AppGraph
 import com.geek.umbra.designsystem.Appearance
@@ -580,7 +581,7 @@ fun ShopThemePage(id: String) {
             }
         }
         settingSection("spec", null, listOf(
-            UmbraSettingRow(str(R.string.theme_specBy), value = e.author.ifEmpty { "Umbra" }),
+            UmbraSettingRow(str(R.string.theme_specBy), value = e.author.ifEmpty { Brand.productName }),
             UmbraSettingRow(str(R.string.theme_specHas), value = str(R.string.theme_specModes)),
             UmbraSettingRow(str(R.string.theme_specPrice), value = priceText(e)),
         ))

@@ -88,6 +88,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.geek.umbra.app.Brand
 import com.geek.umbra.R
 import com.geek.umbra.app.AppGraph
 import com.geek.umbra.designsystem.UmbraDimens
@@ -200,7 +201,7 @@ fun ChatThreadPage(conv: String) {
         val act = afterStorageGrant
         afterStorageGrant = null
         // iOS 那句指向「设置 › Umbra › 照片」，Android 的入口不同，这里换成 Android 的路径说法
-        if (granted) act?.invoke() else router.showToast("没有存储写入权限，去「设置 › 应用 › Umbra › 权限」里开一下")
+        if (granted) act?.invoke() else router.showToast("没有存储写入权限，去「设置 › 应用 › ${Brand.productName} › 权限」里开一下")
     }
 
     // 「+」：相册 / 拍照 / 文件三个入口
@@ -598,7 +599,7 @@ private fun EmptyState(isAssistant: Boolean, title: String) {
     Column(Modifier.fillMaxWidth().padding(vertical = 60.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Column(Modifier.widthIn(max = 250.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(if (isAssistant) "跟秘书说点什么" else "直接吩咐「$title」做事", color = c.text, style = TextStyle(fontSize = 15.sp, fontWeight = UmbraType.weight560), textAlign = TextAlign.Center)
-            Text(if (isAssistant) "描述你的目标就行，Umbra 会拆活、派活。" else "秘书会把任务派给这台设备。", color = c.muted, style = TextStyle(fontSize = 13.sp, lineHeight = 20.8.sp), textAlign = TextAlign.Center)
+            Text(if (isAssistant) "描述你的目标就行，${Brand.productName} 会拆活、派活。" else "秘书会把任务派给这台设备。", color = c.muted, style = TextStyle(fontSize = 13.sp, lineHeight = 20.8.sp), textAlign = TextAlign.Center)
         }
     }
 }

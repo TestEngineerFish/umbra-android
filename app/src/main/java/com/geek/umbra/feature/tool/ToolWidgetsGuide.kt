@@ -32,6 +32,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import com.geek.umbra.app.Brand
 import com.geek.umbra.app.AppGraph
 import com.geek.umbra.designsystem.UmbraDimens
 import com.geek.umbra.designsystem.UmbraScreen
@@ -73,7 +74,7 @@ fun ToolWidgetsGuide() {
                 Steps(
                     listOf(
                         "长按桌面空白处，点「小组件」。有的手机叫「小部件」或「卡片」",
-                        "找到 Umbra，挑「任务」或「今日提醒」，拖到想放的位置",
+                        "找到 ${Brand.productName}，挑「任务」或「今日提醒」，拖到想放的位置",
                         "放好后长按小组件，拖边框可以调大小",
                     ),
                 )
@@ -83,7 +84,7 @@ fun ToolWidgetsGuide() {
             GuideGroup("长按图标记一笔") {
                 Steps(
                     listOf(
-                        "长按桌面上的 Umbra 图标，弹出「记一笔」「记灵感」，点一下直接进对应页面",
+                        "长按桌面上的 ${Brand.productName} 图标，弹出「记一笔」「记灵感」，点一下直接进对应页面",
                         "按住其中一项拖到桌面，会变成一个单独的图标，以后一点就到",
                     ),
                 )

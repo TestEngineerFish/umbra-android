@@ -5,6 +5,7 @@
 // 重试 / 挂起 / 接着跑的判据与字面全在 TaskRetryRules.kt / TaskSuspendRules.kt —— 这里一句都不手写。
 package com.geek.umbra.feature.task
 
+import com.geek.umbra.app.Brand
 import com.geek.umbra.designsystem.UmbraDimens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -197,7 +198,7 @@ fun TaskListView() {
                             }
                             val body = when {
                                 q.isNotEmpty() -> "换个词，或者清掉筛选试试。"
-                                filter == null -> "在聊天里描述目标，Umbra 会自动建任务。"
+                                filter == null -> "在聊天里描述目标，${Brand.productName} 会自动建任务。"
                                 else -> "清掉筛选就能看到全部。"
                             }
                             if (isFiltered) {
