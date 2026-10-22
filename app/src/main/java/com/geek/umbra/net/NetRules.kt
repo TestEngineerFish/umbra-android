@@ -197,6 +197,13 @@ object SessionGuardRules {
         Gate.SessionInvalid -> true
     }
 
+    /**
+     * 半路上的东西还属不属于现在这个会话：开始时记下的代数 [captured] 等于现在的 [current]、且守卫开着。
+     * 会话被吊销 / 登出（哪怕随后又登了另一个号）之后落地的回包、要发的通知都作废（refs TestEngineerFish/umbra#134：
+     * iOS 是推送 payload 带 uid、对不上不展示；Android 没有服务端推送，任务通知是本机拉了再发，同一道门放在这里）。
+     */
+    fun stillCurrent(captured: Int, current: Int, locked: Boolean): Boolean = !locked && captured == current
+
     /** 刚手动登出过的，即使问出来是 open（服务器没有账号功能）也落登录屏。 */
     fun gateAfterSignOut(asked: Gate) = if (asked == Gate.Open) Gate.Login else asked
 }

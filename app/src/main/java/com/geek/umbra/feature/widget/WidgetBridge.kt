@@ -57,6 +57,7 @@ object WidgetBridge {
     fun syncTasks(items: List<TaskItem>) {
         ensureObserving()
         if (AppGraph.guard.locked.value) return
+        val gen = AppGraph.guard.generation
         AppGraph.scope.launch {
             // 一把锁串起来：当前步名要拉详情（挂起点），两轮轮询的回包不能交错写快照 / 发通知。
             syncLock.withLock {
@@ -76,7 +77,7 @@ object WidgetBridge {
                     redraw(task = true, reminder = false)
                 }
                 // 与小组件同一份列表、同一次调用 —— 同源同 tick。
-                TaskProgressNotifier.sync(ctx, items)
+                TaskProgressNotifier.sync(ctx, items, gen)
             }
         }
     }

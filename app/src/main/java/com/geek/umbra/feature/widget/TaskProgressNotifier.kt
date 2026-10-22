@@ -15,7 +15,8 @@
 //   · 完成：同上一条渠道，标题 = 任务名，正文 =「全部完成 · 耗时 4分08秒」，动作「查看产出」；
 //     App 在前台且正停在这条任务详情时不发。
 //   · 已取消 / 找不到：答复四态之外，沿用原来的收尾（LiveActivityRules.finalFrame 那一句）。
-//   · 登出：全部撤掉（含结果那一条：任务名是联网数据）。
+//   · 登出：全部撤掉（含结果那一条：任务名是联网数据）。被吊销 / 全部下线 / 注销同样走守卫「关」；
+//     半路上的那一轮按会话代数作废，不在撤完之后再补发一条（refs TestEngineerFish/umbra#134）。
 // 一次只跟一个任务（同 iOS：胶囊态就是「当前那个任务」）。数据与任务小组件同源同 tick：都由 WidgetBridge.syncTasks 那一次调用驱动。
 package com.geek.umbra.feature.widget
 
@@ -48,6 +49,7 @@ import com.geek.umbra.model.TaskItem
 import com.geek.umbra.navigation.Route
 import com.geek.umbra.net.BackgroundWork
 import com.geek.umbra.net.ReasonKind
+import com.geek.umbra.net.SessionGuardRules
 import com.geek.umbra.net.UmbraUrl
 import com.geek.umbra.net.str
 import kotlinx.coroutines.launch
@@ -76,6 +78,14 @@ object TaskProgressNotifier {
     private var lastPosted: String? = null
     /** 这个进程里认领过没有（见 [adopt]）。只在第一次 sync 之前做一次。 */
     private var adopted = false
+    /**
+     * 这一轮 sync 属于哪一代会话（[com.geek.umbra.app.SessionGuard.generation]）。sync 里有挂起点（拉当前步名、问详情）：
+     * 半路被踢 / 登出时守卫已经 [endAll] 撤过一遍，这一轮再发就是把上一个会话的任务名补回通知栏（refs TestEngineerFish/umbra#134）。
+     */
+    @Volatile private var syncGen = 0
+
+    /** 发之前核一次：这一代会话还在、守卫开着。iOS 是推送 payload 的 uid 对不上不展示，Android 是本机拉了再发，门放在发之前。 */
+    private fun mayPost(gen: Int) = SessionGuardRules.stillCurrent(gen, AppGraph.guard.generation, AppGraph.guard.locked.value)
 
     /** 计时器起点：任务的 created_at 解不出时，用这个进程第一次看到它执行的时刻（答复 #9）。 */
     private val firstSeen = mutableMapOf<String, Long>()
@@ -162,7 +172,9 @@ object TaskProgressNotifier {
         TaskTime.parse(task.created_at)?.toEpochMilli() ?: firstSeen.getOrPut(task.id) { now }
 
     /** 拿最新的任务列表同步一次（iOS: UmbraLiveActivityController.sync）。由 WidgetBridge 在同一把锁里调。 */
-    suspend fun sync(ctx: Context, items: List<TaskItem>) {
+    suspend fun sync(ctx: Context, items: List<TaskItem>, gen: Int) {
+        syncGen = gen
+        if (!mayPost(gen)) return
         listen()
         // 跟哪个：正在跟的那个还在常驻态就继续跟；否则挑第一个执行中 / 需确认的。
         // 挂起的那个让位给别的正在跑 / 等确认的任务（胶囊态说的是「现在在动的那个」）。
@@ -257,7 +269,8 @@ object TaskProgressNotifier {
     fun retryFailed(ctx: Context, id: String, message: String) {
         val old = runCatching { nm(ctx).activeNotifications.firstOrNull { it.tag == TAG_DONE + id } }.getOrNull()
         val title = old?.notification?.extras?.getCharSequence(Notification.EXTRA_TITLE)?.toString() ?: "任务失败"
-        postResult(ctx, id, title, message, emptyList())
+        // 人在当前会话里点的「重试」：按现在这一代核（不借 sync 记下的那一代 —— 刚登回来、还没 sync 过时它是旧的）。
+        postResult(ctx, id, title, message, emptyList(), gen = AppGraph.guard.generation)
     }
 
     /** 挂起 / 待执行时那一句：和任务列表那一行同一句（TaskSuspendRules.display 的 listMeta），没有就退回状态词。 */
@@ -370,6 +383,7 @@ object TaskProgressNotifier {
                 .apply { actions.forEach { (label, pi) -> addAction(0, label, pi) } }
                 .build()
         }
+        if (!mayPost(syncGen)) return
         runCatching { nm(ctx).notify(TAG_LIVE + id, ID_LIVE, n) }.onSuccess { lastPosted = key }
     }
 
@@ -408,6 +422,7 @@ object TaskProgressNotifier {
     private fun postResult(
         ctx: Context, id: String, title: String, body: String, actions: List<Pair<String, PendingIntent>>,
         contentIntent: PendingIntent = openTask(ctx, id),
+        gen: Int = syncGen,
     ) {
         ensureChannels(ctx)
         val n = NotificationCompat.Builder(ctx, CHANNEL_RESULT)
@@ -420,6 +435,7 @@ object TaskProgressNotifier {
             .setContentIntent(contentIntent)
             .apply { actions.forEach { (label, pi) -> addAction(0, label, pi) } }
             .build()
+        if (!mayPost(gen)) return
         runCatching { nm(ctx).notify(TAG_DONE + id, ID_DONE, n) }
     }
 }

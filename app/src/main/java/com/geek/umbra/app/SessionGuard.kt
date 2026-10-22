@@ -37,6 +37,12 @@ class SessionGuard(
     val locked: StateFlow<Boolean> = _locked
     private val _lock = MutableStateFlow(SessionLock.Undecided)
     val lock: StateFlow<SessionLock> = _lock
+    /**
+     * 会话代数：每「关」一次加一（登出、被吊销、全部下线、注销都走这里）。半路上的请求 / 一轮同步开始时记下它，
+     * 落地前核一次 [SessionGuardRules.stillCurrent] —— 代数变了就是上一个会话的东西，不展示、不写（refs TestEngineerFish/umbra#134）。
+     */
+    @Volatile var generation: Int = 0
+        private set
 
     init {
         scope.launch {
@@ -53,6 +59,7 @@ class SessionGuard(
             GuardStep.None -> Unit
             GuardStep.Lock -> {
                 prefs.setNow(Prefs.K.signedOut, true)
+                generation++
                 _locked.value = true
                 val wasSettled = settled
                 settled = true

@@ -111,4 +111,33 @@ class NetRulesTest {
         assertNull(ReasonKind.of(""))
         assertEquals(ReasonKind.Unknown, ReasonKind.of("weird"))
     }
+
+    /**
+     * 会话被吊销 / 全部下线 / 注销之后，半路上的东西作废（refs TestEngineerFish/umbra#134）：
+     * 开始时记下的会话代数对不上（哪怕随后又登了另一个号）、或守卫关着，就不展示、不写。
+     */
+    @Test fun staleSessionDropped() {
+        assertTrue("同一代、守卫开着 → 照常", SessionGuardRules.stillCurrent(captured = 3, current = 3, locked = false))
+        assertFalse("#134 半路被踢、守卫关着 → 不发", SessionGuardRules.stillCurrent(captured = 3, current = 4, locked = true))
+        assertFalse("#134 被踢后马上登了另一个号（守卫又开了）→ 上一代的回包照样作废", SessionGuardRules.stillCurrent(captured = 3, current = 4, locked = false))
+        assertFalse("代数没变但守卫关着（冷启动未登录）→ 不发", SessionGuardRules.stillCurrent(captured = 0, current = 0, locked = true))
+    }
+
+    /**
+     * 接线：判据对了但没被调到等于没修。守卫「关」要加代数；任务通知两处 notify 之前要核；拉任务列表回包要核。
+     * 直接读源码（同 DesignSystemCopyTest 的做法）。
+     */
+    @Test fun staleSessionWiring() {
+        fun src(rel: String) = listOf(java.io.File("src/main/java/com/geek/umbra/$rel"), java.io.File("app/src/main/java/com/geek/umbra/$rel"))
+            .first { it.exists() }.readText()
+        val guard = src("app/SessionGuard.kt")
+        assertTrue("守卫「关」没加会话代数", guard.substringAfter("GuardStep.Lock ->").substringBefore("GuardStep.Unlock").contains("generation++"))
+        val notifier = src("feature/widget/TaskProgressNotifier.kt")
+        for (tag in listOf("TAG_LIVE", "TAG_DONE")) {
+            val before = notifier.substringBefore("nm(ctx).notify($tag").takeLast(200)
+            assertTrue("$tag 那条通知发之前没核会话代数", "mayPost(" in before)
+        }
+        val tasks = src("feature/task/TasksStore.kt").substringAfter("suspend fun loadTasks()").substringBefore("_items.value = fetched")
+        assertTrue("拉任务列表的回包没核会话代数", "SessionGuardRules.stillCurrent(" in tasks)
+    }
 }

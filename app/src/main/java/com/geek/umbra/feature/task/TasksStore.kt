@@ -9,6 +9,7 @@ import com.geek.umbra.navigation.Tab
 import com.geek.umbra.navigation.TabBadges
 import com.geek.umbra.net.BackgroundWork
 import com.geek.umbra.net.HttpResult
+import com.geek.umbra.net.SessionGuardRules
 import com.geek.umbra.net.UmbraJson
 import com.geek.umbra.net.UmbraUrl
 import com.geek.umbra.net.str
@@ -155,7 +156,10 @@ object TasksStore {
     }
 
     suspend fun loadTasks() {
+        val gen = AppGraph.guard.generation
         val fetched = AppGraph.http.get("/tasks", ListSerializer(TaskItem.serializer()), mapOf("limit" to LIST_LIMIT))
+        // 请求在半路时会话换了（被踢 / 登出 / 换号）：回包是上一个会话的，不写、不发通知（refs TestEngineerFish/umbra#134）。
+        if (!SessionGuardRules.stillCurrent(gen, AppGraph.guard.generation, AppGraph.guard.locked.value)) return
         // 拉失败（null）就保留旧列表 —— 刷新失败不该把已经在屏幕上的东西抹掉。
         if (fetched != null) {
             _items.value = fetched
