@@ -1,5 +1,7 @@
 package com.geek.umbra.feature.task
 
+import com.geek.umbra.net.ReasonRules
+import com.geek.umbra.net.TaskFailAction
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -48,16 +50,16 @@ class TaskRetryRulesTest {
 
     @Test fun buttons() {
         val pay = "https://pay.example.com/topup"
-        val retryable = TaskReason.taskFailAction("rate_limited", null)
+        val retryable = ReasonRules.taskFailAction("rate_limited", null)
         assertEquals(TaskRetryButton.Retry, TaskRetryRules.button("failed", retryable, false, false))
-        assertEquals("已取消（不带原因）→ 重试", TaskRetryButton.Retry, TaskRetryRules.button("cancelled", TaskReason.taskFailAction(null, null), false, false))
+        assertEquals("已取消（不带原因）→ 重试", TaskRetryButton.Retry, TaskRetryRules.button("cancelled", ReasonRules.taskFailAction(null, null), false, false))
         assertEquals(TaskRetryButton.Relaunch, TaskRetryRules.button("failed", retryable, false, true))
         assertEquals(TaskRetryButton.Relaunch, TaskRetryRules.button("cancelled", TaskFailAction.AsBefore, false, true))
         for (st in listOf("running", "pending", "suspended", "done")) assertNull(TaskRetryRules.button(st, TaskFailAction.AsBefore, false, false))
         for (w in listOf("insufficient_balance", "auth_failed", "bad_request", "unavailable")) {
-            assertNull("$w 不出重试", TaskRetryRules.button("failed", TaskReason.taskFailAction(w, null), false, false))
+            assertNull("$w 不出重试", TaskRetryRules.button("failed", ReasonRules.taskFailAction(w, null), false, false))
         }
-        assertNull("欠费带地址也不出重试", TaskRetryRules.button("failed", TaskReason.taskFailAction("insufficient_balance", pay), false, false))
+        assertNull("欠费带地址也不出重试", TaskRetryRules.button("failed", ReasonRules.taskFailAction("insufficient_balance", pay), false, false))
         assertNull("被服务端说死之后不出", TaskRetryRules.button("failed", TaskFailAction.AsBefore, true, false))
 
         assertEquals(TaskRetryCopy.hintFailed, TaskRetryRules.hint("failed", TaskRetryButton.Retry))
@@ -70,12 +72,12 @@ class TaskRetryRulesTest {
         val pay = "https://pay.example.com/topup"
         fun card(st: String, f: TaskFailAction, blocked: Boolean = false, operate: Boolean = false, gone: Boolean = false) =
             TaskRetryRules.cardAction(st, f, blocked, operate, gone)
-        assertEquals(TaskCardAction.Retry, card("failed", TaskReason.taskFailAction("upstream_error", null)))
-        assertEquals(TaskCardAction.Topup(pay), card("failed", TaskReason.taskFailAction("insufficient_balance", pay)))
+        assertEquals(TaskCardAction.Retry, card("failed", ReasonRules.taskFailAction("upstream_error", null)))
+        assertEquals(TaskCardAction.Topup(pay), card("failed", ReasonRules.taskFailAction("insufficient_balance", pay)))
         assertEquals(TaskCardAction.Relaunch, card("failed", TaskFailAction.AsBefore, operate = true))
         assertEquals(TaskCardAction.Relaunch, card("cancelled", TaskFailAction.AsBefore, operate = true))
-        for (w in listOf("auth_failed", "bad_request", "unavailable")) assertEquals(TaskCardAction.ViewResult, card("failed", TaskReason.taskFailAction(w, null)))
-        assertEquals("欠费没地址 → 查看结果", TaskCardAction.ViewResult, card("failed", TaskReason.taskFailAction("insufficient_balance", null)))
+        for (w in listOf("auth_failed", "bad_request", "unavailable")) assertEquals(TaskCardAction.ViewResult, card("failed", ReasonRules.taskFailAction(w, null)))
+        assertEquals("欠费没地址 → 查看结果", TaskCardAction.ViewResult, card("failed", ReasonRules.taskFailAction("insufficient_balance", null)))
         assertEquals(TaskCardAction.ViewResult, card("done", TaskFailAction.AsBefore))
         assertNull(card("failed", TaskFailAction.AsBefore, gone = true))
         assertNull(card("failed", TaskFailAction.AsBefore, blocked = true))
@@ -93,8 +95,8 @@ class TaskRetryRulesTest {
     }
 
     @Test fun topupLinkOnlyHttp() {
-        assertNull("不是欠费类不出", TaskReason.topupLink(com.geek.umbra.net.ReasonKind.RateLimited, "https://x.com"))
-        assertNull("javascript: 不收", TaskReason.topupLink(com.geek.umbra.net.ReasonKind.InsufficientBalance, "javascript:alert(1)"))
-        assertEquals("https://x.com/pay", TaskReason.topupLink(com.geek.umbra.net.ReasonKind.NeedMembership, " https://x.com/pay "))
+        assertNull("不是欠费类不出", ReasonRules.topupLink(com.geek.umbra.net.ReasonKind.RateLimited, "https://x.com"))
+        assertNull("javascript: 不收", ReasonRules.topupLink(com.geek.umbra.net.ReasonKind.InsufficientBalance, "javascript:alert(1)"))
+        assertEquals("https://x.com/pay", ReasonRules.topupLink(com.geek.umbra.net.ReasonKind.NeedMembership, " https://x.com/pay "))
     }
 }

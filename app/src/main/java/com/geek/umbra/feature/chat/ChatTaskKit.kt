@@ -8,6 +8,7 @@
 package com.geek.umbra.feature.chat
 
 import com.geek.umbra.model.TaskItem
+import com.geek.umbra.net.TaskFailAction
 import com.geek.umbra.net.UmbraUrl
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject

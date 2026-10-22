@@ -1,12 +1,11 @@
-package com.geek.umbra.feature.chat
+package com.geek.umbra.net
 
-import com.geek.umbra.feature.chat.ChatReasonRules as R
-import com.geek.umbra.net.ReasonKind
+import com.geek.umbra.net.ReasonRules as R
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /** 照抄 iOS Tools/swifttests/ReasonKindTests.swift。 */
-class ChatReasonRulesTest {
+class ReasonRulesTest {
     @Test fun wire() {
         assertEquals(ReasonKind.InsufficientBalance, R.resolve("insufficient_balance", null))
         assertEquals(ReasonKind.RateLimited, R.resolve("rate_limited", null))

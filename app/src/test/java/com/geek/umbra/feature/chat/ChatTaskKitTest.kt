@@ -1,6 +1,8 @@
 package com.geek.umbra.feature.chat
 
 import com.geek.umbra.feature.chat.ChatTaskKit as K
+import com.geek.umbra.net.ReasonRules
+import com.geek.umbra.net.TaskFailAction
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -36,12 +38,12 @@ class ChatTaskKitTest {
     @Test fun cardAction() {
         fun card(st: String, fail: TaskFailAction, operate: Boolean = false, gone: Boolean = false, blocked: Boolean = false) =
             K.cardAction(st, fail, blocked, operate, gone)
-        assertEquals(TaskCardAction.Retry, card("failed", ChatReasonRules.taskFailAction("upstream_error", null)))
-        assertEquals(TaskCardAction.Topup(pay), card("failed", ChatReasonRules.taskFailAction("insufficient_balance", pay)))
+        assertEquals(TaskCardAction.Retry, card("failed", ReasonRules.taskFailAction("upstream_error", null)))
+        assertEquals(TaskCardAction.Topup(pay), card("failed", ReasonRules.taskFailAction("insufficient_balance", pay)))
         assertEquals(TaskCardAction.Relaunch, card("failed", TaskFailAction.AsBefore, operate = true))
         assertEquals(TaskCardAction.Relaunch, card("cancelled", TaskFailAction.AsBefore, operate = true))
-        for (w in listOf("auth_failed", "bad_request", "unavailable")) assertEquals(TaskCardAction.ViewResult, card("failed", ChatReasonRules.taskFailAction(w, null)))
-        assertEquals(TaskCardAction.ViewResult, card("failed", ChatReasonRules.taskFailAction("insufficient_balance", null)))
+        for (w in listOf("auth_failed", "bad_request", "unavailable")) assertEquals(TaskCardAction.ViewResult, card("failed", ReasonRules.taskFailAction(w, null)))
+        assertEquals(TaskCardAction.ViewResult, card("failed", ReasonRules.taskFailAction("insufficient_balance", null)))
         assertEquals(TaskCardAction.ViewResult, card("done", TaskFailAction.AsBefore))
         assertEquals(null, card("failed", TaskFailAction.AsBefore, gone = true))
         assertEquals(null, card("failed", TaskFailAction.AsBefore, blocked = true))

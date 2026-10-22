@@ -1,11 +1,11 @@
 // 服务端 `reason_kind` 的端上判定（iOS: Networking/ReasonKind.swift）：出不出「去充值」、能不能重试、读图卡出不出重读、
 // 任务失败处给什么动作。
 //
-// 地基 net/NetRules.kt 只有 ReasonKind 的枚举本身，判定函数这里补（聊天要用、任务模块多半也要 —— 合并时可挪进 net/）。
-// 纯判据，用例照抄 iOS Tools/swifttests/ReasonKindTests.swift。
-package com.geek.umbra.feature.chat
+// 和 iOS 一样住在网络层：聊天错误卡 / 读图卡、任务详情失败卡、任务通知三处共用这一份。从前聊天（ChatReasonRules）和
+// 任务（TaskReason）各抄了一份，判定一致但改一处容易漏另一处，所以合到这里（开发文档第五节技术债）。
+// 枚举本身在 NetRules.kt（ReasonKind）。纯判据，用例照抄 iOS Tools/swifttests/ReasonKindTests.swift。
+package com.geek.umbra.net
 
-import com.geek.umbra.net.ReasonKind
 import java.net.URI
 
 /** 任务失败处的动作分档（iOS: ReasonKind.swift:177 `TaskFailAction`）。 */
@@ -18,7 +18,7 @@ sealed interface TaskFailAction {
     data object NoRetry : TaskFailAction
 }
 
-object ChatReasonRules {
+object ReasonRules {
     /**
      * 线上字面 → 类别。wire == null = 字段根本没有（老服务端）→ 走兼容分支；"" = 字段在但没有原因 → null。
      * 不认识的值一律 Unknown，**不能**回退去读原话。iOS: ReasonKind.swift:47

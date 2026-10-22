@@ -1,5 +1,6 @@
 package com.geek.umbra.feature.task
 
+import com.geek.umbra.net.TaskFailAction
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

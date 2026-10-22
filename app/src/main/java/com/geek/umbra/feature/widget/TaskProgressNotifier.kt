@@ -285,7 +285,7 @@ object TaskProgressNotifier {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
 
-    /** 外链（去充值）：交给系统浏览器。地址已经过 TaskReason.topupLink 只收 http(s)。 */
+    /** 外链（去充值）：交给系统浏览器。地址已经过 ReasonRules.topupLink 只收 http(s)。 */
     private fun openUrl(ctx: Context, url: String): PendingIntent =
         PendingIntent.getActivity(
             ctx, url.hashCode(),

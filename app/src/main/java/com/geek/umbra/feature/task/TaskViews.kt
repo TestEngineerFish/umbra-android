@@ -93,6 +93,8 @@ import com.geek.umbra.navigation.UmbraAlert
 import com.geek.umbra.navigation.UmbraSheet
 import com.geek.umbra.net.BackgroundWork
 import com.geek.umbra.net.ReasonKind
+import com.geek.umbra.net.ReasonRules
+import com.geek.umbra.net.TaskFailAction
 import com.geek.umbra.net.UmbraJson
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.launch
@@ -644,7 +646,7 @@ private fun FailBlock(d: TaskDetail, summary: String) {
     val what = failedStep?.let { "第 ${it.seq} 步中断：${it.title ?: "未命名步骤"}" } ?: "任务失败"
     val err = failedStep?.error
     val why = err?.message?.takeIf { it.isNotEmpty() } ?: summary
-    val fail = TaskReason.taskFailAction(err?.reason_kind, err?.topup_url)
+    val fail = ReasonRules.taskFailAction(err?.reason_kind, err?.topup_url)
     val kind = ReasonKind.of(err?.reason_kind)
     val topupTitle = stringResource(
         when (kind) {
@@ -682,7 +684,7 @@ private fun DetailBottomBar(d: TaskDetail, ui: DetailUiState) {
     val blocked = retryOutcome?.let { !it.keepsRetry && it != TaskRetryOutcome.Operate } ?: false
     val operate = TaskRetryRules.isOperate(d.task.executor) || retryOutcome == TaskRetryOutcome.Operate
     val fe = failedStepError(d)
-    val fail = TaskReason.taskFailAction(fe?.reason_kind, fe?.topup_url)
+    val fail = ReasonRules.taskFailAction(fe?.reason_kind, fe?.topup_url)
     val button = TaskRetryRules.button(st, fail, blocked, operate, fixable = TaskRetryRules.retryAfterFix(fe?.reason_kind))
     val failLine = retryOutcome?.message ?: ui.resumeFailText.value
     val hint = TaskRetryRules.hint(st, button)

@@ -6,9 +6,8 @@
 // 纯 Kotlin，配 JUnit 用例（TaskRetryRulesTest.kt，照抄 iOS Tools/swifttests/TaskRetryRulesTests.swift）。
 package com.geek.umbra.feature.task
 
-import com.geek.umbra.net.ReasonKind
+import com.geek.umbra.net.TaskFailAction
 import com.geek.umbra.net.UmbraUrl
-import java.net.URI
 
 /** 重试相关的全部字面。除了两句灰色提示，其余逐字同 PC（带参数的两句保留 PC i18n 的 `{{…}}` 占位原样）。 */
 object TaskRetryCopy {
@@ -82,59 +81,6 @@ sealed interface TaskCardAction {
     data object Relaunch : TaskCardAction
     data class Topup(val url: String) : TaskCardAction
     data object ViewResult : TaskCardAction
-}
-
-/** 任务失败处的动作分档（iOS: Networking/ReasonKind.swift:182 `TaskFailAction`）。 */
-sealed interface TaskFailAction {
-    /** 欠费且服务端给了能打开的充值地址：出「去充值」外链。 */
-    data class Topup(val url: String) : TaskFailAction
-    /** 限流 / 模型服务抖动 / unknown / 缺字段：值得再跑一次的那一档。 */
-    data object AsBefore : TaskFailAction
-    /** 其余（key 错、参数被拒、没启用、欠费却没给地址）：不给重试类动作。 */
-    data object NoRetry : TaskFailAction
-}
-
-/**
- * ReasonKind 上任务这条线要用的几条判据（iOS: Networking/ReasonKind.swift 的 showsTopup / retryable / topupLink /
- * taskFailAction）。地基 net/NetRules.kt 只有 ReasonKind 枚举本身，这几条先放在任务包里 —— 聊天错误卡也要用，
- * 合并时宜挪回 net（见交回报告）。
- */
-object TaskReason {
-    /** 只有欠费三类出「去哪儿买」那颗钮。 */
-    fun showsTopup(k: ReasonKind): Boolean =
-        k == ReasonKind.InsufficientBalance || k == ReasonKind.NeedMembership || k == ReasonKind.QuotaExhausted
-
-    /** 原样立刻再来一次有没有用（契约表的「可重试」那一列）。 */
-    fun retryable(k: ReasonKind): Boolean = when (k) {
-        ReasonKind.RateLimited, ReasonKind.UpstreamError, ReasonKind.Unknown -> true
-        else -> false
-    }
-
-    /**
-     * 「去充值」该打开哪儿；null = 不出这颗钮。类别是欠费 + 服务端给了 http(s) 且有 host 的 topup_url 才出 ——
-     * 只收 http(s)：这串东西最后交给系统打开，javascript: / 自定义 scheme 一律当没有。
-     */
-    fun topupLink(kind: ReasonKind?, url: String?): String? {
-        if (kind == null || !showsTopup(kind)) return null
-        val raw = url?.trim() ?: return null
-        val lower = raw.lowercase()
-        if (!lower.startsWith("http://") && !lower.startsWith("https://")) return null
-        val u = runCatching { URI(raw) }.getOrNull() ?: return null
-        val scheme = u.scheme?.lowercase()
-        if (scheme != "http" && scheme != "https") return null
-        if (u.host.isNullOrEmpty()) return null
-        return raw
-    }
-
-    /**
-     * 任务失败处该给什么动作。**缺字段按 unknown**（契约原话）：任务这条线从来没按厂商原话猜过欠费，
-     * 所以不走兼容分支（iOS: ReasonKind.swift:147）。空串同样按 unknown（iOS `resolve("")` 是 nil，再 `?? .unknown`）。
-     */
-    fun taskFailAction(wire: String?, topupUrl: String?): TaskFailAction {
-        val kind = ReasonKind.of(wire ?: ReasonKind.Unknown.wire) ?: ReasonKind.Unknown
-        topupLink(kind, topupUrl)?.let { return TaskFailAction.Topup(it) }
-        return if (retryable(kind)) TaskFailAction.AsBefore else TaskFailAction.NoRetry
-    }
 }
 
 object TaskRetryRules {

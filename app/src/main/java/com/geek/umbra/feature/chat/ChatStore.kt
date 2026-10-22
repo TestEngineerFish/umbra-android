@@ -19,9 +19,11 @@ import com.geek.umbra.net.ImageQuality
 import com.geek.umbra.net.ImageTier
 import com.geek.umbra.net.PreparedImage
 import com.geek.umbra.net.ReasonKind
+import com.geek.umbra.net.ReasonRules
 import com.geek.umbra.net.ServerSettings
 import com.geek.umbra.net.SocketState
 import com.geek.umbra.net.StorageFmt
+import com.geek.umbra.net.TaskFailAction
 import com.geek.umbra.net.UmbraJson
 import com.geek.umbra.net.UmbraUrl
 import com.geek.umbra.net.UploadError
@@ -1225,7 +1227,7 @@ object ChatStore {
                     failedAtts = msg.arr("failed_atts").mapNotNull { (it as? JsonPrimitive)?.takeIf { p -> p.isString }?.content },
                     reason = reason,
                     // 字段缺失（老服务端）才拿原话兜底
-                    reasonKind = ChatReasonRules.resolve(if (msg.containsKey("reason_kind")) msg.str("reason_kind") ?: "" else null, reason),
+                    reasonKind = ReasonRules.resolve(if (msg.containsKey("reason_kind")) msg.str("reason_kind") ?: "" else null, reason),
                     topupUrl = msg.str("topup_url"),
                     quotaWindow = com.geek.umbra.feature.account.ResetCardRules.quotaWindowOf(msg.str("window")),
                 )
@@ -1432,8 +1434,8 @@ object ChatStore {
                     s.assistantIdx = null
                 }
                 // message 在新服务端已经是人话；类别只决定卡上给什么动作
-                val kind = ChatReasonRules.resolve(msg.str("reason_kind"), null)
-                s.blocks += ChatBlock.Error(text = msg.str("message") ?: str(R.string.chat_status_error), kind = kind, topup = ChatReasonRules.topupLink(kind, msg.str("topup_url")), window = com.geek.umbra.feature.account.ResetCardRules.quotaWindowOf(msg.str("window")))
+                val kind = ReasonRules.resolve(msg.str("reason_kind"), null)
+                s.blocks += ChatBlock.Error(text = msg.str("message") ?: str(R.string.chat_status_error), kind = kind, topup = ReasonRules.topupLink(kind, msg.str("topup_url")), window = com.geek.umbra.feature.account.ResetCardRules.quotaWindowOf(msg.str("window")))
                 reflect(streamConv)
             }
 
@@ -1563,8 +1565,8 @@ object ChatStore {
             if (results != null) j = j.copy(results = results)
             if (status == "failed") {
                 j = j.copy(
-                    failAction = ChatReasonRules.taskFailAction(msg.str("reason_kind"), msg.str("topup_url")),
-                    failTopupKey = ChatReasonRules.topupButtonKey(ChatReasonRules.resolve(msg.str("reason_kind"), null)),
+                    failAction = ReasonRules.taskFailAction(msg.str("reason_kind"), msg.str("topup_url")),
+                    failTopupKey = ReasonRules.topupButtonKey(ReasonRules.resolve(msg.str("reason_kind"), null)),
                     failReasonKind = msg.str("reason_kind"),
                     quotaWindow = com.geek.umbra.feature.account.ResetCardRules.quotaWindowOf(msg.str("window")),
                 )
@@ -1587,8 +1589,8 @@ object ChatStore {
                 message = msg.str("message") ?: "",
                 confirmId = if (msg.bool("needs_confirm") == true) msg.str("confirm_id") else null,
                 results = results,
-                failAction = if (status == "failed") ChatReasonRules.taskFailAction(msg.str("reason_kind"), msg.str("topup_url")) else TaskFailAction.AsBefore,
-                failTopupKey = ChatReasonRules.topupButtonKey(ChatReasonRules.resolve(msg.str("reason_kind"), null)),
+                failAction = if (status == "failed") ReasonRules.taskFailAction(msg.str("reason_kind"), msg.str("topup_url")) else TaskFailAction.AsBefore,
+                failTopupKey = ReasonRules.topupButtonKey(ReasonRules.resolve(msg.str("reason_kind"), null)),
                 failReasonKind = if (status == "failed") msg.str("reason_kind") else null,
                 quotaWindow = if (status == "failed") com.geek.umbra.feature.account.ResetCardRules.quotaWindowOf(msg.str("window")) else null,
             )

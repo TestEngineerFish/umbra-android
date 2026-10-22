@@ -7,6 +7,8 @@ package com.geek.umbra.feature.chat
 import com.geek.umbra.net.ImageTier
 import com.geek.umbra.net.PreparedImage
 import com.geek.umbra.net.ReasonKind
+import com.geek.umbra.net.ReasonRules
+import com.geek.umbra.net.TaskFailAction
 import com.geek.umbra.net.UploadError
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -87,8 +89,8 @@ data class VisionState(
 ) {
     /** 错误卡只有全失败和超时两档出（部分失败不出：会把一次成功的回答框成失败）。 */
     val showsErrorCard: Boolean get() = timedOut || label == "allFailed"
-    val topupLink: String? get() = if (label != "allFailed" || timedOut) null else ChatReasonRules.topupLink(reasonKind, topupUrl)
-    val showsReread: Boolean get() = timedOut || ChatReasonRules.visionShowsReread(reasonKind)
+    val topupLink: String? get() = if (label != "allFailed" || timedOut) null else ReasonRules.topupLink(reasonKind, topupUrl)
+    val showsReread: Boolean get() = timedOut || ReasonRules.visionShowsReread(reasonKind)
 }
 
 data class QuestionItem(val id: String, val text: String, val multi: Boolean, val options: List<String>, val optional: Boolean, val allowCustom: Boolean) {

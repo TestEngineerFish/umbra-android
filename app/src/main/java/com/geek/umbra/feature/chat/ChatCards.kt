@@ -61,6 +61,8 @@ import com.geek.umbra.designsystem.UmbraType
 import com.geek.umbra.feature.knowledge.KbApi
 import com.geek.umbra.navigation.Route
 import com.geek.umbra.net.ReasonKind
+import com.geek.umbra.net.ReasonRules
+import com.geek.umbra.net.TaskFailAction
 import kotlinx.coroutines.launch
 
 /** 与同屏的轨迹卡 / 任务卡 / 确认卡同宽。 */
@@ -355,7 +357,7 @@ fun ErrorCard(e: ChatBlock.Error) {
                 // 额度用完：手里有对应窗口的卡就出［用重置卡］（不另确认，点了转圈；批次 278，照 PC），0 张不出、只留去买。
                 if (e.kind == ReasonKind.QuotaExhausted) UseResetCardButton(e.window)
                 e.topup?.let { url ->
-                    UmbraButton(stringResource(chatKeyRes(ChatReasonRules.topupButtonKey(e.kind))), { openExternal(url) }, Modifier.fillMaxWidth(), kind = UmbraButtonKind.Secondary, height = 44.dp, external = true)
+                    UmbraButton(stringResource(chatKeyRes(ReasonRules.topupButtonKey(e.kind))), { openExternal(url) }, Modifier.fillMaxWidth(), kind = UmbraButtonKind.Secondary, height = 44.dp, external = true)
                 }
             }
             ReasonKind.RateLimited, ReasonKind.UpstreamError -> if (ChatStore.turnToRetry(e.id) != null) {
@@ -440,15 +442,15 @@ fun VisionErrorCard(v: VisionState, conv: String, blockId: String) {
         }
     }
     // 地基 UmbraErrorCard 的动作钮不带外链角标（iOS 次动作带 external-link），这里只给文字
-    v.topupLink?.let { url -> actions += stringResource(chatKeyRes(ChatReasonRules.topupButtonKey(v.reasonKind))) to { openExternal(url) } }
+    v.topupLink?.let { url -> actions += stringResource(chatKeyRes(ReasonRules.topupButtonKey(v.reasonKind))) to { openExternal(url) } }
     val base = when {
         v.timedOut -> stringResource(R.string.vision_timeoutReason)
-        v.reasonKind?.let { ChatReasonRules.visionCopyKey(it) } != null -> stringResource(chatKeyRes(ChatReasonRules.visionCopyKey(v.reasonKind)!!))
+        v.reasonKind?.let { ReasonRules.visionCopyKey(it) } != null -> stringResource(chatKeyRes(ReasonRules.visionCopyKey(v.reasonKind)!!))
         else -> v.reason.ifEmpty { stringResource(R.string.vision_failReasonUnknown) }
     }
     val reason = if (!v.timedOut && v.retried) stringResource(R.string.vision_retriedPrefix) + base else base
     // 「原始返回」只在第二段已经换成类别人话时给
-    val raw = if (!v.timedOut && v.reasonKind?.let { ChatReasonRules.visionCopyKey(it) } != null && v.reason.isNotEmpty()) v.reason else null
+    val raw = if (!v.timedOut && v.reasonKind?.let { ReasonRules.visionCopyKey(it) } != null && v.reason.isNotEmpty()) v.reason else null
     UmbraErrorCard(
         title = if (v.timedOut) stringResource(R.string.vision_timeoutTitle) else stringResource(R.string.vision_failTitle, v.n),
         body = reason, actions = actions, raw = raw, modifier = Modifier.width(CARD_W),

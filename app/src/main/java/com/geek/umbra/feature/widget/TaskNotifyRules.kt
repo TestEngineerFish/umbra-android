@@ -4,13 +4,13 @@
 // Android 独有（iOS 是灵动岛 + 锁屏实况，没有这四个槽位），所以用例照答复与出图里的例子写，不来自 swifttests。
 package com.geek.umbra.feature.widget
 
-import com.geek.umbra.feature.task.TaskFailAction
-import com.geek.umbra.feature.task.TaskReason
 import com.geek.umbra.feature.task.TaskRetryButton
 import com.geek.umbra.feature.task.TaskRetryRules
 import com.geek.umbra.feature.task.TaskStatusKind
 import com.geek.umbra.feature.task.taskStatusOf
 import com.geek.umbra.model.TaskStep
+import com.geek.umbra.net.ReasonRules
+import com.geek.umbra.net.TaskFailAction
 
 /** 一个任务在通知这一层处于哪一态。 */
 enum class TaskNotifyPhase {
@@ -128,7 +128,7 @@ object TaskNotifyRules {
      * blocked 恒为 false：通知这里没有「上一次重试已被说死」的记忆（那是详情页内的状态）。
      */
     fun failActions(status: String, reasonKind: String?, topupUrl: String?, executor: String?): List<TaskNotifyFailAction> {
-        val fail = TaskReason.taskFailAction(reasonKind, topupUrl)
+        val fail = ReasonRules.taskFailAction(reasonKind, topupUrl)
         val out = mutableListOf<TaskNotifyFailAction>()
         when (TaskRetryRules.button(status, fail, blocked = false, operate = TaskRetryRules.isOperate(executor))) {
             TaskRetryButton.Retry -> out += TaskNotifyFailAction.Retry
