@@ -51,9 +51,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
-import coil3.network.NetworkHeaders
-import coil3.network.httpHeaders
-import coil3.request.ImageRequest
 import com.geek.umbra.R
 import com.geek.umbra.app.AppGraph
 import com.geek.umbra.designsystem.UmbraButton
@@ -94,6 +91,7 @@ import com.geek.umbra.net.BackgroundWork
 import com.geek.umbra.net.ReasonKind
 import com.geek.umbra.net.ReasonRules
 import com.geek.umbra.net.TaskFailAction
+import com.geek.umbra.net.UmbraImages
 import com.geek.umbra.net.UmbraJson
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.launch
@@ -569,18 +567,16 @@ private fun stepShot(s: TaskStep): Pair<String, String>? {
 /**
  * 该步产出的内联截图：最大 330×280、圆角 9、borderSoft 描边，下方等宽文件名脚注；点开在应用内看大图。
  * 加载失败 / 还在加载都不占位（一格空白比什么都没有更像 bug），脚注也跟着不出。
- * 同源已由 shotUrl 判过，所以带上 Bearer：/files/<id> 之后的 302 跳到对象存储时 OkHttp 会自己把授权头剥掉。
+ * 取图走 [UmbraImages.loader]：令牌只带给自己的服务端，/files/<id> 之后 302 到对象存储时去掉登录头（shotUrl 另外先判过同源）。
  */
 @Composable
 private fun StepShot(s: TaskStep) {
     val shot = remember(s.result_json) { stepShot(s) } ?: return
     val c = UmbraTheme.colors
-    val ctx = LocalContext.current
     var ok by remember(shot.first) { mutableStateOf(false) }
-    val request = remember(shot.first) { shotRequest(ctx, shot.first) }
     Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
         AsyncImage(
-            model = request, contentDescription = shot.second, contentScale = ContentScale.Fit,
+            model = shot.first, imageLoader = UmbraImages.loader, contentDescription = shot.second, contentScale = ContentScale.Fit,
             onSuccess = { ok = true }, onError = { ok = false },
             modifier = Modifier.widthIn(max = 330.dp).heightIn(max = 280.dp).clip(RoundedCornerShape(9.dp))
                 .then(if (ok) Modifier.border(1.dp, c.borderSoft, RoundedCornerShape(9.dp)) else Modifier)
@@ -591,21 +587,14 @@ private fun StepShot(s: TaskStep) {
     }
 }
 
-private fun shotRequest(ctx: android.content.Context, url: String): ImageRequest {
-    val b = ImageRequest.Builder(ctx).data(url)
-    val token = AppGraph.session.token
-    if (token.isNotEmpty()) b.httpHeaders(NetworkHeaders.Builder().set("Authorization", "Bearer $token").build())
-    return b.build()
-}
 
 /** 应用内看大图（iOS UmbraImageViewer）。地基里还没有看图器，这里用底部弹层顶着，双指缩放留给设计系统那一件。 */
 private fun openShotViewer(url: String, name: String) {
     AppGraph.router.present(UmbraSheet("shot-$url") { _ ->
-        val ctx = LocalContext.current
         val c = UmbraTheme.colors
         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(name, color = c.muted, style = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 12.sp), maxLines = 1, overflow = TextOverflow.MiddleEllipsis)
-            AsyncImage(model = remember(url) { shotRequest(ctx, url) }, contentDescription = name, contentScale = ContentScale.Fit,
+            AsyncImage(model = url, imageLoader = UmbraImages.loader, contentDescription = name, contentScale = ContentScale.Fit,
                 modifier = Modifier.fillMaxWidth().heightIn(max = 600.dp).clip(RoundedCornerShape(12.dp)))
         }
     })

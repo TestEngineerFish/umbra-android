@@ -72,6 +72,7 @@ import com.geek.umbra.designsystem.UmbraFixedColors
 import com.geek.umbra.designsystem.UmbraIcon
 import com.geek.umbra.designsystem.UmbraIconPaths
 import com.geek.umbra.designsystem.UmbraTheme
+import com.geek.umbra.net.UmbraImages
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.math.atan2
@@ -100,7 +101,7 @@ fun LocateCard(
     var loadFailed by remember(data.imageUrl) { mutableStateOf(false) }
     var tipNorm by remember { mutableStateOf<Offset?>(null) }
     LaunchedEffect(data.imageUrl) {
-        val bytes = ChatImages.download(ChatImages.full(data.imageUrl))
+        val bytes = UmbraImages.download(UmbraImages.full(data.imageUrl))
         val bmp = bytes?.let { withContext(Dispatchers.Default) { runCatching { BitmapFactory.decodeByteArray(it, 0, it.size) }.getOrNull() } }
         if (bmp != null) image = bmp.asImageBitmap() else loadFailed = true
     }

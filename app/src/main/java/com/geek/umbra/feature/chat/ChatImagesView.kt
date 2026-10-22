@@ -1,4 +1,4 @@
-// 聊天里的图片消息：画和选（iOS: Features/Chat/ChatImages.swift）。发和传在 ChatStore（sendImages / runUpload）。
+// 聊天里的图片消息：画和选（iOS: Features/Chat/UmbraImages.swift）。发和传在 ChatStore（sendImages / runUpload）。
 //
 // 三条稿定的规矩：①图文分条；②一条 = N 张图，不是 N 条（预览器里左右切的就是这一条里的图）；
 // ③多张走固定格子（3 列 68），不按比例排。
@@ -78,6 +78,7 @@ import com.geek.umbra.navigation.UmbraSheet
 import com.geek.umbra.net.ImageTier
 import com.geek.umbra.net.PreparedImage
 import com.geek.umbra.net.ServerSettings
+import com.geek.umbra.net.UmbraImages
 import com.geek.umbra.net.Uploads
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -205,7 +206,7 @@ private fun Cell(b: ChatBlock.Image, i: Int, single: Boolean, onOpen: (Int) -> U
     Box(Modifier.fillMaxSize().clickable(enabled = frac == null) { onOpen(i) }) {
         if (i < b.atts.size) {
             SubcomposeAsyncImage(
-                model = ChatImages.fileUrl(b.atts[i]), imageLoader = ChatImages.loader, contentDescription = null,
+                model = UmbraImages.fileUrl(b.atts[i]), imageLoader = UmbraImages.loader, contentDescription = null,
                 contentScale = if (single) ContentScale.Fit else ContentScale.Crop, modifier = Modifier.fillMaxSize(),
                 error = { AttGone() },
             )
@@ -396,7 +397,7 @@ fun ImageViewer(group: ViewerGroup, onClose: () -> Unit) {
                 var scale by remember { mutableFloatStateOf(1f) }
                 var offset by remember { mutableStateOf(Offset.Zero) }
                 SubcomposeAsyncImage(
-                    model = group.items[page].first, imageLoader = ChatImages.loader, contentDescription = group.items[page].second,
+                    model = group.items[page].first, imageLoader = UmbraImages.loader, contentDescription = group.items[page].second,
                     contentScale = ContentScale.Fit,
                     modifier = Modifier.fillMaxSize()
                         .pointerInput(Unit) {

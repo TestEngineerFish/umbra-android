@@ -44,7 +44,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
@@ -56,9 +55,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil3.compose.SubcomposeAsyncImage
-import coil3.network.NetworkHeaders
-import coil3.network.httpHeaders
-import coil3.request.ImageRequest
 import com.geek.umbra.R
 import com.geek.umbra.app.AppGraph
 import com.geek.umbra.designsystem.UmbraButton
@@ -72,6 +68,7 @@ import com.geek.umbra.designsystem.UmbraTheme
 import com.geek.umbra.designsystem.UmbraTopBarIcon
 import com.geek.umbra.navigation.Route
 import com.geek.umbra.navigation.UmbraSheet
+import com.geek.umbra.net.UmbraImages
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -246,21 +243,9 @@ private fun AttsBlock(atts: List<MoneyAttDTO>, onOpen: (Int) -> Unit) {
 /** 图下那个名字：原图叫「原始截图」，其余用标签，没标签叫「图片」。iOS: MoneyDetailView.swift:229 */
 private fun attName(a: MoneyAttDTO): String = if (a.origin) "原始截图" else a.label.ifEmpty { "图片" }
 
-/**
- * 附件图片的加载源：`local:` 开头的是本机暂存（MoneyLocal.fileFor 给文件）；其余是服务端 /files/{id}，
- * 带上登录令牌（Coil 不走统一出口，令牌这里补）。iOS: HTTPService.swift:796 moneyFileURL
- */
-@Composable
-private fun moneyAttModel(fileId: String): Any? {
-    val ctx = LocalContext.current
-    if (MoneyLocalRules.isLocalFileId(fileId)) return MoneyLocal.fileFor(fileId)
-    val token = AppGraph.session.token
-    return remember(fileId, token) {
-        val b = ImageRequest.Builder(ctx).data(MoneyApi.fileUrl(fileId))
-        if (token.isNotEmpty()) b.httpHeaders(NetworkHeaders.Builder().set("Authorization", "Bearer $token").build())
-        b.build()
-    }
-}
+/** 附件图片的加载源：`local:` 开头的是本机暂存（MoneyLocal.fileFor 给文件）；其余是服务端 /files/{id}（[UmbraImages.loader] 带令牌）。iOS: HTTPService.swift:796 moneyFileURL */
+private fun moneyAttModel(fileId: String): Any? =
+    if (MoneyLocalRules.isLocalFileId(fileId)) MoneyLocal.fileFor(fileId) else UmbraImages.fileUrl(fileId)
 
 /**
  * 一张附件图：加载中 = chip 底 + 图片图标；失败 = 「附件已删除」（服务端在「管理存储」里删掉了它，
@@ -271,6 +256,7 @@ private fun MoneyAttImage(fileId: String, modifier: Modifier, radius: Dp, scale:
     val c = UmbraTheme.colors
     SubcomposeAsyncImage(
         model = moneyAttModel(fileId),
+        imageLoader = UmbraImages.loader,
         contentDescription = null,
         modifier = modifier,
         contentScale = scale,

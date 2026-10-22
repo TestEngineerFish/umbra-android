@@ -57,9 +57,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.FileProvider
-import coil3.ImageLoader
 import coil3.compose.SubcomposeAsyncImage
-import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import com.geek.umbra.R
 import com.geek.umbra.app.AppGraph
 import com.geek.umbra.designsystem.UmbraErrorCard
@@ -83,6 +81,7 @@ import com.geek.umbra.net.ImageQuality
 import com.geek.umbra.net.ImageTier
 import com.geek.umbra.net.PreparedImage
 import com.geek.umbra.net.ServerSettings
+import com.geek.umbra.net.UmbraImages
 import com.geek.umbra.net.UploadError
 import com.geek.umbra.net.Uploads
 import kotlinx.coroutines.Dispatchers
@@ -127,30 +126,13 @@ object ReminderAttUploader {
     }
 }
 
-/**
- * 读 /files/{id} 的图片加载器：带 Bearer（服务端的附件要主人才给）。没登录时拿不到 → 画「附件已删除」占位。
- * 用统一出口那个 OkHttpClient 派生，不另起连接池。
- */
-internal object ReminderImages {
-    val loader: ImageLoader by lazy {
-        val client = AppGraph.http.client.newBuilder().addInterceptor { chain ->
-            val t = AppGraph.session.token
-            val req = if (t.isNotEmpty()) chain.request().newBuilder().header("Authorization", "Bearer $t").build() else chain.request()
-            chain.proceed(req)
-        }.build()
-        ImageLoader.Builder(AppGraph.context).components { add(OkHttpNetworkFetcherFactory(callFactory = { client })) }.build()
-    }
-
-    fun url(fileId: String) = "${AppGraph.prefs.serverUrl}/files/${fileId}"
-}
-
 /** 服务端上的一张图：加载中 chip 底 + 图标；失败（服务端已经没有这张）画「附件已删除」。 */
 @Composable
 internal fun ReminderRemoteImage(fileId: String, size: Dp, radius: Dp, modifier: Modifier = Modifier) {
     val c = UmbraTheme.colors
     val shape = RoundedCornerShape(radius)
     SubcomposeAsyncImage(
-        model = ReminderImages.url(fileId), imageLoader = ReminderImages.loader, contentDescription = null,
+        model = UmbraImages.fileUrl(fileId), imageLoader = UmbraImages.loader, contentDescription = null,
         contentScale = ContentScale.Crop,
         modifier = modifier.size(size).clip(shape).border(UmbraDimens.borderW, c.border, shape),
         loading = { Box(Modifier.fillMaxSize().background(c.chip), contentAlignment = Alignment.Center) { UmbraIcon(UmbraIconPaths.image, c.faint, size = 18.dp, strokeWidth = 1.8f) } },
@@ -389,7 +371,7 @@ fun ReminderAttsPreviewRow(atts: List<ReminderAtt>) {
         Dialog(onDismissRequest = { viewing = null }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
             Box(Modifier.fillMaxSize().background(UmbraFixedColors.viewerBg).clickable { viewing = null }, contentAlignment = Alignment.Center) {
                 SubcomposeAsyncImage(
-                    model = ReminderImages.url(a.fileId), imageLoader = ReminderImages.loader, contentDescription = a.label.ifEmpty { "图片" },
+                    model = UmbraImages.fileUrl(a.fileId), imageLoader = UmbraImages.loader, contentDescription = a.label.ifEmpty { "图片" },
                     contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize(),
                     error = { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(stringResource(R.string.common_attGone), color = Color.White) } },
                 )

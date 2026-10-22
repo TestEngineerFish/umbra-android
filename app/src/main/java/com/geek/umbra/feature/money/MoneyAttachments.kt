@@ -56,9 +56,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
 import coil3.compose.SubcomposeAsyncImage
-import coil3.network.NetworkHeaders
-import coil3.network.httpHeaders
-import coil3.request.ImageRequest
 import com.geek.umbra.R
 import com.geek.umbra.app.AppGraph
 import com.geek.umbra.designsystem.UmbraDimens
@@ -81,6 +78,7 @@ import com.geek.umbra.net.ImageQuality
 import com.geek.umbra.net.ImageTier
 import com.geek.umbra.net.PreparedImage
 import com.geek.umbra.net.ServerSettings
+import com.geek.umbra.net.UmbraImages
 import com.geek.umbra.net.UploadError
 import com.geek.umbra.net.Uploads
 import kotlinx.coroutines.Dispatchers
@@ -366,21 +364,9 @@ internal fun MoneyAttachmentsCard(form: MoneyAddForm, editing: MoneyEntryDTO?, i
     }
 }
 
-/**
- * 附件图的数据源：本机暂存的（local:）读本机文件；服务端的走 /files/{id}，带登录头（那个接口要鉴权，
- * 工程里没有全局配好头的 Coil ImageLoader，这里在请求上逐个带）。
- */
-@Composable
-private fun attModel(fileId: String): Any? {
-    val ctx = LocalContext.current
-    if (MoneyLocalRules.isLocalFileId(fileId)) return MoneyLocal.fileFor(fileId)
-    val token = AppGraph.session.token
-    return remember(fileId, token) {
-        ImageRequest.Builder(ctx).data(MoneyApi.fileUrl(fileId))
-            .apply { if (token.isNotEmpty()) httpHeaders(NetworkHeaders.Builder().set("Authorization", "Bearer $token").build()) }
-            .build()
-    }
-}
+/** 附件图的数据源：本机暂存的（local:）读本机文件；服务端的走 /files/{id}（交给 [UmbraImages.loader]，令牌由统一出口带）。 */
+private fun attModel(fileId: String): Any? =
+    if (MoneyLocalRules.isLocalFileId(fileId)) MoneyLocal.fileFor(fileId) else UmbraImages.fileUrl(fileId)
 
 /** 加载中 / 读不出来时那块灰底（只有图标）。 */
 @Composable
@@ -435,7 +421,7 @@ private fun AttThumb(e: MoneyEntryDTO, a: MoneyAttDTO) {
             // 点开预览只留给原始截图（attachThumb.editing，批次 016）：编辑态别的图上 × 是唯一的动作 ——
             // 44 的 × 钉在 78 的图上会把图的正中心划进删除区。原始截图没有删除键，冲突不存在。
             SubcomposeAsyncImage(
-                model = model, contentDescription = null, contentScale = ContentScale.Crop,
+                model = model, imageLoader = UmbraImages.loader, contentDescription = null, contentScale = ContentScale.Crop,
                 loading = { ThumbPlaceholder() }, error = { AttGonePlaceholder() },
                 modifier = Modifier.size(THUMB).clip(shape).border(UmbraDimens.borderW, c.border, shape)
                     .then(if (a.origin) Modifier.clickable(role = Role.Image) { previewOrigin(a.file_id) } else Modifier),
@@ -460,7 +446,7 @@ private fun previewOrigin(fileId: String) {
         Column(Modifier.fillMaxWidth().padding(16.dp).navigationBarsPadding(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("原始截图", color = c.text, style = UmbraType.sectionTitle)
             SubcomposeAsyncImage(
-                model = attModel(fileId), contentDescription = "原始截图", contentScale = ContentScale.Fit,
+                model = attModel(fileId), imageLoader = UmbraImages.loader, contentDescription = "原始截图", contentScale = ContentScale.Fit,
                 loading = { Box(Modifier.fillMaxWidth().heightIn(min = 200.dp)) { ThumbPlaceholder() } },
                 error = { Box(Modifier.fillMaxWidth().heightIn(min = 200.dp)) { AttGonePlaceholder() } },
                 modifier = Modifier.fillMaxWidth().heightIn(max = 560.dp).clip(RoundedCornerShape(UmbraDimens.radiusShot)),

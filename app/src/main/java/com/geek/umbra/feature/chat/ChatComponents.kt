@@ -4,7 +4,6 @@
 package com.geek.umbra.feature.chat
 
 import androidx.compose.foundation.layout.widthIn
-import android.annotation.SuppressLint
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.StartOffset
@@ -37,17 +36,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
-import coil3.ImageLoader
-import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import com.geek.umbra.R
-import com.geek.umbra.app.AppGraph
 import com.geek.umbra.designsystem.UmbraStatus
 import com.geek.umbra.designsystem.UmbraTheme
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
-import okhttp3.Request
 
 /** 气泡形状：我方 16 16 4 16（右下收角），对方 16 16 16 4（左下收角）。 */
 fun bubbleShape(mine: Boolean) = if (mine) RoundedCornerShape(16.dp, 16.dp, 4.dp, 16.dp) else RoundedCornerShape(16.dp, 16.dp, 16.dp, 4.dp)
@@ -140,39 +132,3 @@ fun ChatMenuBox(items: List<ChatMenuItem>, modifier: Modifier = Modifier, onClic
     }
 }
 
-/**
- * 带鉴权的取图 —— 服务端 `/files/{id}` 要 Bearer。地基没有共用的带鉴权 ImageLoader，这里在聊天包里建一个
- * （复用统一出口的 OkHttp 连接池，每次请求现读令牌）。报告里已写，合并时可挪进 designsystem / net。
- */
-@SuppressLint("StaticFieldLeak")
-object ChatImages {
-    private val client: OkHttpClient by lazy {
-        AppGraph.http.client.newBuilder()
-            .followRedirects(false)
-            .addInterceptor { chain ->
-                val token = AppGraph.session.token
-                val req = chain.request().newBuilder().apply { if (token.isNotEmpty()) header("Authorization", "Bearer $token") }.build()
-                chain.proceed(req)
-            }
-            .build()
-    }
-
-    val loader: ImageLoader by lazy {
-        ImageLoader.Builder(AppGraph.context)
-            .components { add(OkHttpNetworkFetcherFactory(callFactory = { client })) }
-            .build()
-    }
-
-    /** 服务端文件地址（iOS HTTPService.moneyFileURL）。 */
-    fun fileUrl(fileId: String): String = AppGraph.http.server + "/files/" + fileId
-
-    /** 相对路径补服务端前缀。 */
-    fun full(url: String): String = if (url.startsWith("http")) url else AppGraph.http.server + url
-
-    /** 下载一份文件字节（复制图片 / 存相册 / 求助截图）。失败 null。 */
-    suspend fun download(url: String): ByteArray? = withContext(Dispatchers.IO) {
-        runCatching {
-            client.newCall(Request.Builder().url(url).build()).execute().use { r -> if (r.isSuccessful) r.body.bytes() else null }
-        }.getOrNull()
-    }
-}

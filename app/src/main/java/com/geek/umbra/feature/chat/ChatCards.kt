@@ -69,6 +69,7 @@ import com.geek.umbra.navigation.Route
 import com.geek.umbra.net.ReasonKind
 import com.geek.umbra.net.ReasonRules
 import com.geek.umbra.net.TaskFailAction
+import com.geek.umbra.net.UmbraImages
 import kotlinx.coroutines.launch
 
 /** 与同屏的轨迹卡 / 任务卡 / 确认卡同宽。 */
@@ -276,7 +277,7 @@ private fun ResultRow(r: Map<String, String>, onOpenImage: (String, String) -> U
     val url = r["url"] ?: ""
     val name = r["title"] ?: url.ifEmpty { "产出" }
     val isImg = looksImage(url)
-    val full = if (url.isEmpty()) null else ChatImages.full(url)
+    val full = if (url.isEmpty()) null else UmbraImages.full(url)
     val meta = url.replace(Regex("^https?://[^/]+"), "")
     Row(
         Modifier.fillMaxWidth().defaultMinSize(minHeight = 52.dp).clickable {
@@ -290,7 +291,7 @@ private fun ResultRow(r: Map<String, String>, onOpenImage: (String, String) -> U
             if (isImg && full != null) {
                 // 内联缩略：截图任务的重点就是看那张图。失败退回图片图标，不留破图占位
                 SubcomposeAsyncImage(
-                    model = full, imageLoader = ChatImages.loader, contentDescription = null, contentScale = ContentScale.Crop,
+                    model = full, imageLoader = UmbraImages.loader, contentDescription = null, contentScale = ContentScale.Crop,
                     modifier = Modifier.size(36.dp),
                     error = { UmbraIcon(UmbraIconPaths.image, c.muted, size = 16.dp, strokeWidth = 1.8f) },
                     loading = { UmbraIcon(UmbraIconPaths.image, c.muted, size = 16.dp, strokeWidth = 1.8f) },

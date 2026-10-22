@@ -111,6 +111,7 @@ import com.geek.umbra.navigation.UmbraAlert
 import com.geek.umbra.navigation.UmbraSheet
 import com.geek.umbra.net.ImageTier
 import com.geek.umbra.net.Prefs
+import com.geek.umbra.net.UmbraImages
 import com.geek.umbra.net.UploadError
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -391,14 +392,14 @@ fun ChatThreadPage(conv: String) {
     fun cardMenu(summary: String) = listOf(ChatMenuItem(ctx.getString(R.string.chat_menu_copySummary)) { ChatFiles.copyText(summary); router.showToast(ctx.getString(R.string.chat_copied)) })
 
     fun openImage(img: ChatBlock.Image, at: Int) {
-        val items = img.atts.mapIndexed { j, fid -> ChatImages.fileUrl(fid) to ctx.getString(R.string.chat_img_nth, j + 1) }
+        val items = img.atts.mapIndexed { j, fid -> UmbraImages.fileUrl(fid) to ctx.getString(R.string.chat_img_nth, j + 1) }
         if (items.isEmpty()) return
         viewer = ViewerGroup(items, minOf(at, items.size - 1))
     }
     fun copyImage(img: ChatBlock.Image) {
         val done = ctx.getString(if (img.count > 1) R.string.chat_img_copiedFirst else R.string.chat_img_copied)
         scope.launch {
-            val bytes = img.data.firstOrNull() ?: img.atts.firstOrNull()?.let { ChatImages.download(ChatImages.fileUrl(it)) }
+            val bytes = img.data.firstOrNull() ?: img.atts.firstOrNull()?.let { UmbraImages.download(UmbraImages.fileUrl(it)) }
             router.showToast(if (bytes != null && ChatFiles.copyImage(bytes)) done else ctx.getString(R.string.chat_img_copyFailed))
         }
     }
@@ -407,7 +408,7 @@ fun ChatThreadPage(conv: String) {
             scope.launch {
                 var ok = 0
                 img.atts.forEachIndexed { j, fid ->
-                    val bytes = img.data.getOrNull(j) ?: ChatImages.download(ChatImages.fileUrl(fid))
+                    val bytes = img.data.getOrNull(j) ?: UmbraImages.download(UmbraImages.fileUrl(fid))
                     if (bytes != null && ChatFiles.saveToAlbum(bytes)) ok++
                 }
                 router.showToast(if (ok > 0) ctx.getString(R.string.chat_img_saved, ok) else ctx.getString(R.string.chat_img_saveFailed))
