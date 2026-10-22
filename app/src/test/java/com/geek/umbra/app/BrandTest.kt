@@ -51,7 +51,7 @@ class BrandTest {
 
     /**
      * Kotlin 字面量里的代号只剩看不见的那几处：剪贴板 label（系统不展示）、相册目录（改名会把旧图和新图拆成两个相册，
-     * 待 sam 定，见开发文档第五节「品牌名」）。新加一处带代号的界面文案会在这里红。
+     * 用户可见、暂缓到名字定死再统一改，见开发文档第五节「品牌名」）。新加一处带代号的界面文案会在这里红。
      */
     @Test fun noCodenameInKotlinLiterals() {
         val allowed = listOf("newPlainText(", "RELATIVE_PATH", "getExternalStoragePublicDirectory(", "const val codename")

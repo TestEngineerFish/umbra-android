@@ -239,7 +239,7 @@ R8 的问题只在运行时暴露（序列化类被裁、反射找不到），�
 | 请求头 | `X-Umbra-Session` / `X-Umbra-Error` / `X-Umbra-Initiator` | 服务端协议 |
 | 剪贴板 label | `ClipData.newPlainText("Umbra", …)`（4 处） | 系统不展示 label |
 | 测试夹具 | `taskSuspendCases.json`、主题夹具 author | PC / 服务端仓的原样拷贝；比较前用 Brand 换掉 |
-| ⚠️ 相册目录 | `Pictures/Umbra`（聊天存图）、`<目录>/Umbra`（格式转换） | **拿不准，待 sam 定**：相册里看得见，但改名会把旧图和新图拆成两个相册 |
+| ⚠️ 相册目录 | `Pictures/Umbra`（聊天存图）、`<目录>/Umbra`（格式转换） | **用户可见，暂缓**（geek-99 10-22）：名字还可能再动，每改一次相册就多拆一个；名字定死后统一处理 |
 
 ## 六、需要服务端配合
 
