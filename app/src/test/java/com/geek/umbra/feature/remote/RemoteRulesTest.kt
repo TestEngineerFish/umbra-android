@@ -580,4 +580,45 @@ class RemoteRulesTest {
         assertEquals("洗不出字时兜底", "file", RemoteFileName.local("///"))
         assertEquals("中文名照留", "报告.docx", RemoteFileName.local("报告.docx"))
     }
+
+    // MARK: 无人值守的顺序（refs umbra-ios#95）
+
+    /** 先核短码、后给 PIN：没核过时 needPin 先到也停在短码；核过才出键盘；PIN 没核过不发。 */
+    @Test fun unattendedCodeBeforePin() {
+        val u = RemoteUnattended
+        assertEquals("本机认证没过先认证", RemoteUnattended.Step.Face, u.step(false, false, true, false))
+        assertEquals("#95 认证过了、要 PIN、短码没核 → 停在短码", RemoteUnattended.Step.Code, u.step(true, false, true, false))
+        assertEquals("核过了才出 PIN", RemoteUnattended.Step.Pin, u.step(true, true, true, false))
+        assertEquals("核过了、PIN 锁着 → 锁定态", RemoteUnattended.Step.Locked, u.step(true, true, true, true))
+        assertEquals("锁着但短码没核 → 仍先核短码", RemoteUnattended.Step.Code, u.step(true, false, true, true))
+        assertFalse("#95 短码没核不发 PIN", u.maySendPin(localAuthPassed = true, codeVerified = false))
+        assertFalse("本机认证没过不发 PIN", u.maySendPin(localAuthPassed = false, codeVerified = true))
+        assertTrue("两样都过了才发", u.maySendPin(localAuthPassed = true, codeVerified = true))
+    }
+
+    /** 按 deviceId 记电脑侧指纹：对上不再问；换了（中间人 / 电脑重装）重新核；没记过、这次算不出都当没核过。 */
+    @Test fun unattendedFingerprintMemory() {
+        val fp = "sha-256 AB:CD:EF"
+        assertTrue("记住的指纹对上了 → 不用再核", RemoteUnattended.fingerprintMatches(fp, fp))
+        assertFalse("指纹变了 → 重新核短码", RemoteUnattended.fingerprintMatches(fp, "sha-256 12:34:56"))
+        assertFalse("没记过 → 要核", RemoteUnattended.fingerprintMatches(null, fp))
+        assertFalse("这次算不出指纹 → 不能跳过核对", RemoteUnattended.fingerprintMatches(fp, null))
+        assertFalse("两边都没有也不算对上", RemoteUnattended.fingerprintMatches(null, null))
+    }
+
+    /**
+     * 接线：判据对了但没被调到，等于没修（一道只测行为的闸门测不出行为根本没被调到）。
+     * submitPin 要过 maySendPin；会话页的步骤要走 RemoteUnattended.step；已废的 codeChecked 布尔值不再被读来放行。
+     */
+    @Test fun unattendedWiring() {
+        fun src(name: String) = listOf(File("src/main/java/com/geek/umbra/feature/remote/$name"), File("app/src/main/java/com/geek/umbra/feature/remote/$name"))
+            .first { it.exists() }.readText()
+        val client = src("RemoteClient.kt")
+        val submit = client.substringAfter("fun submitPin(").substringBefore("sendCommand(RemoteCommand.pin(")
+        assertTrue("submitPin 发 PIN 前没过 maySendPin", "RemoteUnattended.maySendPin(" in submit)
+        val verify = client.substringAfter("private fun maybeAskVerify(").substringBefore("fun submitPin(")
+        assertFalse("核对短码那一段还在读布尔值（已废的 codeChecked）放行", "getBoolean(" in verify)
+        assertTrue("核对短码没按指纹比对", "RemoteUnattended.fingerprintMatches(" in verify)
+        assertTrue("会话页的步骤没走 RemoteUnattended.step", "RemoteUnattended.step(" in src("RemoteSessionView.kt"))
+    }
 }

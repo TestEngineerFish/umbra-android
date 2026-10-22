@@ -280,8 +280,14 @@ class RemoteClient(val launch: RemoteLaunch) {
     var hint by mutableStateOf<String?>(null)
     /** 刚因为空闲被降了档：随后到的 `rc_state`（mode 变 view）不再另吐一句「已降为只看」—— 那条轻提示已经说了。 */
     private var idleDowngraded = false
-    /** 首次无人值守连接时要人核对短码（§14.4）。 */
+    /** 这次无人值守会话要人核对短码（§14.4）：记住的电脑侧指纹对不上 / 没记过。 */
     var askVerifyCode by mutableStateOf(false)
+    /**
+     * 这次会话短码已核过（人点了「一致」，或记住的电脑侧指纹对上了）。没核过不发 PIN（refs umbra-ios#95，[RemoteUnattended]）。
+     */
+    var codeVerified by mutableStateOf(false); private set
+    /** 这次会话里电脑那一侧的 DTLS 指纹（对端 SDP 的 `a=fingerprint`）。点「一致」时按 deviceId 记下它。 */
+    private var hostFingerprint: String? = null
     val fileLists = mutableStateMapOf<String, List<RemoteFileItem>>()
     val transfers = mutableStateListOf<RemoteTransfer>()
     /** 被控端推过来的屏幕轨。会话页的 SurfaceViewRenderer 挂在它上面。 */
@@ -525,30 +531,41 @@ class RemoteClient(val launch: RemoteLaunch) {
         authenticateLocally()
     }
 
-    /** 首次连这台无人值守的电脑：请人核对一次短码（§14.4）。核对过记在本机（只记「这台核过」，不记短码本身）。 */
+    /**
+     * 本机认证过了、指纹也算出来了：记住的电脑侧指纹对上就算核过，对不上（或没记过）就请人核对短码（§14.4）。
+     * 在 PIN 之前（refs umbra-ios#95）：`needPin` 先到也只记下，界面停在短码那一道。
+     */
     private fun maybeAskVerify() {
-        if (!unattended || !localAuthPassed || safetyCode == null) return
-        if (!verifyPrefs().getBoolean(verifyKey, false)) askVerifyCode = true
+        if (!unattended || !localAuthPassed || codeVerified) return
+        val fp = hostFingerprint ?: return          // 指纹还没算出来：等 makeAnswer 算出来再进这里
+        if (RemoteUnattended.fingerprintMatches(verifyPrefs().getString(fingerprintKey, null), fp)) codeVerified = true
+        else askVerifyCode = true
     }
 
-    /** iOS 记在 UserDefaults，键名照搬；Android 放模块自己的 SharedPreferences（小开关，不进 DataStore 那张共享表）。 */
+    /** 模块自己的 SharedPreferences（小开关，不进 DataStore 那张共享表）。 */
     private fun verifyPrefs() = ctx.getSharedPreferences("umbra.remote", Context.MODE_PRIVATE)
 
-    private val verifyKey: String get() = "umbra.remote.codeChecked." + launch.deviceId
+    /** 按 deviceId 记电脑那一侧的指纹（不记短码本身：短码由两端指纹派生、每次会话都会变）。 */
+    private val fingerprintKey: String get() = "umbra.remote.hostFingerprint." + launch.deviceId
 
-    /** 人说「一致」。 */
+    /** 人说「一致」：记下这次的电脑侧指纹（下次对得上就不再问），放行 PIN。顺手清掉已废的 codeChecked 布尔键。 */
     fun confirmCode() {
-        verifyPrefs().edit().putBoolean(verifyKey, true).apply()
+        val fp = hostFingerprint
+        verifyPrefs().edit().apply {
+            if (fp != null) putString(fingerprintKey, fp)
+            remove("umbra.remote.codeChecked." + launch.deviceId)
+        }.apply()
         askVerifyCode = false
+        codeVerified = true
     }
 
-    /** 送 PIN（DTLS 建立之后才发，走 DataChannel，不过服务端 —— RC-11.4）。 */
+    /** 送 PIN（DTLS 建立之后才发，走 DataChannel，不过服务端 —— RC-11.4）。短码没核过不发（refs umbra-ios#95）。 */
     fun submitPin(pin: String) {
         if (!RemoteCommand.validPin(pin)) {
             pinError = str(R.string.remote_pin_invalid)
             return
         }
-        if (!localAuthPassed) return
+        if (!RemoteUnattended.maySendPin(localAuthPassed, codeVerified)) return
         pinBusy = true
         pinError = null
         sendCommand(RemoteCommand.pin(pin))
@@ -1006,6 +1023,9 @@ class RemoteClient(val launch: RemoteLaunch) {
                         if (pc !== p) return@post
                         AppGraph.socket.send(RemoteSignal.answer(sid, desc.description))
                         safetyCode = RemoteSafetyCode.codeFromSdp(desc.description, remoteSdp)
+                        // 同一会话里重新协商换了对端指纹：先前核过的不算数，重新比对 / 重新核。
+                        val fp = RemoteSafetyCode.fingerprint(remoteSdp)
+                        if (fp != hostFingerprint) { hostFingerprint = fp; codeVerified = false }
                         maybeAskVerify()
                     }
                 }, desc)

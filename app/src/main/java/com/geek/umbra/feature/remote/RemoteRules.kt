@@ -479,6 +479,41 @@ object RemoteSafetyCode {
     }
 }
 
+// MARK: - 无人值守的顺序（§14.6 + S13，refs umbra-ios#95）
+
+/**
+ * 无人值守三道的顺序与「这台核过没有」。**先核短码、后给 PIN**（geek-99 10-22 定的修法）：
+ * 短码防的是信令被攻破后的中间人（S13）—— 它要在 PIN 交出去**之前**确认 DataChannel 真连到了自己的电脑。
+ * 原来是 face → pin → code：PIN 以明文命令先到了中间人手里，核对发生在泄密之后。
+ *
+ * 「核过」不再是一个布尔值（原 `umbra.remote.codeChecked.<deviceId>`，已废）：短码每次会话都变，只记「核过」等于只保护第一次。
+ * 现在按 deviceId 记住**电脑那一侧的 DTLS 指纹**（PC 持久化证书后它跨会话不变），每次会话比对，对不上就重新核短码。
+ * PC 证书若仍是每次新生成，指纹每次都对不上 —— 退化成「每次都核」，安全，只是多一步。
+ */
+object RemoteUnattended {
+    enum class Step { Face, Code, Pin, Locked }
+
+    /**
+     * 这一刻该画哪一道。[codeVerified] = 这次会话已核过短码（人点了「一致」，或记住的指纹对上了）。
+     * 没核过时哪怕 `needPin` 先到也停在 Code —— PIN 只记下「要」，等核过再出键盘。
+     */
+    fun step(localAuthPassed: Boolean, codeVerified: Boolean, pinRequested: Boolean, pinLocked: Boolean): Step = when {
+        !localAuthPassed -> Step.Face
+        !codeVerified -> Step.Code
+        pinRequested -> if (pinLocked) Step.Locked else Step.Pin
+        else -> Step.Code
+    }
+
+    /** PIN 能不能发：本机认证过了、短码也核过了。少一样都不发（PIN 是那台电脑的长期凭证）。 */
+    fun maySendPin(localAuthPassed: Boolean, codeVerified: Boolean): Boolean = localAuthPassed && codeVerified
+
+    /**
+     * 记住的电脑侧指纹 [saved] 和这次会话的 [current] 对得上 → 不用再核。这次没算出指纹（null）一律当没核过：
+     * 认不出对端是谁，就不能跳过核对。
+     */
+    fun fingerprintMatches(saved: String?, current: String?): Boolean = current != null && saved == current
+}
+
 // MARK: - 快照降级与画质（§14.5 / RC-3.5）
 
 object RemoteFallback {

@@ -1336,13 +1336,16 @@ private fun Modifier.blockTouches(): Modifier = pointerInput(Unit) { awaitEachGe
 
 // MARK: 无人值守（§14.6，iOS 稿 05）
 
-/** 无人值守的三步一整页：生物识别过了才出 PIN；PIN 过了、第一次连这台再核对一次短码（iOS: RemoteSessionView.swift:932）。 */
+/**
+ * 无人值守的三步一整页：生物识别 → 核对短码（记住的电脑侧指纹对不上时）→ PIN。
+ * 顺序改过（refs umbra-ios#95）：原来 PIN 在短码之前，PIN 会先交给中间人。判据在 [RemoteUnattended]。
+ */
 private fun showsUnattended(client: RemoteClient): Boolean {
     if (!client.unattended || client.phase == RemoteClient.Phase.Ended) return false
     return !client.localAuthPassed || client.pinRequested || client.askVerifyCode
 }
 
-private enum class UnattendedStep { Face, Pin, Locked, Code }
+private typealias UnattendedStep = RemoteUnattended.Step
 
 /**
  * 无人值守整页（浅底，左上「关闭」；iOS: RemoteSessionView.swift:948）：
@@ -1352,7 +1355,7 @@ private enum class UnattendedStep { Face, Pin, Locked, Code }
  *     满 6 位才出［连接］、不自动提交；错了红字（带了 left 就写「还能试 N 次」）；
  *   · 锁定：「先停一下」+ 锁到几点 + 「到点再试；急用就请那边的人点「允许」」，键盘 35% 置灰；
  *     稿上［改成请对方允许］没做（同 iOS）：无人值守是被控端判的，控制端发不出「这次要人点允许」的请求；
- *   · 核对短码：「第一次连「X」」+ 大号等宽短码 +［一致，继续］［对不上］。
+ *   · 核对短码：「第一次连「X」」+ 大号等宽短码 +［一致，继续］［对不上］—— 在 PIN 之前（refs umbra-ios#95）。
  */
 @Composable
 private fun UnattendedPage(client: RemoteClient) {
@@ -1366,11 +1369,12 @@ private fun UnattendedPage(client: RemoteClient) {
         if (wait > 0) delay(wait + 200)
         nowMs = System.currentTimeMillis()
     }
-    val step = when {
-        !client.localAuthPassed -> UnattendedStep.Face
-        client.pinRequested -> client.pinLockedUntilMs?.takeIf { it > maxOf(nowMs, System.currentTimeMillis()) }?.let { UnattendedStep.Locked } ?: UnattendedStep.Pin
-        else -> UnattendedStep.Code
-    }
+    val step = RemoteUnattended.step(
+        localAuthPassed = client.localAuthPassed,
+        codeVerified = client.codeVerified,
+        pinRequested = client.pinRequested,
+        pinLocked = (client.pinLockedUntilMs ?: 0) > maxOf(nowMs, System.currentTimeMillis()),
+    )
     val lockedAt = client.pinLockedUntilMs?.let(::shortTime) ?: ""
     // 横屏时内容高过屏幕：整页能竖着滚；够高时上半贴顶、钮贴底（SpaceBetween + 最小高 = 可视高）。
     BoxWithConstraints(Modifier.fillMaxSize().background(c.bg).blockTouches().windowInsetsPadding(WindowInsets.safeDrawing)) {
