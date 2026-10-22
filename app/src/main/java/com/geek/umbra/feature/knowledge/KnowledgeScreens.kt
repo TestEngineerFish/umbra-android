@@ -43,23 +43,23 @@ import com.geek.umbra.R
 import com.geek.umbra.app.AppGraph
 import com.geek.umbra.designsystem.UmbraDimens
 import com.geek.umbra.designsystem.UmbraEmptyState
-import com.geek.umbra.designsystem.UmbraErrorCard
-import com.geek.umbra.designsystem.UmbraErrorStrip
 import com.geek.umbra.designsystem.UmbraGroupCard
 import com.geek.umbra.designsystem.UmbraIcon
 import com.geek.umbra.designsystem.UmbraIconPaths
+import com.geek.umbra.designsystem.UmbraPhaseFailedCard
 import com.geek.umbra.designsystem.UmbraProgressBar
 import com.geek.umbra.designsystem.UmbraRowDivider
 import com.geek.umbra.designsystem.UmbraScreen
+import com.geek.umbra.designsystem.UmbraScreenPhase
 import com.geek.umbra.designsystem.UmbraSkeleton
 import com.geek.umbra.designsystem.UmbraSoftChip
 import com.geek.umbra.designsystem.UmbraSpinningIcon
 import com.geek.umbra.designsystem.UmbraStatusDot
 import com.geek.umbra.designsystem.UmbraStripAction
 import com.geek.umbra.designsystem.UmbraTheme
-import com.geek.umbra.designsystem.UmbraTone
 import com.geek.umbra.designsystem.UmbraTopBarIcon
 import com.geek.umbra.designsystem.UmbraType
+import com.geek.umbra.designsystem.umbraPhaseTop
 import com.geek.umbra.feature.me.MeNote
 import com.geek.umbra.feature.me.MeSwipeAction
 import com.geek.umbra.feature.me.MeSwipeRow
@@ -70,28 +70,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 private val router get() = AppGraph.router
-
-// MARK: - 首屏三态的两块（iOS UmbraStates.swift umbraScreenPhase 的 failed / offline 档）
-
-/** 整屏错误卡：第二段分「够不着」和「够得着但没给数据」；第二颗钮送人去连接设置。 */
-@Composable
-private fun PhaseFailed(offline: Boolean, title: String, retry: () -> Unit) {
-    UmbraErrorCard(
-        title = title,
-        body = stringResource(if (offline) R.string.state_failed_reason_offline else R.string.state_failed_reason_server),
-        actions = listOf(
-            stringResource(R.string.state_retry) to retry,
-            stringResource(R.string.state_checkServer) to { router.go(Route.SetConn) },
-        ),
-    )
-}
-
-/** 离线条：错误卡的 edge 形取 warning 档。知识库在线优先、没有本地缓存，第二段用「下面是刚才拿到的内容」。 */
-@Composable
-private fun PhaseOfflineStrip(retry: () -> Unit) {
-    val text = stringResource(R.string.state_offline_title) + " · " + stringResource(R.string.state_offline_reason_live)
-    UmbraErrorStrip(text, tone = UmbraTone.Warning, action = stringResource(R.string.state_retry) to retry)
-}
 
 // MARK: - 库列表
 
@@ -106,7 +84,7 @@ fun KbListScreen() {
     val scope = rememberCoroutineScope()
     var refreshing by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { KbListStore.load() }
-    val phase = KbPhase.resolve(kbs.isNotEmpty(), loading && !loadedOnce, loadedOnce, offline)
+    val phase = UmbraScreenPhase.resolve(kbs.isNotEmpty(), loading && !loadedOnce, loadedOnce, offline)
     val retry: () -> Unit = { scope.launch { KbListStore.load() } }
     val ctx = AppGraph.context
 
@@ -114,14 +92,14 @@ fun KbListScreen() {
         title = stringResource(R.string.kb_title), onBack = { router.back() },
         refreshing = refreshing, onRefresh = { scope.launch { refreshing = true; KbListStore.load(); refreshing = false } },
         actions = { UmbraTopBarIcon(UmbraIconPaths.plus, stringResource(R.string.kb_new), { askCreate() }, tint = c.orangeText) },
-        topContent = if (phase is KbPhase.Content && phase.offline) ({ PhaseOfflineStrip(retry) }) else null,
+        topContent = umbraPhaseTop(phase, live = true, retry),
     ) {
         when (phase) {
-            KbPhase.Skeleton -> item("skel") { UmbraSkeleton() }
-            is KbPhase.Failed -> item("fail") {
-                PhaseFailed(phase.offline, ctx.getString(if (last == KbOutcome.Disabled) R.string.kb_fail_disabled else R.string.kb_list_failed), retry)
+            UmbraScreenPhase.Skeleton -> item("skel") { UmbraSkeleton() }
+            is UmbraScreenPhase.Failed -> item("fail") {
+                UmbraPhaseFailedCard(phase.offline, retry, title = ctx.getString(if (last == KbOutcome.Disabled) R.string.kb_fail_disabled else R.string.kb_list_failed))
             }
-            is KbPhase.Content -> {
+            is UmbraScreenPhase.Content -> {
                 val dim = if (phase.offline) 0.6f else 1f
                 if (kbs.isEmpty()) {
                     item("empty") {
@@ -228,22 +206,22 @@ fun KbDocsScreen(id: String, name: String) {
     LaunchedEffect(id) { while (true) { delay(3_000); model.pollOnce() } }
     DisposableEffect(id) { onDispose { model.leftPage() } }
 
-    val phase = KbPhase.resolve(docs.isNotEmpty(), loading && !loadedOnce, loadedOnce, offline)
+    val phase = UmbraScreenPhase.resolve(docs.isNotEmpty(), loading && !loadedOnce, loadedOnce, offline)
     val retry: () -> Unit = { scope.launch { model.load() } }
 
     UmbraScreen(
         title = name, onBack = { router.back() },
         refreshing = refreshing, onRefresh = { scope.launch { refreshing = true; model.load(); refreshing = false } },
         actions = { UmbraTopBarIcon(UmbraIconPaths.shareUp, stringResource(R.string.kb_upload), pick, tint = c.orangeText, enabled = uploading == null) },
-        topContent = if (phase is KbPhase.Content && phase.offline) ({ PhaseOfflineStrip(retry) }) else null,
+        topContent = umbraPhaseTop(phase, live = true, retry),
     ) {
         uploading?.let { up -> item("upload") { UploadRow(up) { model.cancelUpload() } } }
         when (phase) {
-            KbPhase.Skeleton -> item("skel") { UmbraSkeleton() }
-            is KbPhase.Failed -> item("fail") {
-                PhaseFailed(phase.offline, ctx.getString(if (last == KbOutcome.Disabled) R.string.kb_fail_disabled else R.string.kb_docs_failed), retry)
+            UmbraScreenPhase.Skeleton -> item("skel") { UmbraSkeleton() }
+            is UmbraScreenPhase.Failed -> item("fail") {
+                UmbraPhaseFailedCard(phase.offline, retry, title = ctx.getString(if (last == KbOutcome.Disabled) R.string.kb_fail_disabled else R.string.kb_docs_failed))
             }
-            is KbPhase.Content -> {
+            is UmbraScreenPhase.Content -> {
                 if (docs.isEmpty()) {
                     item("empty") {
                         UmbraEmptyState(

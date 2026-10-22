@@ -31,12 +31,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.DatePicker
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
-import androidx.compose.material3.TimePicker
-import androidx.compose.material3.rememberDatePickerState
-import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -51,7 +47,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -78,6 +73,8 @@ import com.geek.umbra.designsystem.UmbraTheme
 import com.geek.umbra.designsystem.UmbraTopBarIcon
 import com.geek.umbra.designsystem.UmbraTopBarText
 import com.geek.umbra.designsystem.UmbraType
+import com.geek.umbra.designsystem.umbraPhaseTop
+import com.geek.umbra.designsystem.umbraScreenPhase
 import com.geek.umbra.navigation.Route
 import com.geek.umbra.navigation.UmbraAlert
 import kotlinx.coroutines.launch
@@ -259,9 +256,9 @@ fun MoneyRecurListView() {
         actions = { UmbraTopBarIcon(UmbraIconPaths.plus, "新建", { AppGraph.router.go(Route.MoneyRecurEdit(null)) }, tint = c.orange) },
         refreshing = refreshing,
         onRefresh = { scope.launch { refreshing = true; MoneyStore.reloadRecur(); refreshing = false } },
-        topContent = { MoneyOfflineTop(phase) },
+        topContent = umbraPhaseTop(phase, live = true) { MoneyStore.launch { MoneyStore.retryRecur() } },
     ) {
-        moneyPhase(phase, "拿不到周期规则", retry = { MoneyStore.launch { MoneyStore.retryRecur() } }) {
+        umbraScreenPhase(phase, { MoneyStore.launch { MoneyStore.retryRecur() } }, "拿不到周期规则") {
             if (rules.isEmpty()) {
                 item(key = "empty") {
                     Text(

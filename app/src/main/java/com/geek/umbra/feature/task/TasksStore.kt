@@ -1,6 +1,7 @@
 package com.geek.umbra.feature.task
 
 import com.geek.umbra.app.AppGraph
+import com.geek.umbra.designsystem.UmbraScreenPhase
 import com.geek.umbra.model.KnownDevice
 import com.geek.umbra.model.TaskDetail
 import com.geek.umbra.model.TaskItem
@@ -93,8 +94,8 @@ object TasksStore {
     }
 
     /** 首屏三态（offline 由页面传进来，别在这儿读全局 —— 一个页面只订阅一处）。 */
-    fun screenPhase(offline: Boolean): ScreenPhase =
-        ScreenPhase.resolve(_items.value.isNotEmpty(), _firstLoading.value, _loadedOnce.value, offline)
+    fun screenPhase(offline: Boolean): UmbraScreenPhase =
+        UmbraScreenPhase.resolve(_items.value.isNotEmpty(), _firstLoading.value, _loadedOnce.value, offline)
 
     // MARK: - 生命周期（TaskModule 在守卫上登记）
 

@@ -1,7 +1,7 @@
 package com.geek.umbra.feature.inspiration
 
 import com.geek.umbra.app.AppGraph
-import com.geek.umbra.feature.task.ScreenPhase
+import com.geek.umbra.designsystem.UmbraScreenPhase
 import com.geek.umbra.net.str
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -35,8 +35,8 @@ object InspirationStore {
     /** 待办数（工具页卡底「N 条 · M 条待整理」那个 M —— iOS 数的是 status == open）。 */
     fun openCount(l: List<Inspiration> = _list.value) = l.count { it.status == "open" }
 
-    fun screenPhase(offline: Boolean): ScreenPhase =
-        ScreenPhase.resolve(_list.value.isNotEmpty(), _firstLoading.value, _loadedOnce.value, offline)
+    fun screenPhase(offline: Boolean): UmbraScreenPhase =
+        UmbraScreenPhase.resolve(_list.value.isNotEmpty(), _firstLoading.value, _loadedOnce.value, offline)
 
     /** WS inspiration_*（created / updated / deleted …）→ 立即同步并重载（iOS 经 .inspirationChanged 通知）。 */
     fun startListening() {

@@ -21,22 +21,6 @@ import kotlinx.coroutines.withContext
 import com.geek.umbra.feature.me.MeSheetItem
 import com.geek.umbra.feature.me.presentChoice
 
-/** 首屏三态（iOS UmbraStates.swift UmbraScreenPhase）。有内容永远先给内容；没内容 + 首屏在拉 → 骨架；没成功过 → 错误卡。 */
-sealed interface KbPhase {
-    data object Skeleton : KbPhase
-    data class Failed(val offline: Boolean) : KbPhase
-    data class Content(val offline: Boolean) : KbPhase
-
-    companion object {
-        fun resolve(hasContent: Boolean, loading: Boolean, loadedOnce: Boolean, offline: Boolean): KbPhase = when {
-            hasContent -> Content(offline)
-            loading -> Skeleton
-            !loadedOnce -> Failed(offline)
-            else -> Content(offline)
-        }
-    }
-}
-
 /** 库列表（iOS KbListModel）。最近一次的档：disabled 时错误卡说「没启用」，不说「拿不到」。 */
 object KbListStore {
     val kbs = MutableStateFlow<List<KbDTO>>(emptyList())

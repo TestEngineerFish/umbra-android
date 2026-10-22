@@ -22,7 +22,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -44,25 +43,24 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.geek.umbra.R
 import com.geek.umbra.app.AppGraph
 import com.geek.umbra.designsystem.UmbraButton
 import com.geek.umbra.designsystem.UmbraButtonKind
 import com.geek.umbra.designsystem.UmbraEmptyState
-import com.geek.umbra.designsystem.UmbraExtraIcons
 import com.geek.umbra.designsystem.UmbraFieldLabel
 import com.geek.umbra.designsystem.UmbraFilterChips
 import com.geek.umbra.designsystem.UmbraIconPaths
 import com.geek.umbra.designsystem.UmbraMenuItem
 import com.geek.umbra.designsystem.UmbraMoreMenu
+import com.geek.umbra.designsystem.UmbraPhaseFailedCard
 import com.geek.umbra.designsystem.UmbraScreen
+import com.geek.umbra.designsystem.UmbraScreenPhase
 import com.geek.umbra.designsystem.UmbraSkeleton
 import com.geek.umbra.designsystem.UmbraSwitch
 import com.geek.umbra.designsystem.UmbraTagPill
@@ -70,17 +68,14 @@ import com.geek.umbra.designsystem.UmbraTheme
 import com.geek.umbra.designsystem.UmbraTopBarIcon
 import com.geek.umbra.designsystem.UmbraTopBarText
 import com.geek.umbra.designsystem.UmbraType
+import com.geek.umbra.designsystem.umbraPhaseTop
 import com.geek.umbra.feature.chat.ChatApi
 import com.geek.umbra.feature.task.CollapsingSearch
-import com.geek.umbra.feature.task.PhaseFailedCard
-import com.geek.umbra.feature.task.PhaseOfflineStrip
-import com.geek.umbra.feature.task.ScreenPhase
 import com.geek.umbra.feature.task.SimpleMarkdown
 import com.geek.umbra.feature.task.TaskTime
 import com.geek.umbra.feature.task.VisiblePolling
 import com.geek.umbra.navigation.Route
 import com.geek.umbra.navigation.UmbraAlert
-import com.geek.umbra.navigation.UmbraSheet
 import com.geek.umbra.net.BackgroundWork
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.launch
@@ -154,9 +149,9 @@ fun InspListView() {
         if (first) InspirationStore.load() else withContext(BackgroundWork) { InspirationStore.load() }
     }
 
-    val phase = ScreenPhase.resolve(list.isNotEmpty(), firstLoading, loadedOnce, offline)
+    val phase = UmbraScreenPhase.resolve(list.isNotEmpty(), firstLoading, loadedOnce, offline)
     val retry: () -> Unit = { AppGraph.scope.launch { InspirationStore.retry() } }
-    val dim = if (phase is ScreenPhase.Content && phase.offline) 0.6f else 1f
+    val dim = if (phase is UmbraScreenPhase.Content && phase.offline) 0.6f else 1f
     val searchQ = query.trim()
     val isFiltered = searchQ.isNotEmpty() || tag != null || status.isNotEmpty()
     val allTags = InspirationStore.allTags(list)
@@ -191,13 +186,13 @@ fun InspListView() {
                 }
             }
         },
-        topContent = if (phase is ScreenPhase.Content && phase.offline) ({ PhaseOfflineStrip(retry) }) else null,
+        topContent = umbraPhaseTop(phase, live = true, retry),
         spacing = 10.dp,
     ) {
         when (phase) {
-            ScreenPhase.Skeleton -> item("skel") { UmbraSkeleton() }
-            is ScreenPhase.Failed -> item("fail") { PhaseFailedCard(phase.offline, "拿不到灵感列表", retry) }
-            is ScreenPhase.Content -> {
+            UmbraScreenPhase.Skeleton -> item("skel") { UmbraSkeleton() }
+            is UmbraScreenPhase.Failed -> item("fail") { UmbraPhaseFailedCard(phase.offline, retry, Modifier.padding(horizontal = 16.dp, vertical = 12.dp), "拿不到灵感列表") }
+            is UmbraScreenPhase.Content -> {
                 item("status") {
                     UmbraFilterChips(Modifier.alpha(dim)) {
                         listOf("" to "全部", "open" to "待办", "done" to "已实现", "archived" to "归档").forEach { (k, label) ->

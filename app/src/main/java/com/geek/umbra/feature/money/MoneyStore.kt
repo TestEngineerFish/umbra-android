@@ -7,6 +7,7 @@
 package com.geek.umbra.feature.money
 
 import com.geek.umbra.app.AppGraph
+import com.geek.umbra.designsystem.UmbraScreenPhase
 import com.geek.umbra.net.Ledger
 import com.geek.umbra.net.Prefs
 import kotlinx.coroutines.async
@@ -116,7 +117,7 @@ object MoneyStore {
     val hasContent: Boolean get() = _stats.value != null
 
     /** 这一屏该画什么。`.Idle` 也算 loading：中间这一帧画空态会闪一下假的「还没有记录」。 */
-    fun screenPhase(offline: Boolean): MoneyScreenPhase = MoneyScreenPhase.resolve(
+    fun screenPhase(offline: Boolean): UmbraScreenPhase = UmbraScreenPhase.resolve(
         hasContent, _phase.value == Phase.Loading || _phase.value == Phase.Idle, _loadedOnce.value, offline,
     )
 
@@ -124,7 +125,7 @@ object MoneyStore {
     val catsLoadedOnce: StateFlow<Boolean> = _catsLoadedOnce
 
     /** 只吃分类的页面用这个：统计挂了但分类好着的时候，分类管理页本身是能用的。 */
-    fun catsScreenPhase(offline: Boolean): MoneyScreenPhase = MoneyScreenPhase.resolve(
+    fun catsScreenPhase(offline: Boolean): UmbraScreenPhase = UmbraScreenPhase.resolve(
         _cats.value.isNotEmpty(), _phase.value == Phase.Loading || _phase.value == Phase.Idle, _catsLoadedOnce.value, offline,
     )
 
@@ -134,7 +135,7 @@ object MoneyStore {
     private val _recurFirstLoading = MutableStateFlow(true)
     val recurFirstLoading: StateFlow<Boolean> = _recurFirstLoading
 
-    fun recurScreenPhase(offline: Boolean): MoneyScreenPhase = MoneyScreenPhase.resolve(
+    fun recurScreenPhase(offline: Boolean): UmbraScreenPhase = UmbraScreenPhase.resolve(
         _recurRules.value.isNotEmpty(), _recurFirstLoading.value, _recurLoadedOnce.value, offline,
     )
 

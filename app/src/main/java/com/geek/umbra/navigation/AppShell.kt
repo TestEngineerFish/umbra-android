@@ -48,9 +48,9 @@ import com.geek.umbra.app.AppGraph
 import com.geek.umbra.designsystem.UmbraDimens
 import com.geek.umbra.designsystem.UmbraErrorCard
 import com.geek.umbra.designsystem.UmbraButton
-import com.geek.umbra.designsystem.UmbraFixedColors
 import com.geek.umbra.designsystem.UmbraIcon
 import com.geek.umbra.designsystem.UmbraScreen
+import com.geek.umbra.designsystem.UmbraStates
 import com.geek.umbra.designsystem.UmbraTheme
 import com.geek.umbra.designsystem.UmbraTone
 import com.geek.umbra.designsystem.UmbraType
@@ -70,6 +70,8 @@ import com.geek.umbra.net.SessionGuardRules
 @Composable
 fun AppShell() {
     val router = AppGraph.router
+    // 三态错误卡第二颗钮「检查服务端」的出口：设计系统不认路由，由外壳注入一次（iOS AppShell `.environment(\.umbraCheckServer)`）。
+    UmbraStates.checkServer = { router.jump(Route.SetConn) }
     val gate by AppGraph.auth.gate.collectAsState()
     val standalone = AppGraph.prefs.snapshot.collectAsState().value[com.geek.umbra.net.Prefs.K.standalone] ?: false
     val c = UmbraTheme.colors

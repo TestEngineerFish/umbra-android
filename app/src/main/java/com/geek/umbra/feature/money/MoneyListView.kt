@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -57,6 +56,8 @@ import com.geek.umbra.designsystem.UmbraTagPill
 import com.geek.umbra.designsystem.UmbraTheme
 import com.geek.umbra.designsystem.UmbraTopBarIcon
 import com.geek.umbra.designsystem.UmbraType
+import com.geek.umbra.designsystem.umbraPhaseTop
+import com.geek.umbra.designsystem.umbraScreenPhase
 import com.geek.umbra.navigation.Route
 import com.geek.umbra.navigation.UmbraAlert
 import com.geek.umbra.net.Ledger
@@ -154,9 +155,9 @@ fun MoneyListView() {
         spacing = 0.dp,
         contentPadding = PaddingValues(start = UmbraDimens.pagePadX, end = UmbraDimens.pagePadX, top = 2.dp, bottom = 24.dp),
         // 三档挂在列表外面：骨架 / 错误卡整屏换掉列表，离线条钉在列表上方不跟着滚。
-        topContent = { MoneyOfflineTop(screen) },
+        topContent = umbraPhaseTop(screen, live = true) { MoneyStore.launch { MoneyStore.retry() } },
     ) {
-        moneyPhase(screen, failedTitle = "拿不到流水", retry = { MoneyStore.launch { MoneyStore.retry() } }) {
+        umbraScreenPhase(screen, { MoneyStore.launch { MoneyStore.retry() } }, "拿不到流水") {
             item(key = "dir") {
                 UmbraSegmentedControl(
                     DIRS.map { UmbraSegment(it.second) },

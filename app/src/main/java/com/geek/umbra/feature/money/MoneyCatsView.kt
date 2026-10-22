@@ -103,6 +103,8 @@ import com.geek.umbra.designsystem.UmbraTextField
 import com.geek.umbra.designsystem.UmbraTheme
 import com.geek.umbra.designsystem.UmbraTopBarIcon
 import com.geek.umbra.designsystem.UmbraType
+import com.geek.umbra.designsystem.umbraPhaseTop
+import com.geek.umbra.designsystem.umbraScreenPhase
 import com.geek.umbra.navigation.Route
 import com.geek.umbra.navigation.UmbraAlert
 import com.geek.umbra.navigation.UmbraSheet
@@ -252,9 +254,9 @@ fun MoneyCatsView() {
         actions = { UmbraTopBarIcon(UmbraIconPaths.plus, "新建", { askAdd() }, tint = c.orange) },
         refreshing = refreshing,
         onRefresh = { scope.launch { refreshing = true; MoneyStore.reload(silent = true); refreshing = false } },
-        topContent = { MoneyOfflineTop(phase) },
+        topContent = umbraPhaseTop(phase, live = true) { MoneyStore.launch { MoneyStore.retry() } },
     ) {
-        moneyPhase(phase, "拿不到分类", retry = { MoneyStore.launch { MoneyStore.retry() } }) {
+        umbraScreenPhase(phase, { MoneyStore.launch { MoneyStore.retry() } }, "拿不到分类") {
             for ((title, dir) in listOf("支出" to "expense", "收入" to "income")) {
                 item(key = "sec-$dir") {
                     CatSection(
@@ -942,8 +944,8 @@ fun MoneyAccountsView() {
     // 判据同分类管理：用 catsScreenPhase，统计挂了但科目好着时这一屏能用。
     val phase = remember(storePhase, catsLoaded, cats, offline) { MoneyStore.catsScreenPhase(offline) }
 
-    UmbraScreen(title = "科目", onBack = { AppGraph.router.back() }, topContent = { MoneyOfflineTop(phase) }) {
-        moneyPhase(phase, "拿不到科目", retry = { MoneyStore.launch { MoneyStore.reload() } }) {
+    UmbraScreen(title = "科目", onBack = { AppGraph.router.back() }, topContent = umbraPhaseTop(phase, live = true) { MoneyStore.launch { MoneyStore.reload() } }) {
+        umbraScreenPhase(phase, { MoneyStore.launch { MoneyStore.reload() } }, "拿不到科目") {
             item(key = "note") {
                 // ⒞ 那句代价放在表**上面**，不是挂在某个禁用控件上。⚠️ 不写方位词（positionWordsDontMove）。
                 Text(

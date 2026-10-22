@@ -1,5 +1,6 @@
 package com.geek.umbra.feature.task
 
+import com.geek.umbra.designsystem.UmbraScreenPhase
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -73,10 +74,10 @@ class TaskDetailRulesTest {
     }
 
     @Test fun screenPhase() {
-        assertEquals(ScreenPhase.Content(false), ScreenPhase.resolve(true, true, false, false))
-        assertEquals(ScreenPhase.Skeleton, ScreenPhase.resolve(false, true, false, false))
-        assertEquals(ScreenPhase.Failed(true), ScreenPhase.resolve(false, false, false, true))
-        assertEquals("拉完确实是空的 → 内容（页面画空态）", ScreenPhase.Content(false), ScreenPhase.resolve(false, false, true, false))
+        assertEquals(UmbraScreenPhase.Content(false), UmbraScreenPhase.resolve(true, true, false, false))
+        assertEquals(UmbraScreenPhase.Skeleton, UmbraScreenPhase.resolve(false, true, false, false))
+        assertEquals(UmbraScreenPhase.Failed(true), UmbraScreenPhase.resolve(false, false, false, true))
+        assertEquals("拉完确实是空的 → 内容（页面画空态）", UmbraScreenPhase.Content(false), UmbraScreenPhase.resolve(false, false, true, false))
     }
 
     @Test fun statusMapping() {

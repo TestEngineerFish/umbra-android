@@ -9,7 +9,6 @@ import com.geek.umbra.designsystem.UmbraDimens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,7 +23,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
@@ -32,7 +30,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -42,7 +39,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -69,8 +65,10 @@ import com.geek.umbra.designsystem.UmbraFieldLabel
 import com.geek.umbra.designsystem.UmbraFilterChips
 import com.geek.umbra.designsystem.UmbraIcon
 import com.geek.umbra.designsystem.UmbraIconPaths
+import com.geek.umbra.designsystem.UmbraPhaseFailedCard
 import com.geek.umbra.designsystem.UmbraProgressBar
 import com.geek.umbra.designsystem.UmbraScreen
+import com.geek.umbra.designsystem.UmbraScreenPhase
 import com.geek.umbra.designsystem.UmbraSectionLabel
 import com.geek.umbra.designsystem.UmbraSegment
 import com.geek.umbra.designsystem.UmbraSegmentedControl
@@ -81,6 +79,7 @@ import com.geek.umbra.designsystem.UmbraStatusBadge
 import com.geek.umbra.designsystem.UmbraTagPill
 import com.geek.umbra.designsystem.UmbraTheme
 import com.geek.umbra.designsystem.UmbraType
+import com.geek.umbra.designsystem.umbraPhaseTop
 import com.geek.umbra.feature.chat.ChatApi
 import com.geek.umbra.feature.remote.RemoteLauncher
 import com.geek.umbra.model.StepError
@@ -142,9 +141,9 @@ fun TaskListView() {
         if (first) TasksStore.loadTasks() else withContext(BackgroundWork) { TasksStore.loadTasks() }
     }
 
-    val phase = ScreenPhase.resolve(items.isNotEmpty(), firstLoading, loadedOnce, offline)
+    val phase = UmbraScreenPhase.resolve(items.isNotEmpty(), firstLoading, loadedOnce, offline)
     val retry: () -> Unit = { AppGraph.scope.launch { TasksStore.retry() } }
-    val dim = if (phase is ScreenPhase.Content && phase.offline) 0.6f else 1f
+    val dim = if (phase is UmbraScreenPhase.Content && phase.offline) 0.6f else 1f
 
     val q = query.trim()
     val filtered = items.filter { j ->
@@ -161,13 +160,13 @@ fun TaskListView() {
         onBack = { router.back() },
         refreshing = refreshing,
         onRefresh = { AppGraph.scope.launch { TasksStore.refreshTasks() } },
-        topContent = if (phase is ScreenPhase.Content && phase.offline) ({ PhaseOfflineStrip(retry) }) else null,
+        topContent = umbraPhaseTop(phase, live = true, retry),
         spacing = 9.dp,
     ) {
         when (phase) {
-            ScreenPhase.Skeleton -> item("skel") { UmbraSkeleton() }
-            is ScreenPhase.Failed -> item("fail") { PhaseFailedCard(phase.offline, "拿不到任务列表", retry) }
-            is ScreenPhase.Content -> {
+            UmbraScreenPhase.Skeleton -> item("skel") { UmbraSkeleton() }
+            is UmbraScreenPhase.Failed -> item("fail") { UmbraPhaseFailedCard(phase.offline, retry, Modifier.padding(horizontal = 16.dp, vertical = 12.dp), "拿不到任务列表") }
+            is UmbraScreenPhase.Content -> {
                 item("counts") {
                     val running = TasksStore.runningCount(items)
                     Text("共 ${items.size} 个 · $running 个执行中", color = c.muted, style = TextStyle(fontSize = 13.sp), modifier = Modifier.alpha(dim))

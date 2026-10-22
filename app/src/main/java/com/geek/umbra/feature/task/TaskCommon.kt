@@ -40,7 +40,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.LinkAnnotation
@@ -57,16 +56,11 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
-import com.geek.umbra.R
 import com.geek.umbra.app.AppGraph
-import com.geek.umbra.designsystem.UmbraErrorCard
-import com.geek.umbra.designsystem.UmbraErrorStrip
 import com.geek.umbra.designsystem.UmbraIcon
 import com.geek.umbra.designsystem.UmbraIconPaths
 import com.geek.umbra.designsystem.UmbraMotion
 import com.geek.umbra.designsystem.UmbraTheme
-import com.geek.umbra.designsystem.UmbraTone
-import com.geek.umbra.navigation.Route
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import java.net.URI
@@ -126,31 +120,6 @@ fun CollapsingSearch(placeholder: String, text: String, onText: (String) -> Unit
             wantFocus = false
         }
     }
-}
-
-/**
- * 首屏三态里那张整屏错误卡（iOS: UmbraStates.swift `umbraScreenPhase` 的 failed 档）：
- * 第二段分「够不着」和「够得着但没给数据」；第二颗钮把人送到连接设置去。
- */
-@Composable
-fun PhaseFailedCard(offline: Boolean, title: String?, retry: () -> Unit, modifier: Modifier = Modifier) {
-    UmbraErrorCard(
-        title = title ?: stringResource(R.string.state_failed_title),
-        body = stringResource(if (offline) R.string.state_failed_reason_offline else R.string.state_failed_reason_server),
-        actions = listOf(
-            stringResource(R.string.state_retry) to retry,
-            stringResource(R.string.state_checkServer) to { AppGraph.router.go(Route.SetConn) },
-        ),
-        modifier = modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-    )
-}
-
-/** 离线条（错误卡的 edge 形取 warning 档）。任务 / 灵感是刚拿到的内容，用「下面是刚才拿到的内容」那句。 */
-@Composable
-fun PhaseOfflineStrip(retry: () -> Unit, live: Boolean = true) {
-    val title = stringResource(R.string.state_offline_title)
-    val reason = stringResource(if (live) R.string.state_offline_reason_live else R.string.state_offline_reason)
-    UmbraErrorStrip("$title · $reason", tone = UmbraTone.Warning, action = stringResource(R.string.state_retry) to retry)
 }
 
 /** 进程级剪贴板写入（普通文本，不是保险箱那种敏感值）。 */

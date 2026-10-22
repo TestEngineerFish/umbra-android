@@ -65,6 +65,8 @@ import com.geek.umbra.designsystem.UmbraScreen
 import com.geek.umbra.designsystem.UmbraTheme
 import com.geek.umbra.designsystem.UmbraTopBarIcon
 import com.geek.umbra.designsystem.UmbraType
+import com.geek.umbra.designsystem.umbraPhaseTop
+import com.geek.umbra.designsystem.umbraScreenPhase
 import com.geek.umbra.navigation.Route
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -188,9 +190,9 @@ fun MoneyHomeView() {
         },
         spacing = UmbraDimens.sp4,
         contentPadding = PaddingValues(start = UmbraDimens.pagePadX, end = UmbraDimens.pagePadX, top = UmbraDimens.sp2, bottom = 24.dp),
-        topContent = { MoneyOfflineTop(screen) },
+        topContent = umbraPhaseTop(screen, live = true) { MoneyStore.launch { MoneyStore.retry() } },
     ) {
-        moneyPhase(screen, failedTitle = "拿不到这个月的账", retry = { MoneyStore.launch { MoneyStore.retry() } }) {
+        umbraScreenPhase(screen, { MoneyStore.launch { MoneyStore.retry() } }, "拿不到这个月的账") {
             val st = stats
             if (isEmpty) {
                 // ⚠️ 与 iOS 的差异：iOS 空态整个替换内容区，连月份行一起没了 —— 翻到一个空月之后
