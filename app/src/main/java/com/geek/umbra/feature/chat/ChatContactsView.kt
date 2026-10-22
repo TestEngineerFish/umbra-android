@@ -175,7 +175,7 @@ private fun ContactRow(conv: String, dev: com.geek.umbra.model.KnownDevice?, pre
     }
     if (dev == null) { row(); return }
     // 只有设备行能左滑：露出「移除」钮（公共件，拖到底不执行），点了再过确认（破坏性操作必过确认）。
-    val remove = UmbraSwipeAction("移除", UmbraIconPaths.trash, c.danger, c.onDanger) {
+    val remove = UmbraSwipeAction("移除", UmbraIconPaths.minusCircle, c.danger, c.onDanger) {
         AppGraph.router.confirm(
             UmbraAlert(
                 title = "从联系人移除「${ChatStore.convLabel(conv)}」？",

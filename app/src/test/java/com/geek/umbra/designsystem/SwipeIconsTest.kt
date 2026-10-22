@@ -18,7 +18,8 @@ class SwipeIconsTest {
     private val registered = mapOf(
         "trash" to "trash", "ban" to "ban", "play" to "play", "briefcase" to "briefcase", "wallet" to "wallet",
         "copy" to "copy", "refreshCw" to "refresh-cw", "undo" to "undo", "edit" to "edit", "shapes" to "shapes",
-        "clock" to "clock", "check" to "check", "x" to "x", "stopCircle" to "stop-circle", "moon" to "moon",
+        "alarmClock" to "alarm-clock", "minusCircle" to "circle-minus", // 批次 285：clock 是状态「待执行」不上钮；移除不是删除，不用 trash
+        "check" to "check", "x" to "x", "stopCircle" to "stop-circle", "moon" to "moon",
     )
 
     @Test fun swipeIconsAreRegistered() {
@@ -35,9 +36,9 @@ class SwipeIconsTest {
         assertTrue("左滑用了没登记的图标：$bad", bad.isEmpty())
     }
 
-    /** 照登记表原文抄进来的四颗（带相对坐标、弧线、隐式 lineto）都解析得出路径 —— 重试 / 找回所在的页要联网，本机模拟器点不到。 */
+    /** 照登记表原文抄进来的几颗（带相对坐标、弧线、隐式 lineto）都解析得出路径 —— 重试 / 找回所在的页要联网，本机模拟器点不到。 */
     @Test fun copiedIconsParse() {
-        for (d in listOf(UmbraExtraIcons.refreshCw, UmbraExtraIcons.undo, UmbraExtraIcons.edit, UmbraExtraIcons.shapes)) {
+        for (d in listOf(UmbraExtraIcons.refreshCw, UmbraExtraIcons.undo, UmbraExtraIcons.edit, UmbraExtraIcons.shapes, UmbraExtraIcons.alarmClock)) {
             val nodes = androidx.compose.ui.graphics.vector.PathParser().parsePathString(d).toNodes()
             assertTrue("解析不出：$d", nodes.size >= 3)
         }

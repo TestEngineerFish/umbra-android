@@ -91,6 +91,7 @@ import com.geek.umbra.designsystem.UmbraErrorCard
 import com.geek.umbra.designsystem.UmbraFieldLabel
 import com.geek.umbra.designsystem.UmbraGroupCard
 import com.geek.umbra.designsystem.UmbraIcon
+import com.geek.umbra.designsystem.UmbraExtraIcons
 import com.geek.umbra.designsystem.UmbraIconPaths
 import com.geek.umbra.designsystem.UmbraPhaseFailedCard
 import com.geek.umbra.designsystem.UmbraPickers
@@ -278,7 +279,7 @@ private fun ReminderRow(r: Reminder, leaving: Boolean, onToggle: () -> Unit) {
                 confirmLabel = "移入回收站", destructive = true,
             ) { store.delete(r.id); router.showToast("已移入回收站 · 保留 30 天") })
         })
-        if (r.canSnoozeNow) add(UmbraSwipeAction("再等 10 分钟", UmbraIconPaths.clock, c.warning) {
+        if (r.canSnoozeNow) add(UmbraSwipeAction("再等 10 分钟", UmbraExtraIcons.alarmClock, c.warning) {
             store.snooze(r.id); router.showToast("好，10 分钟后再叫你")
         })
     }
