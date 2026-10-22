@@ -197,6 +197,7 @@ R8 的问题只在运行时暴露（序列化类被裁、反射找不到），�
 - 单机模式下保险箱把请求闸的调试描述当离线原因显示；Android 改为未登录时安静回落本机。
 - 主题许可证：iOS 本机许可证整机一份、读取时不核账号（同 PC #128）；Android 登出 / 换号即清、读取核 `sub` 与记下的账号。
 - 主题试用到点：iOS 开着编辑页时多等 3 秒再退（SwiftUI 换根视图身份会丢草稿）；Compose 换配色只重组、不丢状态，Android 不用等。
+- 选择列表底部「取消」：iOS `UmbraSheetLayer` 写死中文「取消」，英文界面也是中文；Android 的 `UmbraChoice` 走 `common_cancel`（英文 Cancel），有用例 `DesignSystemCopyTest` 守着。
 
 ### 技术债
 

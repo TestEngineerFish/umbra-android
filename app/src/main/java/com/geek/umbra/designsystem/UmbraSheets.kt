@@ -123,7 +123,7 @@ object UmbraChoice {
      * （确认弹窗 / 下一步选择器）。项多时整张能滚。
      * [onDismissed]：弹层**因为任何原因**离开（选了 / 取消 / 下滑关掉）都回调一次，带「是不是选了一项」——
      * 知识库同名询问靠它把「下滑关掉」认成取消（iOS KbClashPrompt.sheetsChanged 那一套）。
-     * 「取消」写死中文：iOS UmbraSheetLayer 那颗就是字面量「取消」（不走 L()），英文界面也一样。
+     * 「取消」走通用的 `common_cancel`（英文界面是 Cancel）。iOS UmbraSheetLayer 那颗写死了中文「取消」，那是 iOS 的缺陷，Android 不跟。
      */
     fun present(
         title: String,
@@ -168,7 +168,7 @@ object UmbraChoice {
                     }
                 }
                 // 取消不是要推销的动作：次级样式，不用橙色。
-                UmbraButton("取消", dismiss, Modifier.fillMaxWidth(), kind = UmbraButtonKind.Secondary, height = 50.dp)
+                UmbraButton(stringResource(R.string.common_cancel), dismiss, Modifier.fillMaxWidth(), kind = UmbraButtonKind.Secondary, height = 50.dp)
             }
         })
     }
