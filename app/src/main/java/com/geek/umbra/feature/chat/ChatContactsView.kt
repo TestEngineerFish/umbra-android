@@ -54,6 +54,7 @@ import com.geek.umbra.designsystem.UmbraScreen
 import com.geek.umbra.designsystem.UmbraStatusDot
 import com.geek.umbra.designsystem.UmbraTheme
 import com.geek.umbra.designsystem.UmbraType
+import com.geek.umbra.feature.me.DevicesStore
 import com.geek.umbra.navigation.Route
 import com.geek.umbra.navigation.UmbraAlert
 import com.geek.umbra.net.SocketState
@@ -69,12 +70,12 @@ fun ChatContactsPage() {
     val ws by AppGraph.socket.state.collectAsState()
     var refreshing by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    LaunchedEffect(Unit) { ChatStore.loadDevices() }
+    LaunchedEffect(Unit) { DevicesStore.load() }
 
     UmbraScreen(
         title = "聊天",
         refreshing = refreshing,
-        onRefresh = { scope.launch { refreshing = true; ChatStore.reloadDevices(); refreshing = false } },
+        onRefresh = { scope.launch { refreshing = true; DevicesStore.reload(); refreshing = false } },
     ) {
         item(key = "head") {
             // 分区标题行：左「联系人」，右侧是连接状态 —— 状态不占一整行
@@ -196,7 +197,7 @@ private fun ContactRow(conv: String, dev: com.geek.umbra.model.KnownDevice?, pre
                         message = "只是从列表里拿掉，设备重新连上会再次出现。",
                         confirmLabel = "移除", destructive = true,
                     ) {
-                        ChatStore.forgetDevice(dev.device_id)
+                        DevicesStore.forget(dev.device_id)
                         AppGraph.router.showToast("已移除")
                     },
                 )

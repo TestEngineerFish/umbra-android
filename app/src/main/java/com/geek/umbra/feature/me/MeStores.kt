@@ -3,18 +3,19 @@ package com.geek.umbra.feature.me
 import com.geek.umbra.app.AppGraph
 import com.geek.umbra.model.Capability
 import com.geek.umbra.model.KnownDevice
+import com.geek.umbra.net.BackgroundWork
 import com.geek.umbra.net.UmbraUrl
 import com.geek.umbra.net.isOk
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.builtins.ListSerializer
 
 /**
- * 执行端设备（`GET /devices/all`）—— iOS 放在 ChatViewModel.devices（ChatViewModel.swift:199-216）。
- * 「我」首页那一行的台数、设备与能力列表、设备详情三处读同一份。
- *
- * 聊天模块的联系人列表在 iOS 也读这一份；Android 聊天包有自己的，合并时可以收成一处（见交回报告）。
+ * 执行端设备（`GET /devices/all`）—— iOS 放在 ChatViewModel.devices（ChatViewModel.swift:199-216），聊天联系人与「我」共读那一份。
+ * Android 也只存这一份：聊天联系人 / 会话标题、「我」首页那一行的台数、设备与能力列表、设备详情都读它。
+ * 从前聊天包另存了一份，长连接推来「设备上下线」只刷新聊天那份，「我」里的在线状态要等进页面才跟上（开发文档第五节技术债）。
  */
 object DevicesStore {
     private val _devices = MutableStateFlow<List<KnownDevice>>(emptyList())
@@ -26,7 +27,10 @@ object DevicesStore {
         _devices.value = list
     }
 
-    fun load() { AppGraph.scope.launch { reload() } }
+    /** background：长连接推来的刷新信号（设备上下线）、守卫「开」连带的请求不是人点的，统一出口不打「人引起的」头。 */
+    fun load(background: Boolean = false) {
+        AppGraph.scope.launch { if (background) withContext(BackgroundWork) { reload() } else reload() }
+    }
 
     /**
      * 从联系人列表移除：`DELETE /devices/{id}`，成功才从本地拿掉（iOS forgetDevice）。

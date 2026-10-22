@@ -7,6 +7,7 @@ package com.geek.umbra.feature.chat
 
 import com.geek.umbra.R
 import com.geek.umbra.app.AppGraph
+import com.geek.umbra.feature.me.DevicesStore
 import com.geek.umbra.feature.task.TaskDetailRules
 import com.geek.umbra.feature.task.TaskResumeOutcome
 import com.geek.umbra.feature.task.TaskRetryOutcome
@@ -93,8 +94,8 @@ object ChatStore {
     val activeConv: StateFlow<String> = _activeConv
     private val _unread = MutableStateFlow<Set<String>>(emptySet())
     val unread: StateFlow<Set<String>> = _unread
-    private val _devices = MutableStateFlow<List<KnownDevice>>(emptyList())
-    val devices: StateFlow<List<KnownDevice>> = _devices
+    /** 设备（联系人）列表：和「我」共用 [DevicesStore] 那一份（iOS 同是一份 ChatViewModel.devices）。 */
+    val devices: StateFlow<List<KnownDevice>> get() = DevicesStore.devices
     private val _previews = MutableStateFlow<Map<String, ConvPreview>>(emptyMap())
     val previews: StateFlow<Map<String, ConvPreview>> = _previews
     private val _history = MutableStateFlow(HistoryRowState())
@@ -201,7 +202,7 @@ object ChatStore {
         isLoadingHistory = false
         // 「接着跑」那几颗钮退回「还不知道」（不能原样留着：未登录期间挂一颗按了必回 401 的钮）
         _resumeAsks.value = _resumeAsks.value.mapValues { ResumeAsk() }
-        _devices.value = emptyList()
+        DevicesStore.clear()
         _previews.value = emptyMap()
         _unread.value = emptySet()
         quote.value = null
@@ -217,7 +218,7 @@ object ChatStore {
                 refetchResumeAsks()
                 loadHistory()
                 loadConversationsList()
-                loadDevices(background = true)
+                DevicesStore.load(background = true)
             }
         }
     }
@@ -234,30 +235,11 @@ object ChatStore {
     fun device(conv: String): KnownDevice? {
         if (!conv.startsWith("device:")) return null
         val id = conv.removePrefix("device:")
-        return _devices.value.firstOrNull { it.device_id == id }
+        return DevicesStore.devices.value.firstOrNull { it.device_id == id }
     }
 
     /** 联系人顺序：秘书恒在首位 → 在线设备 → 离线设备（服务端已排好）。 */
     fun contacts(devs: List<KnownDevice>): List<String> = listOf(MAIN_CONV) + devs.map { it.conversation }
-
-    /** background：长连接推来的刷新信号（设备上下线）连带的请求不是人点的，统一出口不打「人引起的」头。 */
-    fun loadDevices(background: Boolean = false) {
-        AppGraph.scope.launch { if (background) withContext(BackgroundWork) { reloadDevices() } else reloadDevices() }
-    }
-
-    /** 下拉刷新用的可等待版本。拉失败（null）保留旧联系人，别把列表清成只剩秘书。 */
-    suspend fun reloadDevices() {
-        val list = AppGraph.http.get<List<KnownDevice>>("/devices/all")
-        if (list != null) _devices.value = list
-    }
-
-    /** 从联系人列表移除一台设备（DELETE /devices/{id}，id 按一个路径段编码）。 */
-    fun forgetDevice(deviceId: String) {
-        AppGraph.scope.launch {
-            val r = AppGraph.http.call("DELETE", "/devices/${UmbraUrl.segment(deviceId)}")
-            if (r is ApiResult.Ok) _devices.value = _devices.value.filter { it.device_id != deviceId }
-        }
-    }
 
     private fun setPreview(conv: String, text: String, at: String?) {
         if (text.isEmpty()) return
@@ -1178,7 +1160,7 @@ object ChatStore {
 
     /** 求助卡「实时接管」要的设备：按运行认；认不出就只剩一台带远程能力的在线设备时用它，否则 null（不瞎猜）。 */
     fun deviceForRun(runId: String?): KnownDevice? {
-        val devs = _devices.value
+        val devs = DevicesStore.devices.value
         if (runId != null) operateRunDevice[runId]?.let { id -> devs.firstOrNull { it.device_id == id }?.let { return it } }
         val candidates = devs.filter { it.online && it.remote != null }
         return if (candidates.size == 1) candidates.first() else null
@@ -1322,7 +1304,7 @@ object ChatStore {
             // 回收站找回：往正确位置插旧消息的排序逻辑每端各写一遍必然各错各的 —— 重拉那个会话
             "message_restored" -> reloadConv(msg.str("conversation") ?: _activeConv.value)
 
-            "device_presence" -> loadDevices(background = true)
+            "device_presence" -> DevicesStore.load(background = true)
 
             // 灵感 / 提醒 / 执勤 / 设置这些刷新信号由各自模块从同一条 frames 里挑，这里不转发
 
