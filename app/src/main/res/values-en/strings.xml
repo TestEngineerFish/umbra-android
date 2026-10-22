@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 手写的英文公共文案（与 values/strings.xml 一一对应；iOS 生成的在 strings_ios.xml，不手改）。 -->
+<resources>
+    <string name="common_gotIt">Got it</string>
+</resources>

@@ -102,7 +102,7 @@ object UmbraNotice {
             ) {
                 Text(title, color = c.text, style = UmbraType.sectionTitle)
                 Text(body, color = c.text, style = TextStyle(fontSize = 14.sp, lineHeight = 21.sp))
-                UmbraButton(button ?: stringResource(R.string.presence_ok), dismiss, Modifier.fillMaxWidth(), kind = UmbraButtonKind.Secondary, height = 48.dp)
+                UmbraButton(button ?: stringResource(R.string.common_gotIt), dismiss, Modifier.fillMaxWidth(), kind = UmbraButtonKind.Secondary, height = 48.dp)
             }
         })
     }

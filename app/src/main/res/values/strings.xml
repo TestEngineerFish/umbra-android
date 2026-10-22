@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">Umbra</string>
+    <!-- 公共「知道了」：单钮说明弹层（UmbraNotice）的默认钮。iOS 没有通用的这一条（各模块各一个 *_ok / *_gotIt），所以手写在这里。 -->
+    <string name="common_gotIt">知道了</string>
 </resources>

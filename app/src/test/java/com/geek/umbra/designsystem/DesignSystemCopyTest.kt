@@ -14,9 +14,10 @@ class DesignSystemCopyTest {
     private fun file(rel: String): File =
         listOf(File(rel), File("app/$rel")).firstOrNull { it.exists() } ?: error("读不到 $rel")
 
-    private fun value(dir: String, key: String): String? {
-        val xml = file("src/main/res/$dir/strings_ios.xml").readText()
-        return Regex("<string name=\"${Regex.escape(key)}\">([^<]*)</string>").find(xml)?.groupValues?.get(1)
+    /** 在 [dir] 下的 [files] 里找 [key] 的值（iOS 生成的 strings_ios.xml，或手写的 strings.xml）。 */
+    private fun value(dir: String, key: String, files: List<String> = listOf("strings_ios.xml")): String? = files.firstNotNullOfOrNull { name ->
+        val xml = file("src/main/res/$dir/$name").readText()
+        Regex("<string name=\"${Regex.escape(key)}\">([^<]*)</string>").find(xml)?.groupValues?.get(1)
     }
 
     /** 选择列表 / 输入弹层的「取消」：中文「取消」，英文 Cancel。 */
@@ -25,10 +26,16 @@ class DesignSystemCopyTest {
         assertEquals("Cancel", value("values-en", "common_cancel"))
     }
 
+    /** 说明弹层（UmbraNotice）的默认钮：手写的公共键，中文「知道了」，英文 Got it。 */
+    @Test fun gotItIsLocalized() {
+        assertEquals("知道了", value("values", "common_gotIt", listOf("strings.xml")))
+        assertEquals("Got it", value("values-en", "common_gotIt", listOf("strings.xml")))
+    }
+
     /** 三个收口的公共件借用的其余文案，中英都得有值。 */
     @Test fun borrowedKeysHaveBothLanguages() {
         val keys = listOf(
-            "common_attGone", "presence_ok",
+            "common_attGone",
             "state_retry", "state_checkServer", "state_failed_title", "state_failed_reason_offline", "state_failed_reason_server",
             "state_offline_title", "state_offline_reason", "state_offline_reason_live",
         )
