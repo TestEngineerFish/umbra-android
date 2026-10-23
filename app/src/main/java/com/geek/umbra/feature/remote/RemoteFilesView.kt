@@ -340,10 +340,10 @@ private fun TransferRow(client: RemoteClient, t: RemoteTransfer) {
             Row(verticalAlignment = Alignment.Top) {
                 UmbraIcon(UmbraIconPaths.alertTriangle, c.warningText, size = 12.dp, strokeWidth = 2.2f, modifier = Modifier.padding(top = 2.dp))
                 Spacer(Modifier.width(4.dp))
-                Text(stringResource(R.string.remote_android_push_controlledTitle, client.hostName), color = c.warningText, style = UmbraRemoteType.transferStatus)
+                Text(stringResource(R.string.remote_files_blockedTitle, client.hostName), color = c.warningText, style = UmbraRemoteType.transferStatus)
             }
-            Text(stringResource(R.string.remote_android_push_controlledBody), color = c.muted, style = UmbraRemoteType.transferStatus)
-            Row { Spacer(Modifier.weight(1f)); RowAction(stringResource(R.string.common_gotIt)) { client.dismissTransfer(t.id) } }
+            Text(stringResource(R.string.remote_files_blockedBody), color = c.muted, style = UmbraRemoteType.transferStatus)
+            Row { Spacer(Modifier.weight(1f)); RowAction(stringResource(R.string.remote_files_blockedOk)) { client.dismissTransfer(t.id) } }
         }
     }
 }

@@ -4,9 +4,4 @@
     <string name="remote_android_unattended_faceId">Use biometrics</string>
     <string name="remote_android_unattended_faceTitle">Confirm it\'s you with biometrics</string>
     <string name="remote_android_files_push">Send one from this phone</string>
-    <string name="remote_android_verify_recheckTitle">Verify “%s” again</string>
-    <string name="remote_android_verify_recheckBody">This computer\'s remote identity has changed since you last verified it. That happens when its remote pairing is reset. Check the code in the bar at the top of its screen and continue only if both match.</string>
-    <string name="remote_android_push_controlledTitle">Couldn\'t send: “%s” is being remotely controlled</string>
-    <string name="remote_android_push_controlledBody">Files can\'t be sent to it while it\'s being controlled. Send it again after it ends.</string>
-    <string name="remote_android_verify_body">Check the code in the bar at the top of its screen and continue only if both match.</string>
 </resources>

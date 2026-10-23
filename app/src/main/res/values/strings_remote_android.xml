@@ -7,12 +7,4 @@
     <string name="remote_android_unattended_faceId">用生物识别</string>
     <string name="remote_android_unattended_faceTitle">用生物识别确认是你</string>
     <string name="remote_android_files_push">从手机推一个过去</string>
-    <!-- 核对短码「指纹变了」那一档（设计侧批次 286 §四，iOS 还没加；iOS 加了 key 之后改走 strings_ios.xml）。
-         短码改到被控端屏幕顶部的提示条上（批次 290 §四），两句的指路跟着改；iOS 的 remote_verify_body 还是旧指路，先在这里盖一份。 -->
-    <string name="remote_android_verify_recheckTitle">「%s」要重新核对</string>
-    <string name="remote_android_verify_recheckBody">这台电脑的远程身份和上次核过的不一样了，它重置过远程配对就会这样。看一眼它屏幕顶部的提示条，两边是同一串才继续。</string>
-    <!-- 控制中推文件被拒（批次 290 §六 3）：选了［知道了］那一版，第二句补「结束后再推一次就行。」 -->
-    <string name="remote_android_push_controlledTitle">没传成：「%s」正在被远程控制</string>
-    <string name="remote_android_push_controlledBody">被控制的时候，不能往那台电脑推文件。结束后再推一次就行。</string>
-    <string name="remote_android_verify_body">看一眼那台电脑屏幕顶部的提示条，两边是同一串才继续。</string>
 </resources>

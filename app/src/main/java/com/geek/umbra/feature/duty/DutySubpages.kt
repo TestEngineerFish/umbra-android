@@ -336,7 +336,7 @@ private fun FollowRow(ctx: Context, tr: DutyTr, f: DutyFollow) {
         } else {
             add(UmbraSwipeAction(ctx.getString(R.string.duty_follow_end), UmbraIconPaths.ban, c.faint) { write { DutyStore.patchFollow(f.id, state("ended")) } })
             add(UmbraSwipeAction(
-                ctx.getString(if (f.state == "quiet") R.string.duty_follow_unquiet else R.string.duty_follow_quietShort),
+                ctx.getString(if (f.state == "quiet") R.string.duty_follow_unquietShort else R.string.duty_follow_quietShort),
                 if (f.state == "quiet") UmbraExtraIcons.bellRing else UmbraExtraIcons.bellOff, c.warning,
             ) { write { DutyStore.patchFollow(f.id, state(if (f.state == "quiet") "active" else "quiet")) } })
         }

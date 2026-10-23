@@ -614,11 +614,13 @@ class RemoteRulesTest {
         fun src(name: String) = listOf(File("src/main/java/com/geek/umbra/feature/remote/$name"), File("app/src/main/java/com/geek/umbra/feature/remote/$name"))
             .first { it.exists() }.readText()
         val files = src("RemoteFilesView.kt")
-        assertTrue("文件面板没认 remote_active", "RemoteFilePush.rejectedWhileControlled(t.failure)" in files && "R.string.remote_android_push_controlledTitle" in files)
-        assertTrue("第一次核对还在念旧指路（会话窗口右上角）", "R.string.remote_android_verify_body" in src("RemoteSessionView.kt"))
-        fun res(dir: String) = listOf(File("src/main/res/$dir/strings_remote_android.xml"), File("app/src/main/res/$dir/strings_remote_android.xml")).first { it.exists() }.readText()
-        assertTrue(res("values").contains("屏幕顶部的提示条") && !res("values").contains("会话窗口右上角"))
-        assertTrue(res("values-en").contains("the bar at the top of its screen") && !res("values-en").contains("top right of its session window"))
+        assertTrue("文件面板没认 remote_active", "RemoteFilePush.rejectedWhileControlled(t.failure)" in files && "R.string.remote_files_blockedTitle" in files)
+        // iOS cfc739b 起这几句都有 key：走 strings_ios.xml，Android 不再另写一份。
+        assertTrue("第一次核对没读 iOS 的 remote_verify_body", "R.string.remote_verify_body" in src("RemoteSessionView.kt"))
+        fun res(dir: String, name: String) = listOf(File("src/main/res/$dir/$name"), File("app/src/main/res/$dir/$name")).first { it.exists() }.readText()
+        assertTrue(res("values", "strings_ios.xml").contains("屏幕顶部的提示条") && !res("values", "strings_ios.xml").contains("会话窗口右上角"))
+        assertTrue(res("values-en", "strings_ios.xml").contains("the bar at the top of its screen"))
+        assertFalse("临时覆盖没撤干净", Regex("remote_android_(verify|push)_").containsMatchIn(res("values", "strings_remote_android.xml") + res("values-en", "strings_remote_android.xml")))
     }
 
     /** 批次 286 §四：记过指纹又对不上才念「要重新核对」；没记过 / 这次算不出 / 对得上都不算「变了」。 */
@@ -633,7 +635,7 @@ class RemoteRulesTest {
         val verify = src("RemoteClient.kt").substringAfter("private fun maybeAskVerify(").substringBefore("fun submitPin(")
         assertTrue("核对那一段没按「指纹变了」分档", "RemoteUnattended.fingerprintChanged(" in verify && "codeRecheck =" in verify)
         val view = src("RemoteSessionView.kt")
-        assertTrue("会话页没念「要重新核对」", "R.string.remote_android_verify_recheckTitle" in view && "R.string.remote_android_verify_recheckBody" in view)
+        assertTrue("会话页没念「要重新核对」", "R.string.remote_verify_recheckTitle" in view && "R.string.remote_verify_recheckBody" in view)
     }
 
     /**
