@@ -258,7 +258,10 @@ object ReminderPlace {
     /** 按时间提醒的才进时间那一套（闹钟、过期、推进、日期分组、小组件）。 */
     fun timed(r: Reminder): Boolean = r.place == null
 
-    /** 地名超过 10 个字截断（批次 288 §三）：「到达 / 离开」和「时」不截，只截名字。name 空退 address，再空念「指定地点」。 */
+    /**
+     * 地名超过 10 个字截断（批次 288 §三）：「到达 / 离开」和「时」不截，只截名字。name 空退 address，再空念「指定地点」。
+     * 本对象里的句子都是手写：iOS 是用 Swift 字面拼的（ReminderPlaceText，不进文案表），没有 key 可读；纯判据也拿不到 Android 资源。
+     */
     private fun name(place: JsonObject, english: Boolean): String {
         val n = listOf("name", "address").firstNotNullOfOrNull { k -> place.strictString(k)?.trim()?.takeIf { it.isNotEmpty() } }
             ?: if (english) "a place" else "指定地点"
@@ -277,7 +280,7 @@ object ReminderPlace {
         }
     }
 
-    /** 列表行：「到达 家 时 · 在手机上提醒」/ "Arriving at Home · Reminds on iPhone"（批次 288 §四，Android 跟 PC 只读行同一句）。 */
+    /** 列表行：「到达 家 时 · 在手机上提醒」/ "Arriving at Home · Reminds on iPhone"（批次 288 §四）。手写：iOS 自己能触发，行上不带「在手机上提醒」，这句只有 PC / Android 只读端有。 */
     fun row(place: JsonObject, english: Boolean): String =
         head(place, english) + if (english) " · Reminds on iPhone" else " · 在手机上提醒"
 

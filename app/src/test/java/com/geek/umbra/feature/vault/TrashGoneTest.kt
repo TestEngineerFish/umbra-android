@@ -26,11 +26,14 @@ class TrashGoneTest {
         assertEquals("${Brand.nickname}没找到这条灵感", TrashGoneCopy.title("灵感", "idea", english = false))
         assertEquals("This reminder is gone", TrashGoneCopy.title("提醒", "reminder", english = true))
         assertFalse("英文不用昵称", TrashGoneCopy.title("提醒", "reminder", english = true).contains(Brand.nickname))
-        assertEquals("它可能刚被删掉了，删掉的会在回收站留 30 天。", TrashGoneCopy.hint(expired = false, english = false))
-        assertEquals("它被删掉超过 30 天了，找不回来。", TrashGoneCopy.hint(expired = true, english = false))
-        assertEquals("It may have just been deleted. Deleted items stay in Trash for 30 days.", TrashGoneCopy.hint(false, true))
-        assertEquals("回到提醒", TrashGoneCopy.back("提醒", "reminder", false))
-        assertEquals("Back to reminders", TrashGoneCopy.back("提醒", "reminder", true))
+        assertEquals("它被删掉超过 30 天了，找不回来。", TrashGoneCopy.expiredHint(english = false))
+        // 「可能刚删掉 / 回到提醒」读 iOS key（reminder.gone.* / insp.gone.*），同一句只留一个出处。
+        val src = listOf(java.io.File("src/main/java"), java.io.File("app/src/main/java")).first { it.exists() }
+        val rem = src.resolve("com/geek/umbra/feature/reminder/ReminderScreens.kt").readText()
+        val insp = src.resolve("com/geek/umbra/feature/inspiration/InspirationViews.kt").readText()
+        assertTrue("R.string.reminder_gone_body" in rem && "R.string.reminder_gone_back" in rem)
+        assertTrue("R.string.insp_gone_body" in insp && "R.string.insp_gone_back" in insp)
+        assertFalse("TrashGone.kt 里还手写着 iOS 有 key 的那句", "删掉的会在回收站留 30 天" in src.resolve("com/geek/umbra/feature/vault/TrashGone.kt").readText())
         assertEquals("Open Trash", TrashGoneCopy.openTrash(true))
     }
 }

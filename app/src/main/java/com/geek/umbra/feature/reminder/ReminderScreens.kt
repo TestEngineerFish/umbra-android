@@ -515,7 +515,7 @@ fun RemDetailScreen(id: String) {
                 // 端上在同步里发现这一条已经不在了（服务端这一族不发 404）。字面照批次 290 §五 A：带昵称、说清回收站留 30 天，
                 // 回收站里也没有（超过 30 天）才说找不回来。本机还有没推上去的删除时不算「超过 30 天」。
                 TrashGoneState(
-                    UmbraIconPaths.bell, "reminder", id, "提醒", "reminder",
+                    UmbraIconPaths.bell, "reminder", id, "提醒", "reminder", R.string.reminder_gone_body, R.string.reminder_gone_back,
                     pendingLocalDelete = id in ReminderCache.pendingTombs(), onBack = { router.back() },
                 )
             }
@@ -550,14 +550,17 @@ private fun androidx.compose.foundation.lazy.LazyListScope.preview(r: Reminder) 
     val place = r.place
     if (place != null) {
         // 地点提醒：重复 / 提前那张卡换成地址 + 范围 + 只在 iPhone 上提醒（批次 288 §三；Android 只读，不画小地图）。
+        ReminderPlace.address(place)?.let { addr ->
+            item("placeAddr") { Text(addr, color = UmbraTheme.colors.muted, style = TextStyle(fontSize = 14.sp), modifier = Modifier.padding(horizontal = 4.dp)) }
+        }
+        // 同 iOS 详情（ReminderViews.swift:2101）：范围一行 + 「在哪儿提醒 / 只在 iPhone 上」一行，字面读 iOS key。
         item("place") {
-            val c = UmbraTheme.colors
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(horizontal = 4.dp)) {
-                ReminderPlace.address(place)?.let { Text(it, color = c.muted, style = TextStyle(fontSize = 14.sp)) }
-                val range = ReminderPlace.radius(place, reminderEnglish)
-                val where = if (reminderEnglish) "Reminds on iPhone only" else "在哪儿提醒 · 只在 iPhone 上"
-                Text(listOfNotNull(range?.let { if (reminderEnglish) "$it radius" else "范围 $it" }, where).joinToString(" · "),
-                    color = c.faint, style = TextStyle(fontSize = 13.sp))
+            UmbraGroupCard {
+                ReminderPlace.radius(place, reminderEnglish)?.let {
+                    UmbraSettingRowView(UmbraSettingRow(stringResource(R.string.reminder_place_radius), value = it))
+                    UmbraRowDivider(Modifier.padding(start = 14.dp))
+                }
+                UmbraSettingRowView(UmbraSettingRow(stringResource(R.string.reminder_place_whereLabel), value = stringResource(R.string.reminder_place_whereValue)))
             }
         }
     } else item("fields") {
@@ -862,8 +865,10 @@ private fun ReminderForm(
                         UmbraIcon(UmbraExtraIcons.mapPin, c.muted, size = 15.dp)
                         Spacer(Modifier.width(8.dp))
                         val range = ReminderPlace.radius(place, reminderEnglish)
-                        Text(listOfNotNull(ReminderPlace.head(place, reminderEnglish), range?.let { if (reminderEnglish) "$it radius" else "范围 $it" }).joinToString(" · "),
+                        val rangeText = range?.let { stringResource(R.string.reminder_place_rangeIs, it) } // 「范围 200 米」/「200 m radius」读 iOS key
+                        Text(listOfNotNull(ReminderPlace.head(place, reminderEnglish), rangeText).joinToString(" · "),
                             color = c.text, style = TextStyle(fontSize = 15.sp), modifier = Modifier.weight(1f))
+                        // 手写：iOS 那边地点就在本机改，没有「只能在 iPhone 上改」这句；字面取 PC 编辑面板（批次 288 §四）。
                         Text(if (reminderEnglish) "Edit on iPhone" else "只能在 iPhone 上改", color = c.faint, style = TextStyle(fontSize = 13.sp))
                     }
                 }

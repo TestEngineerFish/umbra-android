@@ -10,7 +10,7 @@ package com.geek.umbra.feature.task
 data class TaskProgress(val done: Int, val total: Int) {
     /** 0…1，进度条用。 */
     val fraction: Float get() = done.toFloat() / total
-    /** 「已完成 2/3 步」。设计侧改字面只改这里。 */
+    /** 「已完成 2/3 步」。设计侧改字面只改这里。手写：iOS 同样是常量 TaskProgress.stepLineFormat，不进文案表。 */
     val stepLine: String get() = "已完成 $done/$total 步"
     /** 英文："2 of 3 steps done"（批次 290 §六）。 */
     val stepLineEn: String get() = "$done of $total steps done"

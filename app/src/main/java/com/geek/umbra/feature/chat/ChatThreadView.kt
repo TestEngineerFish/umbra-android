@@ -606,6 +606,7 @@ private fun HistoryRow(h: HistoryRowState) {
  * 空会话。和秘书的那一条是「聊天第一次打开」：标题带昵称、一句具体的话、两颗建议芯片（设计侧批次 290 §五 C）。
  * 芯片点了只填进输入框、把键盘叫起来，不直接发出去 —— 这一屏的下一步是输入框，芯片给不知道说什么的人起个头，所以不另放主按钮。
  * 英文界面不用昵称。和设备的那一条照旧（它不是「第一次用」那一类）。
+ * 手写：iOS 这一屏也是 Swift 字面（Brand.nicknamed），文案表里没有 key。
  */
 @Composable
 private fun EmptyState(isAssistant: Boolean, title: String, onChip: (String) -> Unit) {

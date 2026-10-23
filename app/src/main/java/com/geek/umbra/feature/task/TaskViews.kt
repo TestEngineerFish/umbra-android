@@ -208,6 +208,7 @@ fun TaskListView() {
                             } else if (items.isEmpty()) {
                                 // 第一次用、还从来没有任务：昵称（Brand.nickname）只进这一类闲着的空状态（设计侧批次 287 §三），后面跟一句具体的话和一颗钮。
                                 // 英文界面不用昵称，照平实的句子写。筛选后的空结果不算（用户正在找东西）。
+                                // 手写：iOS 这几句也是 Swift 字面（Brand.nicknamed），文案表里没有 key。
                                 val en = UmbraDateText.english
                                 UmbraEmptyState(
                                     UmbraIconPaths.task,
