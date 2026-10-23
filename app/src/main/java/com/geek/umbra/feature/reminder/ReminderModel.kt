@@ -16,6 +16,7 @@ import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
@@ -257,10 +258,42 @@ object ReminderPlace {
     /** 按时间提醒的才进时间那一套（闹钟、过期、推进、日期分组、小组件）。 */
     fun timed(r: Reminder): Boolean = r.place == null
 
-    /** 「到达 公司 时 · 在 iPhone 上提醒」（geek-99 10-23 给的句子）。on 认不出按到达念；name 空退 address，再空念「指定地点」。 */
-    fun label(place: JsonObject): String {
-        val on = if (place.strictString("on") == "leave") "离开" else "到达"
-        val name = listOf("name", "address").firstNotNullOfOrNull { k -> place.strictString(k)?.trim()?.takeIf { it.isNotEmpty() } } ?: "指定地点"
-        return "$on $name 时 · 在 iPhone 上提醒"
+    /** 地名超过 10 个字截断（批次 288 §三）：「到达 / 离开」和「时」不截，只截名字。name 空退 address，再空念「指定地点」。 */
+    private fun name(place: JsonObject, english: Boolean): String {
+        val n = listOf("name", "address").firstNotNullOfOrNull { k -> place.strictString(k)?.trim()?.takeIf { it.isNotEmpty() } }
+            ?: if (english) "a place" else "指定地点"
+        return if (n.length > NAME_MAX) n.take(NAME_MAX) + "…" else n
     }
+    private const val NAME_MAX = 10
+
+    private fun leaving(place: JsonObject) = place.strictString("on") == "leave" // 认不出按到达念
+
+    /** 详情头、编辑页那一格：「到达 家 时」/ "Arriving at Home"、「离开 家 时」/ "Leaving Home"（批次 288 §三的用词）。 */
+    fun head(place: JsonObject, english: Boolean): String {
+        val n = name(place, english)
+        return when {
+            english -> if (leaving(place)) "Leaving $n" else "Arriving at $n"
+            else -> (if (leaving(place)) "离开" else "到达") + " $n 时"
+        }
+    }
+
+    /** 列表行：「到达 家 时 · 在手机上提醒」/ "Arriving at Home · Reminds on iPhone"（批次 288 §四，Android 跟 PC 只读行同一句）。 */
+    fun row(place: JsonObject, english: Boolean): String =
+        head(place, english) + if (english) " · Reminds on iPhone" else " · 在手机上提醒"
+
+    /** 范围：不到 1000 写「450 米」，满 1000 写「1.2 公里」（一位小数，整数不写 .0）。英文 m / km。没给半径 → null。 */
+    fun radius(place: JsonObject, english: Boolean): String? {
+        val m = (place["radius_m"] as? JsonPrimitive)?.takeIf { !it.isString }?.doubleOrNull?.takeIf { it > 0 } ?: return null
+        return rangeText(m, english)
+    }
+
+    fun rangeText(meters: Double, english: Boolean): String {
+        if (meters < 1000) return "${Math.round(meters)}" + if (english) " m" else " 米"
+        val km = Math.round(meters / 100.0) / 10.0
+        val t = if (km == Math.floor(km)) km.toLong().toString() else km.toString()
+        return t + if (english) " km" else " 公里"
+    }
+
+    /** 地址（详情头下面那一行）。没有 → null。 */
+    fun address(place: JsonObject): String? = place.strictString("address")?.trim()?.takeIf { it.isNotEmpty() }
 }

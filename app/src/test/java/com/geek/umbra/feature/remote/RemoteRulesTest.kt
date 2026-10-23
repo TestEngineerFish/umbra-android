@@ -606,6 +606,21 @@ class RemoteRulesTest {
         assertFalse("两边都没有也不算对上", RemoteUnattended.fingerprintMatches(null, null))
     }
 
+    /** 批次 286 §四：记过指纹又对不上才念「要重新核对」；没记过 / 这次算不出 / 对得上都不算「变了」。 */
+    @Test fun unattendedFingerprintChanged() {
+        val fp = "sha-256 AB:CD:EF"
+        assertTrue(RemoteUnattended.fingerprintChanged(fp, "sha-256 12:34:56"))
+        assertFalse("没记过是第一次连", RemoteUnattended.fingerprintChanged(null, fp))
+        assertFalse("算不出指纹不说它变了", RemoteUnattended.fingerprintChanged(fp, null))
+        assertFalse(RemoteUnattended.fingerprintChanged(fp, fp))
+        fun src(name: String) = listOf(File("src/main/java/com/geek/umbra/feature/remote/$name"), File("app/src/main/java/com/geek/umbra/feature/remote/$name"))
+            .first { it.exists() }.readText()
+        val verify = src("RemoteClient.kt").substringAfter("private fun maybeAskVerify(").substringBefore("fun submitPin(")
+        assertTrue("核对那一段没按「指纹变了」分档", "RemoteUnattended.fingerprintChanged(" in verify && "codeRecheck =" in verify)
+        val view = src("RemoteSessionView.kt")
+        assertTrue("会话页没念「要重新核对」", "R.string.remote_android_verify_recheckTitle" in view && "R.string.remote_android_verify_recheckBody" in view)
+    }
+
     /**
      * 接线：判据对了但没被调到，等于没修（一道只测行为的闸门测不出行为根本没被调到）。
      * submitPin 要过 maySendPin；会话页的步骤要走 RemoteUnattended.step；已废的 codeChecked 布尔值不再被读来放行。

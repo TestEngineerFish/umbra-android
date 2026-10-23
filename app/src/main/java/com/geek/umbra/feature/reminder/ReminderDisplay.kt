@@ -152,11 +152,11 @@ fun Reminder.cloneAsNew(): Reminder {
 val Reminder.repeatEnded: Boolean
     get() = repeatRule != "不重复" && repeatEndMs != null && System.currentTimeMillis() > repeatEndMs
 
-/** 列表分组。过期在最前；地点提醒没有日期，单列一组放最后。 */
+/** 列表分组。过期在最前；地点提醒没有日期，单开「到地方时」一组排在日期分组后面（批次 288 §三）。 */
 val Reminder.group: String
     get() {
         if (done) return if (repeatEnded) "重复已结束" else "已完成"
-        if (!ReminderPlace.timed(this)) return "地点提醒"
+        if (!ReminderPlace.timed(this)) return "到地方时"
         val now = System.currentTimeMillis()
         if (atMs < now) return "已过期"
         val d = dateOf(atMs); val today = LocalDate.now(zone)
@@ -169,7 +169,7 @@ val Reminder.group: String
 /** 「今天 09:30」/「明天 09:30」/「昨天 09:30」/「7月31日 09:30」/「2027年7月31日 09:30」。 */
 val Reminder.timeLabel: String
     get() {
-        place?.let { return ReminderPlace.label(it) } // 地点提醒：「到达 公司 时 · 在 iPhone 上提醒」
+        place?.let { return ReminderPlace.head(it, reminderEnglish) } // 地点提醒没有时刻：「到达 家 时」
         val z = Instant.ofEpochMilli(atMs).atZone(zone)
         val t = z.format(DateTimeFormatter.ofPattern("HH:mm", Locale.CHINA))
         val d = z.toLocalDate(); val today = LocalDate.now(zone)

@@ -125,8 +125,8 @@ import java.time.ZoneId
 import java.util.UUID
 import kotlin.math.roundToInt
 
-/** 地点提醒没有日期，单列最后一组（Reminder.group）。 */
-private val todoOrder = listOf("已过期", "今天", "明天", "本周", "更远", "地点提醒")
+/** 地点提醒没有日期，「到地方时」排在日期分组后面（Reminder.group，批次 288 §三）。 */
+private val todoOrder = listOf("已过期", "今天", "明天", "本周", "更远", "到地方时")
 /** 完成段两组：「已完成」是这件事做完了，「重复已结束」是这套重复结束了（两端同序，PC GROUP_ORDER）。 */
 private val doneOrder = listOf("已完成", "重复已结束")
 
@@ -310,7 +310,15 @@ private fun ReminderRow(r: Reminder, leaving: Boolean, onToggle: () -> Unit) {
                 )
                 Spacer(Modifier.height(5.dp))
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(7.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(r.timeLabel, color = if (r.overdue) c.dangerText else c.muted, style = TextStyle(fontSize = 13.sp))
+                    val place = r.place
+                    if (place != null) {
+                        // 地点提醒：map-pin 13 +「到达 家 时 · 在手机上提醒」代替时间（批次 288 §三 / §四）。
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            UmbraIcon(UmbraExtraIcons.mapPin, c.muted, size = 13.dp)
+                            Spacer(Modifier.width(4.dp))
+                            Text(ReminderPlace.row(place, reminderEnglish), color = c.muted, style = TextStyle(fontSize = 13.sp))
+                        }
+                    } else Text(r.timeLabel, color = if (r.overdue) c.dangerText else c.muted, style = TextStyle(fontSize = 13.sp))
                     if (r.overdue) Chip("已过期", c.dangerText, c.dangerSoft)
                     if (r.pushRejection != null) Chip("服务端不收这条", c.warningText, c.warningSoft, UmbraIconPaths.alertTriangle)
                     if (r.repeatRule != "不重复") Chip(r.repeatLabel + r.repeatEndSuffix, c.orangeText, c.orangeSoft, UmbraIconPaths.repeatArrows)
@@ -527,7 +535,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.preview(r: Reminder) 
             // 过期时铃铛、时间、胶囊一起转警示色 —— 状态不只靠一个小胶囊表达。
             val ink = if (r.overdue) c.dangerText else c.text
             Row(Modifier.padding(top = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-                UmbraIcon(UmbraIconPaths.bell, ink, size = 18.dp, strokeWidth = 2f)
+                UmbraIcon(if (r.place != null) UmbraExtraIcons.mapPin else UmbraIconPaths.bell, ink, size = 18.dp, strokeWidth = 2f)
                 Spacer(Modifier.width(8.dp))
                 Text(r.timeLabel, color = ink, style = TextStyle(fontSize = 19.sp, fontWeight = FontWeight.SemiBold))
                 if (r.overdue) {
@@ -538,7 +546,20 @@ private fun androidx.compose.foundation.lazy.LazyListScope.preview(r: Reminder) 
             }
         }
     }
-    item("fields") {
+    val place = r.place
+    if (place != null) {
+        // 地点提醒：重复 / 提前那张卡换成地址 + 范围 + 只在 iPhone 上提醒（批次 288 §三；Android 只读，不画小地图）。
+        item("place") {
+            val c = UmbraTheme.colors
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(horizontal = 4.dp)) {
+                ReminderPlace.address(place)?.let { Text(it, color = c.muted, style = TextStyle(fontSize = 14.sp)) }
+                val range = ReminderPlace.radius(place, reminderEnglish)
+                val where = if (reminderEnglish) "Reminds on iPhone only" else "在哪儿提醒 · 只在 iPhone 上"
+                Text(listOfNotNull(range?.let { if (reminderEnglish) "Range $it" else "范围 $it" }, where).joinToString(" · "),
+                    color = c.faint, style = TextStyle(fontSize = 13.sp))
+            }
+        }
+    } else item("fields") {
         UmbraGroupCard {
             UmbraSettingRowView(UmbraSettingRow(stringResource(R.string.reminder_row_repeat), value = r.repeatRowValue))
             UmbraRowDivider(Modifier.padding(start = 14.dp))
@@ -834,8 +855,15 @@ private fun ReminderForm(
         if (place != null) {
             Field(stringResource(R.string.reminder_field_time)) {
                 FormCard {
-                    Text(ReminderPlace.label(place), color = c.muted, style = TextStyle(fontSize = 15.sp),
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp))
+                    // 同 PC 编辑面板（批次 288 §四）：只读一行「到达 家 时 · 范围 200 米」，右侧「只能在 iPhone 上改」。
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        UmbraIcon(UmbraExtraIcons.mapPin, c.muted, size = 15.dp)
+                        Spacer(Modifier.width(8.dp))
+                        val range = ReminderPlace.radius(place, reminderEnglish)
+                        Text(listOfNotNull(ReminderPlace.head(place, reminderEnglish), range?.let { if (reminderEnglish) "$it range" else "范围 $it" }).joinToString(" · "),
+                            color = c.text, style = TextStyle(fontSize = 15.sp), modifier = Modifier.weight(1f))
+                        Text(if (reminderEnglish) "Edit on iPhone" else "只能在 iPhone 上改", color = c.faint, style = TextStyle(fontSize = 13.sp))
+                    }
                 }
             }
         } else {

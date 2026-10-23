@@ -56,6 +56,7 @@ import com.geek.umbra.app.AppGraph
 import com.geek.umbra.designsystem.UmbraButton
 import com.geek.umbra.designsystem.UmbraButtonKind
 import com.geek.umbra.designsystem.UmbraCard
+import com.geek.umbra.designsystem.UmbraDateText
 import com.geek.umbra.designsystem.UmbraEmptyState
 import com.geek.umbra.designsystem.UmbraErrorCard
 import com.geek.umbra.designsystem.UmbraFieldLabel
@@ -85,6 +86,7 @@ import com.geek.umbra.model.TaskEvent
 import com.geek.umbra.model.TaskItem
 import com.geek.umbra.model.TaskStep
 import com.geek.umbra.navigation.Route
+import com.geek.umbra.navigation.Tab
 import com.geek.umbra.navigation.UmbraAlert
 import com.geek.umbra.navigation.UmbraSheet
 import com.geek.umbra.net.BackgroundWork
@@ -203,6 +205,16 @@ fun TaskListView() {
                             }
                             if (isFiltered) {
                                 UmbraEmptyState(UmbraIconPaths.filter, title, hint = body, action = "清掉筛选", onAction = { query = ""; filter = null })
+                            } else if (items.isEmpty()) {
+                                // 第一次用、还从来没有任务：昵称（Brand.nickname）只进这一类闲着的空状态（设计侧批次 287 §三），后面跟一句具体的话和一颗钮。
+                                // 英文界面不用昵称，照平实的句子写。筛选后的空结果不算（用户正在找东西）。
+                                val en = UmbraDateText.english
+                                UmbraEmptyState(
+                                    UmbraIconPaths.task,
+                                    if (en) "Nothing here yet" else "${Brand.nickname}在枝头等你",
+                                    hint = if (en) "Describe a goal in chat and ${Brand.displayNameEn} will create a task" else "在聊天里说一句目标，它会帮你建任务",
+                                    action = if (en) "Start a chat" else "开始聊天", onAction = { router.selectTab(Tab.Chat) },
+                                )
                             } else UmbraEmptyState(UmbraIconPaths.task, title, hint = body)
                         }
                     } else {

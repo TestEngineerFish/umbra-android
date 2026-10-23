@@ -20,6 +20,7 @@ class SwipeIconsTest {
         "copy" to "copy", "refreshCw" to "refresh-cw", "undo" to "undo", "edit" to "edit", "shapes" to "shapes",
         "alarmClock" to "alarm-clock", "minusCircle" to "circle-minus", // 批次 285：clock 是状态「待执行」不上钮；移除不是删除，不用 trash
         "check" to "check", "x" to "x", "stopCircle" to "stop-circle", "moon" to "moon",
+        "bellOff" to "bell-off", "bellRing" to "bell-ring", // 批次 286 §四：执勤关注「静音 / 单独提醒」跟着当前状态换
     )
 
     @Test fun swipeIconsAreRegistered() {
@@ -38,7 +39,8 @@ class SwipeIconsTest {
 
     /** 照登记表原文抄进来的几颗（带相对坐标、弧线、隐式 lineto）都解析得出路径 —— 重试 / 找回所在的页要联网，本机模拟器点不到。 */
     @Test fun copiedIconsParse() {
-        for (d in listOf(UmbraExtraIcons.refreshCw, UmbraExtraIcons.undo, UmbraExtraIcons.edit, UmbraExtraIcons.shapes, UmbraExtraIcons.alarmClock)) {
+        for (d in listOf(UmbraExtraIcons.refreshCw, UmbraExtraIcons.undo, UmbraExtraIcons.edit, UmbraExtraIcons.shapes, UmbraExtraIcons.alarmClock,
+            UmbraExtraIcons.bellOff, UmbraExtraIcons.bellRing, UmbraExtraIcons.mapPin)) {
             val nodes = androidx.compose.ui.graphics.vector.PathParser().parsePathString(d).toNodes()
             assertTrue("解析不出：$d", nodes.size >= 3)
         }

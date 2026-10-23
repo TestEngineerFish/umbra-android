@@ -4,4 +4,6 @@
     <string name="remote_android_unattended_faceId">Use biometrics</string>
     <string name="remote_android_unattended_faceTitle">Confirm it\'s you with biometrics</string>
     <string name="remote_android_files_push">Send one from this phone</string>
+    <string name="remote_android_verify_recheckTitle">Verify “%s” again</string>
+    <string name="remote_android_verify_recheckBody">This computer\'s remote identity has changed since you last verified it. That happens when its remote pairing is reset. Check the code at the top right of its session window and continue only if both match.</string>
 </resources>

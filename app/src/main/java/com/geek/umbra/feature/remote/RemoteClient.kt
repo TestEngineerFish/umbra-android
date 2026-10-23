@@ -286,6 +286,8 @@ class RemoteClient(val launch: RemoteLaunch) {
      * 这次会话短码已核过（人点了「一致」，或记住的电脑侧指纹对上了）。没核过不发 PIN（refs umbra-ios#95，[RemoteUnattended]）。
      */
     var codeVerified by mutableStateOf(false); private set
+    /** 这次要核的短码是「指纹变了」那一档（标题念「要重新核对」，不念「第一次连」）。 */
+    var codeRecheck by mutableStateOf(false); private set
     /** 这次会话里电脑那一侧的 DTLS 指纹（对端 SDP 的 `a=fingerprint`）。点「一致」时按 deviceId 记下它。 */
     private var hostFingerprint: String? = null
     val fileLists = mutableStateMapOf<String, List<RemoteFileItem>>()
@@ -538,8 +540,9 @@ class RemoteClient(val launch: RemoteLaunch) {
     private fun maybeAskVerify() {
         if (!unattended || !localAuthPassed || codeVerified) return
         val fp = hostFingerprint ?: return          // 指纹还没算出来：等 makeAnswer 算出来再进这里
-        if (RemoteUnattended.fingerprintMatches(verifyPrefs().getString(fingerprintKey, null), fp)) codeVerified = true
-        else askVerifyCode = true
+        val saved = verifyPrefs().getString(fingerprintKey, null)
+        if (RemoteUnattended.fingerprintMatches(saved, fp)) codeVerified = true
+        else { codeRecheck = RemoteUnattended.fingerprintChanged(saved, fp); askVerifyCode = true }
     }
 
     /** 模块自己的 SharedPreferences（小开关，不进 DataStore 那张共享表）。 */

@@ -57,6 +57,7 @@ import com.geek.umbra.designsystem.UmbraChoiceItem
 import com.geek.umbra.designsystem.UmbraDimens
 import com.geek.umbra.designsystem.UmbraGroupCard
 import com.geek.umbra.designsystem.UmbraIcon
+import com.geek.umbra.designsystem.UmbraExtraIcons
 import com.geek.umbra.designsystem.UmbraIconPaths
 import com.geek.umbra.designsystem.UmbraProgressBar
 import com.geek.umbra.designsystem.UmbraPrompt
@@ -322,7 +323,8 @@ internal fun DutyFollowsView() {
 
 /**
  * 一行关注。左滑三颗（批次 261 §四）：删除最外、结束、静音（只进早报）。删除走 router.confirm 二次确认。
- * 已结束的不给「结束 / 静音」，给「重新关注」。iOS 的 swipeActions 只有字；Android 地基的滑出钮要一颗图标，挑了意思最近的那颗。
+ * 已结束的不给「结束 / 静音」，给「重新关注」。iOS 的 swipeActions 只有字；Android 地基的滑出钮要一颗图标（批次 286 §四定）：
+ * 结束用 ban（停下来，不是删掉，同停用周期规则）；静音那颗跟着当前状态换 —— active 画 bell-off「静音」，quiet 画 bell-ring。
  */
 @Composable
 private fun FollowRow(ctx: Context, tr: DutyTr, f: DutyFollow) {
@@ -332,10 +334,10 @@ private fun FollowRow(ctx: Context, tr: DutyTr, f: DutyFollow) {
         if (f.state == "ended") {
             add(UmbraSwipeAction(ctx.getString(R.string.duty_follow_restart), UmbraIconPaths.play, c.orange) { write { DutyStore.patchFollow(f.id, state("active")) } })
         } else {
-            add(UmbraSwipeAction(ctx.getString(R.string.duty_follow_end), UmbraIconPaths.stopCircle, c.faint) { write { DutyStore.patchFollow(f.id, state("ended")) } })
+            add(UmbraSwipeAction(ctx.getString(R.string.duty_follow_end), UmbraIconPaths.ban, c.faint) { write { DutyStore.patchFollow(f.id, state("ended")) } })
             add(UmbraSwipeAction(
                 ctx.getString(if (f.state == "quiet") R.string.duty_follow_unquiet else R.string.duty_follow_quietShort),
-                UmbraIconPaths.moon, c.warning,
+                if (f.state == "quiet") UmbraExtraIcons.bellRing else UmbraExtraIcons.bellOff, c.warning,
             ) { write { DutyStore.patchFollow(f.id, state(if (f.state == "quiet") "active" else "quiet")) } })
         }
     }

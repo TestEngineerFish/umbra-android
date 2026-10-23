@@ -99,6 +99,21 @@ class BrandTest {
     }
 
     /**
+     * 昵称「雀雀」只进三类闲着的地方（设计侧批次 287 §三：首次空状态标题、找不到的页面、关于 / 欢迎页），而且读常量。
+     * 守两件事：① 字面「雀雀」只在 Brand.kt；② 引用 Brand.nickname 的文件在下面这张名单里 —— 新加一处先对照 287 的「不用的地方」，
+     * 再把文件加进来（错误卡、确认弹窗、保险箱、远程、吐司、筛选后的空结果、英文界面都不用）。
+     */
+    @Test fun nicknameOnlyInApprovedPlaces() {
+        val approved = setOf("TaskViews.kt") // 任务列表第一次用的空状态
+        val src = file("src/main/java").walk().filter { it.isFile && it.extension == "kt" }.toList()
+        val literal = src.filter { it.name != "Brand.kt" && Brand.nickname in it.readText() }.map { it.name }
+        assertTrue("「${Brand.nickname}」写死了，改读 Brand.nickname：$literal", literal.isEmpty())
+        val used = src.filter { "Brand.nickname" in it.readText() }.map { it.name }.toSet()
+        assertTrue("这些文件用了昵称但不在 287 认可的名单里：${used - approved}", (used - approved).isEmpty())
+        assertTrue("名单里的位置没在用昵称（删了就把名单也删掉）：${approved - used}", (approved - used).isEmpty())
+    }
+
+    /**
      * Kotlin 字面量里的代号只剩看不见的那几处：剪贴板 label（系统不展示）、相册目录（改名会把旧图和新图拆成两个相册，
      * 用户可见、暂缓到名字定死再统一改，见开发文档第五节「品牌名」）。新加一处带代号的界面文案会在这里红。
      */

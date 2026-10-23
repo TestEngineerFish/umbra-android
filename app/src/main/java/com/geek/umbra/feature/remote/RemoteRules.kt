@@ -512,6 +512,12 @@ object RemoteUnattended {
      * 认不出对端是谁，就不能跳过核对。
      */
     fun fingerprintMatches(saved: String?, current: String?): Boolean = current != null && saved == current
+
+    /**
+     * 核对短码那一道念哪一档（批次 286 §四）：记过指纹、这次又对不上 →「要重新核对」（电脑重置过远程配对就会这样）；
+     * 从没记过 →「第一次连」。这次没算出指纹不算「变了」—— 认不出就不说它变了，照第一次念。
+     */
+    fun fingerprintChanged(saved: String?, current: String?): Boolean = saved != null && current != null && saved != current
 }
 
 // MARK: - 快照降级与画质（§14.5 / RC-3.5）

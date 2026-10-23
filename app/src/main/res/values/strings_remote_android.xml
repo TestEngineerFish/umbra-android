@@ -7,4 +7,7 @@
     <string name="remote_android_unattended_faceId">用生物识别</string>
     <string name="remote_android_unattended_faceTitle">用生物识别确认是你</string>
     <string name="remote_android_files_push">从手机推一个过去</string>
+    <!-- 核对短码「指纹变了」那一档（设计侧批次 286 §四，iOS 还没加；iOS 加了 key 之后改走 strings_ios.xml）。 -->
+    <string name="remote_android_verify_recheckTitle">「%s」要重新核对</string>
+    <string name="remote_android_verify_recheckBody">这台电脑的远程身份和上次核过的不一样了，它重置过远程配对就会这样。看一眼它会话窗口右上角，两边是同一串才继续。</string>
 </resources>

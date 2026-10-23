@@ -54,10 +54,8 @@ class ReminderPlaceTest {
         assertNull("带重复也不推进", ReminderAdvance.applied(r.copy(repeatRule = "每天"), now))
         assertFalse("不算过期", r.overdue)
         assertFalse("不给「再等 10 分钟」", r.canSnoozeNow)
-        assertEquals("单列一组，不按日期分", "地点提醒", r.group)
-        assertEquals("到达 公司 时 · 在 iPhone 上提醒", r.timeLabel)
-        assertEquals("离开 人民广场 1 号 时 · 在 iPhone 上提醒",
-            ReminderPlace.label(UmbraJson.parseToJsonElement("""{"on":"leave","name":"  ","address":"人民广场 1 号"}""").jsonObject))
+        assertEquals("单开「到地方时」一组，不按日期分（批次 288）", "到地方时", r.group)
+        assertEquals("到达 公司 时", r.timeLabel)
         // 同一条去掉 place 就回到时间那一套（判据确实看的是 place，不是别的格）。
         val timed = r.copy(place = null)
         assertTrue(timed.overdue)
@@ -66,5 +64,28 @@ class ReminderPlaceTest {
         val widget = listOf(File("src/main/java"), File("app/src/main/java")).first { it.exists() }
             .resolve("com/geek/umbra/feature/widget/ReminderWidget.kt").readText()
         assertTrue("小组件没滤掉地点提醒", "items.filter { !it.done && ReminderPlace.timed(it) }" in widget)
+    }
+
+    /** 批次 288 的字面：行上一句、英文、到达 / 离开、地名截 10 字、范围 米 / 公里。 */
+    @Test fun placeCopyFollowsBatch288() {
+        fun p(json: String) = UmbraJson.parseToJsonElement(json).jsonObject
+        val home = p("""{"on":"arrive","name":"家","radius_m":200}""")
+        assertEquals("到达 家 时 · 在手机上提醒", ReminderPlace.row(home, english = false))
+        assertEquals("Arriving at 家 · Reminds on iPhone", ReminderPlace.row(home, english = true))
+        assertEquals("Leaving Home", ReminderPlace.head(p("""{"on":"leave","name":"Home"}"""), english = true))
+        assertEquals("离开 人民广场 1 号 时", ReminderPlace.head(p("""{"on":"leave","name":"  ","address":"人民广场 1 号"}"""), english = false))
+        assertEquals("到达 指定地点 时", ReminderPlace.head(p("""{"on":"arrive"}"""), english = false))
+        // 地名超过 10 个字截断，「到达」「时」不截。
+        assertEquals("到达 一二三四五六七八九十… 时", ReminderPlace.head(p("""{"on":"arrive","name":"一二三四五六七八九十一"}"""), english = false))
+        assertEquals("到达 一二三四五六七八九十 时", ReminderPlace.head(p("""{"on":"arrive","name":"一二三四五六七八九十"}"""), english = false))
+        // 范围：不到 1000 写米，满 1000 写公里（一位小数，整数不写 .0）。
+        assertEquals("200 米", ReminderPlace.radius(home, english = false))
+        assertEquals("450 米", ReminderPlace.rangeText(450.0, false))
+        assertEquals("1 公里", ReminderPlace.rangeText(1000.0, false))
+        assertEquals("1.2 公里", ReminderPlace.rangeText(1200.0, false))
+        assertEquals("2 公里", ReminderPlace.rangeText(2000.0, false))
+        assertEquals("1.2 km", ReminderPlace.rangeText(1200.0, true))
+        assertEquals("950 m", ReminderPlace.rangeText(950.0, true))
+        assertNull("没给半径", ReminderPlace.radius(p("""{"on":"arrive","name":"家"}"""), false))
     }
 }
