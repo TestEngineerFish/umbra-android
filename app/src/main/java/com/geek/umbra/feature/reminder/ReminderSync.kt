@@ -23,7 +23,7 @@ import java.util.TimeZone
  * （拒删回包里那一行解坏了要当「没带」，不能被默认值兜成一条空提醒，iOS ReminderSync.swift:186）。
  *
  * 可选格编码时 null 不写键（UmbraJson.explicitNulls = false）—— 这正是三处「不写 = 保留服务端那份」的约定：
- * atts 只在动过附件时带、anchor_day 只在 1–31 时带、week_days 本机有这一格才带（含 []）。
+ * atts 只在动过附件时带、anchor_day 只在 1–31 时带、week_days 本机有这一格才带（含 []）、place 只有地点提醒才带。
  */
 @Serializable
 data class ReminderDTO(
@@ -46,6 +46,8 @@ data class ReminderDTO(
     val created_at: String? = null,
     val anchor_day: Int? = null,
     val week_days: List<Int>? = null,
+    /** 地点提醒的地点，整块原样（见 ReminderPlace）。下行总带这个键（不是地点提醒为 null）；上行 null 不写键 = 服务端保留。 */
+    val place: JsonObject? = null,
 )
 
 @Serializable
@@ -115,6 +117,7 @@ fun Reminder.Companion.fromDto(dto: ReminderDTO): Reminder = Reminder(
     tz = dto.tz,
     anchorDay = dto.anchor_day?.takeIf { it in 1..31 },
     weekDays = dto.week_days?.let { Reminder.normWeekDays(it) },
+    place = dto.place,
 )
 
 /** 转成上行的线格式 —— 中文枚举唯一的出口。iOS: ReminderSync.swift:375 */
@@ -135,6 +138,7 @@ fun Reminder.toDto(): ReminderDTO = ReminderDTO(
     atts = ReminderAttsWire.upstream(atts, attsTouched),
     anchor_day = anchorDay?.takeIf { it in 1..31 },
     week_days = weekDays?.let { Reminder.normWeekDays(it) },
+    place = place,
 )
 
 /** 上行 JSON（null 不写键）。 */

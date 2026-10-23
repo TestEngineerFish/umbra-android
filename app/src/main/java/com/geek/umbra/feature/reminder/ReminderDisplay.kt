@@ -116,12 +116,13 @@ val Reminder.defaultRepeatEnd: Long
         return ReminderAdvance.endOfDay(end.toInstant().toEpochMilli())
     }
 
-val Reminder.overdue: Boolean get() = !done && atMs < System.currentTimeMillis()
+/** 地点提醒没有时刻（at_ms = 0），永远不算过期。 */
+val Reminder.overdue: Boolean get() = !done && ReminderPlace.timed(this) && atMs < System.currentTimeMillis()
 
 /** 「再等 10 分钟 / 稍后提醒」只对今天（含已过期）的有意义：明天的推到「现在 + 10 分钟」等于提前。已完成的不给。 */
 val Reminder.canSnoozeNow: Boolean
     get() {
-        if (done) return false
+        if (done || !ReminderPlace.timed(this)) return false // 地点提醒没有时刻，推 10 分钟无从谈起
         val endOfToday = LocalDate.now(zone).atTime(23, 59, 59).atZone(zone).toInstant().toEpochMilli()
         return atMs <= endOfToday
     }
@@ -130,7 +131,7 @@ val Reminder.canSnoozeNow: Boolean
 val Reminder.repeatEndProblem: String?
     get() {
         val end = repeatEndMs
-        if (repeatRule == "不重复" || end == null) return null
+        if (repeatRule == "不重复" || end == null || !ReminderPlace.timed(this)) return null
         if (dateOf(end) < dateOf(atMs)) return str(R.string.reminder_endProblem_beforeAt)
         if (dateOf(end) < LocalDate.now(zone)) return str(R.string.reminder_endProblem_past)
         return null
@@ -151,10 +152,11 @@ fun Reminder.cloneAsNew(): Reminder {
 val Reminder.repeatEnded: Boolean
     get() = repeatRule != "不重复" && repeatEndMs != null && System.currentTimeMillis() > repeatEndMs
 
-/** 列表分组。过期在最前。 */
+/** 列表分组。过期在最前；地点提醒没有日期，单列一组放最后。 */
 val Reminder.group: String
     get() {
         if (done) return if (repeatEnded) "重复已结束" else "已完成"
+        if (!ReminderPlace.timed(this)) return "地点提醒"
         val now = System.currentTimeMillis()
         if (atMs < now) return "已过期"
         val d = dateOf(atMs); val today = LocalDate.now(zone)
@@ -167,6 +169,7 @@ val Reminder.group: String
 /** 「今天 09:30」/「明天 09:30」/「昨天 09:30」/「7月31日 09:30」/「2027年7月31日 09:30」。 */
 val Reminder.timeLabel: String
     get() {
+        place?.let { return ReminderPlace.label(it) } // 地点提醒：「到达 公司 时 · 在 iPhone 上提醒」
         val z = Instant.ofEpochMilli(atMs).atZone(zone)
         val t = z.format(DateTimeFormatter.ofPattern("HH:mm", Locale.CHINA))
         val d = z.toLocalDate(); val today = LocalDate.now(zone)

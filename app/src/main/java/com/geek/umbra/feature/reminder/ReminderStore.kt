@@ -536,7 +536,8 @@ object ReminderStore {
     /** 编辑页 / 新建页落库：先规整每周几（at 挪到第一个选中日），再按提醒时区定锚定日。 */
     fun save(r: Reminder) {
         var v = ReminderAdvance.normalizedWeekDays(r)
-        v = v.copy(anchorDay = ReminderAdvance.anchorDayOf(v.atMs, r.anchorDay, ReminderAdvance.zone(r.tz)))
+        // 地点提醒 at_ms = 0：按它算锚定日会凭空写出一个 anchor_day = 1 推上去，不算。
+        if (ReminderPlace.timed(v)) v = v.copy(anchorDay = ReminderAdvance.anchorDayOf(v.atMs, r.anchorDay, ReminderAdvance.zone(r.tz)))
         commit(v)
     }
 

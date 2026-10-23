@@ -125,7 +125,8 @@ import java.time.ZoneId
 import java.util.UUID
 import kotlin.math.roundToInt
 
-private val todoOrder = listOf("已过期", "今天", "明天", "本周", "更远")
+/** 地点提醒没有日期，单列最后一组（Reminder.group）。 */
+private val todoOrder = listOf("已过期", "今天", "明天", "本周", "更远", "地点提醒")
 /** 完成段两组：「已完成」是这件事做完了，「重复已结束」是这套重复结束了（两端同序，PC GROUP_ORDER）。 */
 private val doneOrder = listOf("已完成", "重复已结束")
 
@@ -828,70 +829,81 @@ private fun ReminderForm(
             MultiField(draft.note, { v -> onDraft { it.copy(note = v.take(Reminder.noteMax)) } }, stringResource(R.string.reminder_placeholder_note), 64, 15.5f)
             Counter(draft.note.length, Reminder.noteMax)
         }
-        Field(stringResource(R.string.reminder_field_time)) {
-            FormCard {
-                PickerRow(stringResource(R.string.reminder_sub_date), UmbraDateText.dayLabel(UmbraDateText.dayOffset(draft.atMs))) {
-                    focus.clearFocus() // 先收键盘再弹面板：不收的话面板关掉时焦点回到输入框，键盘又蹦出来
-                    UmbraPickers.presentWhen("什么时候", draft.atMs, UmbraWhenTab.Date) { ms -> onDraft { it.copy(atMs = ms) } }
-                }
-                Divider(14)
-                PickerRow(stringResource(R.string.reminder_sub_time), UmbraDateText.hm(draft.atMs)) {
-                    focus.clearFocus()
-                    UmbraPickers.presentWhen("什么时候", draft.atMs, UmbraWhenTab.Time) { ms -> onDraft { it.copy(atMs = ms) } }
+        // 地点提醒没有时刻（at_ms = 0），时间 / 重复 / 提前这几格对它没意义；Android 也不做地点设置，只念一句、原样存回。
+        val place = draft.place
+        if (place != null) {
+            Field(stringResource(R.string.reminder_field_time)) {
+                FormCard {
+                    Text(ReminderPlace.label(place), color = c.muted, style = TextStyle(fontSize = 15.sp),
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp))
                 }
             }
-        }
-        Field(stringResource(R.string.reminder_field_repeatAhead)) {
-            FormCard {
-                MenuRow(stringResource(R.string.reminder_row_repeat), draft.repeatRowValue, options = Reminder.repeatOptions,
-                    display = { ReminderOptions.repeatOptionText(it) }, current = draft.repeatRule) { v -> onDraft { it.copy(repeatRule = v) } }
-                if (draft.repeatRule == "每周") {
-                    // 每周几（可多选、至少一个）：没存过亮 at 那一天；最后一颗点了不灭；at 不在选中日里时保存会挪到第一个选中日。
-                    val shown = ReminderAdvance.shownWeekDays(draft)
-                    val names = if (reminderEnglish) Reminder.weekDayNamesEn else Reminder.weekDayNamesZh
-                    Divider(32)
-                    Row(Modifier.horizontalScroll(rememberScrollState()).padding(start = 32.dp, end = 14.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        for (i in 0 until 7) UmbraTagPill(names[i], shown.contains(i), { onDraft { it.copy(weekDays = ReminderAdvance.toggleWeekDay(shown, i)) } })
+        } else {
+            Field(stringResource(R.string.reminder_field_time)) {
+                FormCard {
+                    PickerRow(stringResource(R.string.reminder_sub_date), UmbraDateText.dayLabel(UmbraDateText.dayOffset(draft.atMs))) {
+                        focus.clearFocus() // 先收键盘再弹面板：不收的话面板关掉时焦点回到输入框，键盘又蹦出来
+                        UmbraPickers.presentWhen("什么时候", draft.atMs, UmbraWhenTab.Date) { ms -> onDraft { it.copy(atMs = ms) } }
+                    }
+                    Divider(14)
+                    PickerRow(stringResource(R.string.reminder_sub_time), UmbraDateText.hm(draft.atMs)) {
+                        focus.clearFocus()
+                        UmbraPickers.presentWhen("什么时候", draft.atMs, UmbraWhenTab.Time) { ms -> onDraft { it.copy(atMs = ms) } }
                     }
                 }
-                if (draft.repeatRule == "自定义") {
-                    Divider(32)
-                    MenuRow(stringResource(R.string.reminder_row_frequency), ReminderOptions.customFreqText(draft.customFreq, draft.customN), sub = true,
-                        options = Reminder.customFreqOptions, display = { ReminderOptions.customFreqText(it, draft.customN) }, current = draft.customFreq) { v -> onDraft { it.copy(customFreq = v) } }
-                    Divider(32)
-                    NumberRow(stringResource(R.string.reminder_row_every), draft.customN, ReminderOptions.customFreqText(draft.customFreq, draft.customN)) { s ->
-                        onDraft { it.copy(customN = Reminder.customN(s).toLong()) }
-                    }
-                }
-                if (draft.repeatRule != "不重复") {
-                    Divider(32)
-                    val cur = if (draft.repeatEndMs == null) "永不" else "指定日期"
-                    MenuRow(endField, ReminderOptions.endOptionText(cur), sub = true, options = listOf("永不", "指定日期"),
-                        display = { ReminderOptions.endOptionText(it) }, current = cur) { v ->
-                        onDraft { d ->
-                            if (v == "永不") d.copy(repeatEndMs = null)
-                            else if (d.repeatEndMs == null) d.copy(repeatEndMs = d.defaultRepeatEnd) else d
+            }
+            Field(stringResource(R.string.reminder_field_repeatAhead)) {
+                FormCard {
+                    MenuRow(stringResource(R.string.reminder_row_repeat), draft.repeatRowValue, options = Reminder.repeatOptions,
+                        display = { ReminderOptions.repeatOptionText(it) }, current = draft.repeatRule) { v -> onDraft { it.copy(repeatRule = v) } }
+                    if (draft.repeatRule == "每周") {
+                        // 每周几（可多选、至少一个）：没存过亮 at 那一天；最后一颗点了不灭；at 不在选中日里时保存会挪到第一个选中日。
+                        val shown = ReminderAdvance.shownWeekDays(draft)
+                        val names = if (reminderEnglish) Reminder.weekDayNamesEn else Reminder.weekDayNamesZh
+                        Divider(32)
+                        Row(Modifier.horizontalScroll(rememberScrollState()).padding(start = 32.dp, end = 14.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            for (i in 0 until 7) UmbraTagPill(names[i], shown.contains(i), { onDraft { it.copy(weekDays = ReminderAdvance.toggleWeekDay(shown, i)) } })
                         }
                     }
-                    if (draft.repeatEndMs != null) {
+                    if (draft.repeatRule == "自定义") {
                         Divider(32)
-                        PickerRow(stringResource(R.string.reminder_row_endDate), UmbraDateText.dayLabel(UmbraDateText.dayOffset(draft.repeatEndMs)), sub = true) {
-                            focus.clearFocus()
-                            // 结束日期带下界：早于提醒日的日子在面板里就点不动；写回规整成本机那天 23:59:59.999（#81）。
-                            UmbraPickers.presentDate(endField, draft.repeatEndMs, minDayMs = draft.atMs, minNote = ReminderOptions.endMinNote(draft.atMs)) { ms ->
-                                onDraft { it.copy(repeatEndMs = ReminderAdvance.endOfDay(ms)) }
+                        MenuRow(stringResource(R.string.reminder_row_frequency), ReminderOptions.customFreqText(draft.customFreq, draft.customN), sub = true,
+                            options = Reminder.customFreqOptions, display = { ReminderOptions.customFreqText(it, draft.customN) }, current = draft.customFreq) { v -> onDraft { it.copy(customFreq = v) } }
+                        Divider(32)
+                        NumberRow(stringResource(R.string.reminder_row_every), draft.customN, ReminderOptions.customFreqText(draft.customFreq, draft.customN)) { s ->
+                            onDraft { it.copy(customN = Reminder.customN(s).toLong()) }
+                        }
+                    }
+                    if (draft.repeatRule != "不重复") {
+                        Divider(32)
+                        val cur = if (draft.repeatEndMs == null) "永不" else "指定日期"
+                        MenuRow(endField, ReminderOptions.endOptionText(cur), sub = true, options = listOf("永不", "指定日期"),
+                            display = { ReminderOptions.endOptionText(it) }, current = cur) { v ->
+                            onDraft { d ->
+                                if (v == "永不") d.copy(repeatEndMs = null)
+                                else if (d.repeatEndMs == null) d.copy(repeatEndMs = d.defaultRepeatEnd) else d
                             }
                         }
-                        draft.repeatEndProblem?.let { bad ->
-                            Text(bad, color = c.dangerText, style = TextStyle(fontSize = 12.sp, fontWeight = UmbraType.weight560),
-                                modifier = Modifier.fillMaxWidth().padding(start = 32.dp, end = 14.dp, bottom = 10.dp))
+                        if (draft.repeatEndMs != null) {
+                            Divider(32)
+                            PickerRow(stringResource(R.string.reminder_row_endDate), UmbraDateText.dayLabel(UmbraDateText.dayOffset(draft.repeatEndMs)), sub = true) {
+                                focus.clearFocus()
+                                // 结束日期带下界：早于提醒日的日子在面板里就点不动；写回规整成本机那天 23:59:59.999（#81）。
+                                UmbraPickers.presentDate(endField, draft.repeatEndMs, minDayMs = draft.atMs, minNote = ReminderOptions.endMinNote(draft.atMs)) { ms ->
+                                    onDraft { it.copy(repeatEndMs = ReminderAdvance.endOfDay(ms)) }
+                                }
+                            }
+                            draft.repeatEndProblem?.let { bad ->
+                                Text(bad, color = c.dangerText, style = TextStyle(fontSize = 12.sp, fontWeight = UmbraType.weight560),
+                                    modifier = Modifier.fillMaxWidth().padding(start = 32.dp, end = 14.dp, bottom = 10.dp))
+                            }
                         }
                     }
+                    Divider(14)
+                    MenuRow(stringResource(R.string.reminder_row_ahead), draft.aheadRowValue, options = Reminder.aheadOptions.map { it.first },
+                        display = { o -> ReminderOptions.aheadOptionText(Reminder.aheadOptions.firstOrNull { it.first == o }?.second ?: 0) },
+                        current = draft.aheadLabel) { v -> onDraft { it.copy(aheadMinutes = Reminder.aheadOptions.firstOrNull { o -> o.first == v }?.second ?: 0) } }
                 }
-                Divider(14)
-                MenuRow(stringResource(R.string.reminder_row_ahead), draft.aheadRowValue, options = Reminder.aheadOptions.map { it.first },
-                    display = { o -> ReminderOptions.aheadOptionText(Reminder.aheadOptions.firstOrNull { it.first == o }?.second ?: 0) },
-                    current = draft.aheadLabel) { v -> onDraft { it.copy(aheadMinutes = Reminder.aheadOptions.firstOrNull { o -> o.first == v }?.second ?: 0) } }
             }
         }
         ReminderAttsSection(

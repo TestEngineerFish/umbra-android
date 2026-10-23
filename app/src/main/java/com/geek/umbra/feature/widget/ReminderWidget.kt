@@ -42,6 +42,7 @@ import androidx.glance.text.TextStyle
 import com.geek.umbra.R
 import com.geek.umbra.feature.reminder.Reminder
 import com.geek.umbra.feature.reminder.ReminderAdvance
+import com.geek.umbra.feature.reminder.ReminderPlace
 import com.geek.umbra.feature.reminder.ReminderStore
 import com.geek.umbra.feature.reminder.ReminderWire
 
@@ -80,7 +81,8 @@ internal object ReminderWidgetData {
      */
     fun rows(items: List<Reminder>, now: Long): List<ReminderWidgetRow> {
         val cal = runCatching { ReminderStore.holidayCalendar }.getOrNull()
-        val sources = items.filter { !it.done }.map { r ->
+        // 地点提醒不上小组件：它没有时刻（at_ms = 0），按时间排会被当成 1970 年的「已过期」。
+        val sources = items.filter { !it.done && ReminderPlace.timed(it) }.map { r ->
             val repeating = r.repeatRule != "不重复"
             val upcoming = if (!repeating) emptyList() else ReminderAdvance.upcoming(
                 r.atMs, ReminderWire.ruleToWire(r.repeatRule), ReminderWire.freqToWire(r.customFreq), r.customN,

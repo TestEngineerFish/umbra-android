@@ -223,6 +223,7 @@ object ReminderAdvance {
      * pendingSinceMs 只在原来不脏时写成 now（横幅从现在起算）。iOS: ReminderAdvance.swift:335
      */
     fun applied(r: Reminder, nowMs: Long, cal: HolidayCalendar? = null, fallbackTz: ZoneId = ZoneId.systemDefault()): Reminder? {
+        if (!ReminderPlace.timed(r)) return null // 地点提醒 at_ms = 0，没有「下一次」可推
         val tz = zone(r.tz, fallbackTz)
         val a = advance(
             r.atMs, ReminderWire.ruleToWire(r.repeatRule), ReminderWire.freqToWire(r.customFreq), r.customN,

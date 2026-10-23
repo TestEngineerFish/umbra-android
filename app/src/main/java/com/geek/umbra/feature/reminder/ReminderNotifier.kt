@@ -71,7 +71,8 @@ object ReminderNotifier {
 
     /** 下一次主通知 / 提前通知各在什么时刻响。null = 不排。 */
     internal fun nextFires(r: Reminder, cal: HolidayCalendar?, nowMs: Long): Pair<Long?, Long?> {
-        if (r.done) return null to null
+        // 地点提醒归 iOS 的地理围栏触发；它的 at_ms = 0，按时间排会在开机后立刻响一次。
+        if (r.done || !ReminderPlace.timed(r)) return null to null
         val tz = ReminderAdvance.zone(r.tz)
         fun first(now: Long): Long? = if (r.repeatRule == "不重复") r.atMs.takeIf { it > now }
         else ReminderAdvance.upcoming(

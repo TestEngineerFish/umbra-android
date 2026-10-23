@@ -41,6 +41,7 @@ data class ReminderPushRejection(val status: Int, val detail: String?)
  * - [anchorDay]：按月 / 按年重复的锚定日（1–31），nil = 没存。
  * - [weekDays]：每周选中的星期几（0=周一…6=周日）。nil = 本机没这一格（上行不写键）；[] = 没选（上行写 []）。
  * - [pushRejection]：服务端明确不收这一条。
+ * - [place]：地点提醒的地点（服务端原样那一块），null = 按时间提醒。见 [ReminderPlace]。
  */
 data class Reminder(
     val id: String,
@@ -65,6 +66,7 @@ data class Reminder(
     val anchorDay: Int? = null,
     val weekDays: List<Int>? = null,
     val pushRejection: ReminderPushRejection? = null,
+    val place: JsonObject? = null,
 ) {
     /** 换附件：值真的变了才置 attsTouched（iOS `atts` 的 didSet）。值没变（上传全失败）不算动过。 */
     fun withAtts(next: List<ReminderAtt>): Reminder =
@@ -170,6 +172,7 @@ object ReminderCodec {
         r.pushRejection?.let { p ->
             put("pushRejection", buildJsonObject { put("status", p.status); p.detail?.let { put("detail", it) } })
         }
+        r.place?.let { put("place", it) }
     }
 
     /** 解一条。必填四格缺了 / 类型不对 → null（调用方丢掉这一条并留底）。iOS: ReminderModel.swift:226 */
@@ -214,6 +217,7 @@ object ReminderCodec {
             pushRejection = (o["pushRejection"] as? JsonObject)?.let { p ->
                 p.strictLong("status")?.let { ReminderPushRejection(it.toInt(), p.strictString("detail")) }
             },
+            place = o["place"] as? JsonObject,
         )
     }
 
@@ -238,3 +242,25 @@ internal fun JsonObject.strictLong(k: String): Long? =
 
 internal fun JsonObject.strictBool(k: String): Boolean? =
     (this[k] as? JsonPrimitive)?.takeIf { it !is JsonNull && !it.isString }?.booleanOrNull
+
+// MARK: - 地点提醒
+
+/**
+ * 地点提醒（服务端 10-23 加的 place：{lat, lng, radius_m, on: arrive|leave, name, address}，不是地点提醒时为 null）。
+ * 到了 / 离开那个地方由 iOS 用地理围栏触发；Android 这次不做触发、不做设置界面，只做三件事：认出来、原样带回去、列表念一句。
+ * - 整块 JsonObject 透传，不拆字段：拆成已知字段再拼回去，服务端以后加的子字段会在 Android 编辑一次之后丢掉。
+ * - 地点提醒的 at_ms 一律是 0（没有时刻）：凡是按 atMs 排闹钟、判过期、推进重复、按日期分组、上小组件的地方都先问 [timed]，
+ *   不然 1970 年那一刻会让它永远「已过期」、开机就响一次。
+ * - PUT 不带 place 键 = 服务端保留库里那份（同 atts 的约定）：普通提醒上行时不写这个键，旧版 Android 也抹不掉地点。
+ */
+object ReminderPlace {
+    /** 按时间提醒的才进时间那一套（闹钟、过期、推进、日期分组、小组件）。 */
+    fun timed(r: Reminder): Boolean = r.place == null
+
+    /** 「到达 公司 时 · 在 iPhone 上提醒」（geek-99 10-23 给的句子）。on 认不出按到达念；name 空退 address，再空念「指定地点」。 */
+    fun label(place: JsonObject): String {
+        val on = if (place.strictString("on") == "leave") "离开" else "到达"
+        val name = listOf("name", "address").firstNotNullOfOrNull { k -> place.strictString(k)?.trim()?.takeIf { it.isNotEmpty() } } ?: "指定地点"
+        return "$on $name 时 · 在 iPhone 上提醒"
+    }
+}
