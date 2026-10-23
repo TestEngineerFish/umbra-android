@@ -17,15 +17,14 @@ object Brand {
     /** 对外产品名（中文界面、写死中文的文案用它）。 */
     const val productName = "长尾雀"
     /**
-     * 产品名的 ASCII 版。英文名还没定，先占位，**不上界面**（拼音占位；sam 10-22：英文名定下来之前不对外露出 Changweique）。
-     * 只用在必须是 ASCII、写不了中文的地方 —— Android 侧只有一处：安装包文件名（app/build.gradle.kts）。
+     * 英文产品名（sam 10-23 定，读作 "kwe-tail"）：英文界面显示它，必须是 ASCII 的地方（安装包文件名，app/build.gradle.kts）也用它。
      */
-    const val productNameEn = "Changweique"
+    const val productNameEn = "Quetail"
     /**
-     * 英文界面显示的产品名（启动器名、英文文案、分享面板）。英文名定下来之前就是中文名 —— 定了只改这一行，
-     * 让它指向 productNameEn，再重跑 gen_brand.py / gen_strings.py。
+     * 英文界面显示的产品名（启动器名、英文文案、分享面板）。英文名没定那阵子它指向中文名（sam 10-22），
+     * 10-23 定了 Quetail 改指 productNameEn。留成开关是因为 gen_brand.py / gen_strings.py / 测试都读它，不必再改三处。
      */
-    const val displayNameEn = productName
+    const val displayNameEn = productNameEn
     /** 昵称（sam 10-22）。这次只登记常量，界面上先不用 —— 哪句文案用它等 iOS / 设计侧定。 */
     const val nickname = "雀雀"
     /** 内部代号：包名、类名、请求头、日志里出现的那个名字。不上界面。 */

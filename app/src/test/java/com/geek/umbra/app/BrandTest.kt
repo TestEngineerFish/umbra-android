@@ -24,7 +24,7 @@ class BrandTest {
     @Test fun brandXmlMatchesBrandKt() {
         assertEquals(Brand.productName, value("values", "brand.xml", "app_name"))
         assertEquals(Brand.productName, value("values", "brand.xml", "brand_name"))
-        // 英文表读 displayNameEn：英文名定下来之前英文界面也显示中文名（sam 10-22）。
+        // 英文表读 displayNameEn（10-23 起指向英文名 productNameEn）。
         assertEquals(Brand.displayNameEn, value("values-en", "brand.xml", "app_name"))
         assertEquals(Brand.displayNameEn, value("values-en", "brand.xml", "brand_name"))
         assertTrue(value("values", "brand.xml", "share_insp_title")!!.contains(Brand.productName))
@@ -52,14 +52,20 @@ class BrandTest {
     }
 
     /**
-     * 英文名定下来之前，界面上不露出 productNameEn（sam 10-22）：任何字符串资源（含生成的）里都不许有它。
-     * displayNameEn 改指向 productNameEn 那天，这条自动放行。productNameEn 只给写不了中文的地方用（安装包文件名）。
+     * 英文界面显示英文名（sam 10-23 定 Quetail）：values-en 下所有字符串资源里没有中文名 —— 改了 Brand.kt 忘了重跑
+     * gen_brand.py / gen_strings.py，或 displayNameEn 又指回了中文名，这里会红。名字一律读常量，不写死。
+     * 只有中文、没有英文的 iOS 条目不进 values-en（英文模式下整句回落中文，名字也是中文，与 iOS 一致），所以这里查得干净。
      */
-    @Test fun productNameEnNotOnScreen() {
-        if (Brand.displayNameEn == Brand.productNameEn) return
-        val hits = file("src/main/res").walk().filter { it.isFile && it.extension == "xml" && it.parentFile.name.startsWith("values") }
-            .filter { Brand.productNameEn in it.readText() }.map { "${it.parentFile.name}/${it.name}" }.toList()
-        assertTrue("英文名还没定，界面上不该出现 ${Brand.productNameEn}：$hits", hits.isEmpty())
+    @Test fun englishShowsEnglishName() {
+        assertEquals(Brand.productNameEn, Brand.displayNameEn)
+        assertEquals(Brand.productNameEn, value("values-en", "brand.xml", "app_name"))
+        val hits = file("src/main/res").walk().filter { it.isFile && it.extension == "xml" && it.parentFile.name == "values-en" }
+            .flatMap { f ->
+                Regex("<string name=\"(\\w+)\"[^>]*>([^<]*)</string>").findAll(f.readText())
+                    .filter { Brand.productName in it.groupValues[2] }.map { "${f.name}: ${it.groupValues[1]}" }
+            }.toList()
+        assertTrue("英文资源里还显示中文名 ${Brand.productName}：$hits", hits.isEmpty())
+        assertTrue("英文资源里一处英文名都没有，扫描写坏了", file("src/main/res/values-en/strings_ios.xml").readText().contains(Brand.productNameEn))
     }
 
     /**
