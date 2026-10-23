@@ -100,11 +100,17 @@ class BrandTest {
 
     /**
      * 昵称「雀雀」只进三类闲着的地方（设计侧批次 287 §三：首次空状态标题、找不到的页面、关于 / 欢迎页），而且读常量。
+     * 字面都由设计侧逐字给（287 任务空状态；290 §五 A 已删对象页、B 关于、C 聊天第一次打开）。
      * 守两件事：① 字面「雀雀」只在 Brand.kt；② 引用 Brand.nickname 的文件在下面这张名单里 —— 新加一处先对照 287 的「不用的地方」，
      * 再把文件加进来（错误卡、确认弹窗、保险箱、远程、吐司、筛选后的空结果、英文界面都不用）。
      */
     @Test fun nicknameOnlyInApprovedPlaces() {
-        val approved = setOf("TaskViews.kt") // 任务列表第一次用的空状态
+        val approved = setOf(
+            "TaskViews.kt",      // 任务列表第一次用的空状态（287）
+            "TrashGone.kt",      // 深链落到已删掉的提醒 / 灵感（290 §五 A）
+            "MeScreens.kt",      // 关于页（290 §五 B）
+            "ChatThreadView.kt", // 聊天第一次打开（290 §五 C）
+        )
         val src = file("src/main/java").walk().filter { it.isFile && it.extension == "kt" }.toList()
         val literal = src.filter { it.name != "Brand.kt" && Brand.nickname in it.readText() }.map { it.name }
         assertTrue("「${Brand.nickname}」写死了，改读 Brand.nickname：$literal", literal.isEmpty())

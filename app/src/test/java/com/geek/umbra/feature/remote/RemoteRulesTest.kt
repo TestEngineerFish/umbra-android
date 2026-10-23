@@ -606,6 +606,21 @@ class RemoteRulesTest {
         assertFalse("两边都没有也不算对上", RemoteUnattended.fingerprintMatches(null, null))
     }
 
+    /** 批次 290：控制中推文件被拒（remote_active）走三段式、不印码；短码那两句的指路改成被控端屏幕顶部的提示条。 */
+    @Test fun pushRejectedWhileControlledAndCodeGuide() {
+        assertTrue(RemoteFilePush.rejectedWhileControlled("remote_active"))
+        assertFalse(RemoteFilePush.rejectedWhileControlled("io_error"))
+        assertFalse(RemoteFilePush.rejectedWhileControlled(null))
+        fun src(name: String) = listOf(File("src/main/java/com/geek/umbra/feature/remote/$name"), File("app/src/main/java/com/geek/umbra/feature/remote/$name"))
+            .first { it.exists() }.readText()
+        val files = src("RemoteFilesView.kt")
+        assertTrue("文件面板没认 remote_active", "RemoteFilePush.rejectedWhileControlled(t.failure)" in files && "R.string.remote_android_push_controlledTitle" in files)
+        assertTrue("第一次核对还在念旧指路（会话窗口右上角）", "R.string.remote_android_verify_body" in src("RemoteSessionView.kt"))
+        fun res(dir: String) = listOf(File("src/main/res/$dir/strings_remote_android.xml"), File("app/src/main/res/$dir/strings_remote_android.xml")).first { it.exists() }.readText()
+        assertTrue(res("values").contains("屏幕顶部的提示条") && !res("values").contains("会话窗口右上角"))
+        assertTrue(res("values-en").contains("the bar at the top of its screen") && !res("values-en").contains("top right of its session window"))
+    }
+
     /** 批次 286 §四：记过指纹又对不上才念「要重新核对」；没记过 / 这次算不出 / 对得上都不算「变了」。 */
     @Test fun unattendedFingerprintChanged() {
         val fp = "sha-256 AB:CD:EF"

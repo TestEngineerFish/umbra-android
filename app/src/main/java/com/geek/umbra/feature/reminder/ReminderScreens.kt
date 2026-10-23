@@ -2,6 +2,7 @@
 // 路由分发表（navigation/RouteScreens.kt）只调这里的三个函数，签名不改。
 package com.geek.umbra.feature.reminder
 
+import com.geek.umbra.feature.vault.TrashGoneState
 import androidx.compose.foundation.layout.widthIn
 import android.content.Intent
 import android.net.Uri
@@ -511,11 +512,11 @@ fun RemDetailScreen(id: String) {
             }
             item != null -> preview(item)
             else -> item("gone") {
-                // 端上在同步里发现这一条已经不在了（服务端这一族不发 404）。第二段说清它还找得回来。
-                UmbraEmptyState(
-                    UmbraIconPaths.bell, "这条提醒已经不在了",
-                    hint = "可能是在电脑上把它删掉了 —— 删掉的提醒会在回收站里留 30 天，能找回来。",
-                    action = "回到提醒列表", onAction = { router.back() },
+                // 端上在同步里发现这一条已经不在了（服务端这一族不发 404）。字面照批次 290 §五 A：带昵称、说清回收站留 30 天，
+                // 回收站里也没有（超过 30 天）才说找不回来。本机还有没推上去的删除时不算「超过 30 天」。
+                TrashGoneState(
+                    UmbraIconPaths.bell, "reminder", id, "提醒", "reminder",
+                    pendingLocalDelete = id in ReminderCache.pendingTombs(), onBack = { router.back() },
                 )
             }
         }
@@ -555,7 +556,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.preview(r: Reminder) 
                 ReminderPlace.address(place)?.let { Text(it, color = c.muted, style = TextStyle(fontSize = 14.sp)) }
                 val range = ReminderPlace.radius(place, reminderEnglish)
                 val where = if (reminderEnglish) "Reminds on iPhone only" else "在哪儿提醒 · 只在 iPhone 上"
-                Text(listOfNotNull(range?.let { if (reminderEnglish) "Range $it" else "范围 $it" }, where).joinToString(" · "),
+                Text(listOfNotNull(range?.let { if (reminderEnglish) "$it radius" else "范围 $it" }, where).joinToString(" · "),
                     color = c.faint, style = TextStyle(fontSize = 13.sp))
             }
         }
@@ -856,11 +857,12 @@ private fun ReminderForm(
             Field(stringResource(R.string.reminder_field_time)) {
                 FormCard {
                     // 同 PC 编辑面板（批次 288 §四）：只读一行「到达 家 时 · 范围 200 米」，右侧「只能在 iPhone 上改」。
+                    // 英文范围写「200 m radius」放在 · 后面（批次 290 §六）。
                     Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                         UmbraIcon(UmbraExtraIcons.mapPin, c.muted, size = 15.dp)
                         Spacer(Modifier.width(8.dp))
                         val range = ReminderPlace.radius(place, reminderEnglish)
-                        Text(listOfNotNull(ReminderPlace.head(place, reminderEnglish), range?.let { if (reminderEnglish) "$it range" else "范围 $it" }).joinToString(" · "),
+                        Text(listOfNotNull(ReminderPlace.head(place, reminderEnglish), range?.let { if (reminderEnglish) "$it radius" else "范围 $it" }).joinToString(" · "),
                             color = c.text, style = TextStyle(fontSize = 15.sp), modifier = Modifier.weight(1f))
                         Text(if (reminderEnglish) "Edit on iPhone" else "只能在 iPhone 上改", color = c.faint, style = TextStyle(fontSize = 13.sp))
                     }

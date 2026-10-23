@@ -110,10 +110,10 @@ private fun TaskWidgetContent(context: Context, snap: TaskWidgetSnapshot?, signe
                     Spacer(GlanceModifier.height(5.dp))
                     Text(snap.runningTitle, style = TextStyle(color = WTheme.text, fontSize = 14.sp, fontWeight = FontWeight.Medium), maxLines = 1)
                     Spacer(GlanceModifier.height(5.dp))
-                    Text(
-                        TaskNotifyRules.runningBody(snap.stepsDone, snap.stepsTotal, snap.stepTitle),
-                        style = TextStyle(color = WTheme.muted, fontSize = 12.sp), maxLines = 1,
-                    )
+                    // 两行（批次 290 §六）：「已完成 2/8 步」一行，「正在做第 3 步 · 步名」另起一行。
+                    for (line in TaskNotifyRules.runningBody(snap.stepsDone, snap.stepsTotal, snap.stepTitle).lines()) {
+                        Text(line, style = TextStyle(color = WTheme.muted, fontSize = 12.sp), maxLines = 1)
+                    }
                     snap.startedAtMs?.let {
                         Spacer(GlanceModifier.height(5.dp))
                         Text("已用 ${TaskNotifyRules.elapsedText(now - it)}", style = TextStyle(color = WTheme.faint, fontSize = 11.5.sp), maxLines = 1)

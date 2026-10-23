@@ -4,6 +4,7 @@
 // Android 独有（iOS 是灵动岛 + 锁屏实况，没有这四个槽位），所以用例照答复与出图里的例子写，不来自 swifttests。
 package com.geek.umbra.feature.widget
 
+import com.geek.umbra.feature.task.TaskProgress
 import com.geek.umbra.feature.task.TaskRetryButton
 import com.geek.umbra.feature.task.TaskRetryRules
 import com.geek.umbra.feature.task.TaskStatusKind
@@ -53,9 +54,9 @@ object TaskLocalStops {
 }
 
 object TaskNotifyRules {
-    /** 已取消那一条的正文（设计侧批次 201 第 7 条定稿）。步数拿不到时不编「第 ?/? 步」。 */
+    /** 已取消那一条的正文（设计侧批次 201 第 7 条定稿；步数按批次 290「已完成几步」）。步数拿不到时不编进度。 */
     fun cancelledBody(done: Int?, total: Int?): String =
-        if (done != null && total != null && total > 0) "已取消，停在第 ${done.coerceIn(0, total)}/$total 步。做完的部分留在任务详情里"
+        if (done != null) TaskProgress.make(done, total)?.let { "已取消，${it.stepLine}。做完的部分留在任务详情里" } ?: "已取消。做完的部分留在任务详情里"
         else "已取消。做完的部分留在任务详情里"
 
     /** 服务端找不到这条任务时的正文（同上定稿），配动作「打开任务」落任务列表。 */
@@ -85,7 +86,7 @@ object TaskNotifyRules {
 
     /**
      * 正在做的那一步：先找状态是执行中的那一步，没有就按 seq 排好取第 done+1 步（下标 done）。
-     * 步骤标题服务端可能不给（null / 空），那就只说「第 N/M 步」。
+     * 步骤标题服务端可能不给（null / 空），那就只说「正在做第 N 步」。
      */
     fun currentStepTitle(steps: List<TaskStep>, done: Int): String? {
         val sorted = steps.sortedBy { it.seq }
@@ -93,10 +94,13 @@ object TaskNotifyRules {
         return s?.title?.trim()?.takeIf { it.isNotEmpty() }
     }
 
-    /** 执行中的正文：`第 3/8 步 · 打开价格页并截图`；没有当前步名就只到「第 3/8 步」；没有步骤数就是「执行中」（不编进度）。 */
+    /**
+     * 执行中的正文，两行（批次 290 §六）：「已完成 2/8 步」\n「正在做第 3 步 · 打开价格页并截图」。
+     * 全做完那一刻只剩第一行；没有步骤数就是「执行中」（不编进度）。⚠️ 原来写「第 3/8 步」（按 done+1 算），和详情的「2 / 8」对不上。
+     */
     fun runningBody(done: Int, total: Int, stepTitle: String?): String {
-        val head = if (total > 0) "第 ${minOf(done + 1, total)}/$total 步" else "执行中"
-        return if (stepTitle.isNullOrEmpty() || total <= 0) head else "$head · $stepTitle"
+        val p = TaskProgress.make(done, total) ?: return "执行中"
+        return listOfNotNull(p.stepLine, p.currentStep?.let { TaskProgress.currentLine(it, stepTitle) }).joinToString("\n")
     }
 
     /** 状态栏胶囊（Live Updates 的 shortCriticalText）：百分比；需确认换「待确认」。 */

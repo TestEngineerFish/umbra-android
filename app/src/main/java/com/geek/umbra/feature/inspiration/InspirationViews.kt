@@ -4,6 +4,7 @@
 // 设计稿里有、服务端没有的「关联任务」整块不画 —— 画一个永远为空的分节等于告诉用户功能坏了。
 package com.geek.umbra.feature.inspiration
 
+import com.geek.umbra.feature.vault.TrashGoneState
 import androidx.compose.foundation.layout.widthIn
 import com.geek.umbra.app.Brand
 import com.geek.umbra.designsystem.UmbraDimens
@@ -392,8 +393,8 @@ fun InspDetailView(id: String) {
             // 本机账本还没读过（冷进详情的第一帧）：别先闪一下「这条灵感不在了」
             !loadedOnce -> item("skel") { UmbraSkeleton() }
             !deleting -> item("missing") {
-                // 灵感被别的端删了：如实说明并给出口，而不是留一个空白页。
-                UmbraEmptyState(UmbraIconPaths.bulb, "这条灵感不在了", hint = "可能是在别的设备上删掉了。", action = "回到灵感列表", onAction = { router.back() })
+                // 灵感被别的端删了：如实说明并给出口，而不是留一个空白页（字面照批次 290 §五 A，同提醒那一页）。
+                TrashGoneState(UmbraIconPaths.bulb, "idea", id, "灵感", "idea", pendingLocalDelete = false, onBack = { router.back() })
             }
         }
     }

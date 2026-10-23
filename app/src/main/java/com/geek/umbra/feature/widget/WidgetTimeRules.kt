@@ -14,6 +14,7 @@
 // 任务那一份仍要落盘（任务没有本地持久化，进程被杀后小组件还得有东西画），见 WidgetBridge。
 package com.geek.umbra.feature.widget
 
+import com.geek.umbra.feature.task.TaskProgress
 import com.geek.umbra.feature.task.TaskTime
 import com.geek.umbra.model.TaskItem
 import kotlinx.serialization.Serializable
@@ -32,7 +33,7 @@ data class TaskWidgetSnapshot(
     val runningTitle: String? = null,
     val stepsDone: Int = 0,
     val stepsTotal: Int = 0,
-    /** 一句话状态行：「第 3/5 步」/「执行中」（与进行中通知同一句，同源同 tick）。 */
+    /** 一句话状态行：「已完成 3/5 步」/「执行中」（与进行中通知同一句，同源同 tick）。 */
     val statusLine: String? = null,
     /** 写入那一天完成了几个。**只对 savedAt 那一天成立** —— 画的时候经 [WidgetTimeRules.todayDone] 判跨日。 */
     val todayDone: Int = 0,
@@ -194,9 +195,8 @@ object WidgetTaskRules {
 
     /** 「第 3/5 步」；服务端没给步骤数就用状态词，不编进度。 */
     fun line(task: TaskItem): String {
-        val t = task.steps_total
-        if (t != null && t > 0) return "第 ${minOf((task.steps_done ?: 0) + 1, t)}/$t 步"
-        return "执行中"
+        // 按「已完成几步」，同详情 / 通知（批次 290 §六；原来按 done+1 写「第 N/M 步」）。
+        return TaskProgress.make(task.steps_done, task.steps_total)?.stepLine ?: "执行中"
     }
 
     /** 「40%」。没有步骤数时给 "…"（服务端没给就不编百分比）。iOS: WidgetShared.swift `percentText`。 */

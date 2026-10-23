@@ -8,6 +8,8 @@
 // 按住说话 → SpeechRecognizer（见 ChatVoice.kt）。
 package com.geek.umbra.feature.chat
 
+import com.geek.umbra.designsystem.UmbraTagPill
+import com.geek.umbra.designsystem.UmbraDateText
 import android.Manifest
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -27,6 +29,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
@@ -510,7 +513,13 @@ fun ChatThreadPage(conv: String) {
                     ) {
                         if (history.show) item(key = "__history") { HistoryRow(history) }
                         // 首屏没拉到时不画空态：上面那一行的「加载失败 · 重试」才是这时该说的话
-                        if (shown.isEmpty() && !history.failed) item(key = "__empty") { EmptyState(isAssistant, title) }
+                        if (shown.isEmpty() && !history.failed) item(key = "__empty") {
+                            // 建议芯片：只填进输入框、叫起键盘，不发出去（批次 290 §五 C）。
+                            EmptyState(isAssistant, title) { t ->
+                                ChatStore.setDraft(t); voiceMode = false
+                                scope.launch { runCatching { inputFocus.requestFocus() } }
+                            }
+                        }
                         items(shown.size, key = { shown[it].id }) { idx ->
                             val b = shown[idx]
                             val align = when (b) {
@@ -593,13 +602,37 @@ private fun HistoryRow(h: HistoryRowState) {
     }
 }
 
+/**
+ * 空会话。和秘书的那一条是「聊天第一次打开」：标题带昵称、一句具体的话、两颗建议芯片（设计侧批次 290 §五 C）。
+ * 芯片点了只填进输入框、把键盘叫起来，不直接发出去 —— 这一屏的下一步是输入框，芯片给不知道说什么的人起个头，所以不另放主按钮。
+ * 英文界面不用昵称。和设备的那一条照旧（它不是「第一次用」那一类）。
+ */
 @Composable
-private fun EmptyState(isAssistant: Boolean, title: String) {
+private fun EmptyState(isAssistant: Boolean, title: String, onChip: (String) -> Unit) {
     val c = UmbraTheme.colors
+    val en = UmbraDateText.english
     Column(Modifier.fillMaxWidth().padding(vertical = 60.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Column(Modifier.widthIn(max = 250.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(if (isAssistant) "跟秘书说点什么" else "直接吩咐「$title」做事", color = c.text, style = TextStyle(fontSize = 15.sp, fontWeight = UmbraType.weight560), textAlign = TextAlign.Center)
-            Text(if (isAssistant) "描述你的目标就行，${Brand.productName}会拆活、派活。" else "秘书会把任务派给这台设备。", color = c.muted, style = TextStyle(fontSize = 13.sp, lineHeight = 20.8.sp), textAlign = TextAlign.Center)
+            val head = when {
+                !isAssistant -> "直接吩咐「$title」做事"
+                en -> "What do you want to do?"
+                else -> "${Brand.nickname}在枝头等你"
+            }
+            val sub = when {
+                !isAssistant -> "秘书会把任务派给这台设备。"
+                en -> "Say it in a sentence and ${Brand.displayNameEn} will take it from there."
+                else -> "说一句你想做的事，它会接着办。"
+            }
+            Text(head, color = c.text, style = TextStyle(fontSize = 15.sp, fontWeight = UmbraType.weight560), textAlign = TextAlign.Center)
+            Text(sub, color = c.muted, style = TextStyle(fontSize = 13.sp, lineHeight = 20.8.sp), textAlign = TextAlign.Center)
+        }
+        if (isAssistant) {
+            Spacer(Modifier.height(UmbraDimens.sp4))
+            val chips = if (en) listOf("Tidy up this week's meeting notes", "Jot something down") else listOf("整理这周的会议纪要", "记一句话")
+            // 英文那两句长，一行放不下就折行。
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                for (t in chips) UmbraTagPill(t, false, { onChip(t) })
+            }
         }
     }
 }

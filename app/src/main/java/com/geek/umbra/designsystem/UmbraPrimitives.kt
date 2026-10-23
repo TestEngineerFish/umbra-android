@@ -502,7 +502,10 @@ fun UmbraSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit, modifier: 
 
 // MARK: - 状态页
 
-/** 空态：图标块 64 圆角 16 图标 28；标题 15/560，hint 13；按钮 44 高最大宽 200；内边距 34/60。 */
+/**
+ * 空态：图标块 64 圆角 16 图标 28；标题 15/560，hint 13；按钮 44 高最大宽 200；内边距 34/60。
+ * [secondary] 是第二颗钮（次要样式，排在主钮下面）—— 深链落到已删对象那一页要两颗：去回收站 / 回到列表（批次 290 §五 A）。
+ */
 @Composable
 fun UmbraEmptyState(
     icon: String,
@@ -511,6 +514,8 @@ fun UmbraEmptyState(
     hint: String? = null,
     action: String? = null,
     onAction: (() -> Unit)? = null,
+    secondary: String? = null,
+    onSecondary: (() -> Unit)? = null,
 ) {
     val c = UmbraTheme.colors
     Column(
@@ -529,6 +534,10 @@ fun UmbraEmptyState(
         if (action != null && onAction != null) {
             Spacer(Modifier.height(16.dp))
             UmbraButton(action, onAction, Modifier.widthIn(max = 200.dp), height = 44.dp)
+        }
+        if (secondary != null && onSecondary != null) {
+            Spacer(Modifier.height(10.dp))
+            UmbraButton(secondary, onSecondary, Modifier.widthIn(max = 200.dp), kind = UmbraButtonKind.Secondary, height = 44.dp)
         }
     }
 }

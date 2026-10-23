@@ -29,10 +29,11 @@ class TaskNotifyRulesTest {
     }
 
     @Test fun runningBody() {
-        assertEquals("第 3/8 步 · 打开价格页并截图", R.runningBody(2, 8, "打开价格页并截图"))
-        assertEquals("第 3/8 步", R.runningBody(2, 8, null))
-        // 全做完那一刻不写「第 9/8 步」。
-        assertEquals("第 8/8 步", R.runningBody(8, 8, ""))
+        // 批次 290 §六：按「已完成几步」，正在做的那一步另起一行。
+        assertEquals("已完成 2/8 步\n正在做第 3 步 · 打开价格页并截图", R.runningBody(2, 8, "打开价格页并截图"))
+        assertEquals("已完成 2/8 步\n正在做第 3 步", R.runningBody(2, 8, null))
+        // 全做完那一刻只剩完成数，不写「正在做第 9 步」。
+        assertEquals("已完成 8/8 步", R.runningBody(8, 8, ""))
         // 服务端没给步骤数：不编进度。
         assertEquals("执行中", R.runningBody(0, 0, "打开价格页并截图"))
     }
@@ -126,9 +127,9 @@ class TaskNotifyRulesTest {
 
     /** 设计侧批次 201 第 7 条定稿：已取消正文带步数；步数拿不到不编「第 ?/? 步」；本机停的记号只取一次。 */
     @org.junit.Test fun cancelledAndLocalStop() {
-        org.junit.Assert.assertEquals("已取消，停在第 3/8 步。做完的部分留在任务详情里", TaskNotifyRules.cancelledBody(3, 8))
+        org.junit.Assert.assertEquals("已取消，已完成 3/8 步。做完的部分留在任务详情里", TaskNotifyRules.cancelledBody(3, 8))
         org.junit.Assert.assertEquals("已取消。做完的部分留在任务详情里", TaskNotifyRules.cancelledBody(null, 8))
-        org.junit.Assert.assertEquals("已取消，停在第 8/8 步。做完的部分留在任务详情里", TaskNotifyRules.cancelledBody(9, 8))
+        org.junit.Assert.assertEquals("已取消，已完成 8/8 步。做完的部分留在任务详情里", TaskNotifyRules.cancelledBody(9, 8))
         TaskLocalStops.mark("t1")
         org.junit.Assert.assertTrue(TaskLocalStops.take("t1"))
         org.junit.Assert.assertFalse(TaskLocalStops.take("t1"))

@@ -830,6 +830,9 @@ class RemoteClient(val launch: RemoteLaunch) {
     }
 
     /** 收尾一条传输：failure == null 表示成功。 */
+    /** 「知道了」：把那一行被拒的推送收掉（批次 290 §六 3）。 */
+    fun dismissTransfer(id: String) { transfers.removeAll { it.id == id } }
+
     private fun markTransfer(id: String, failure: String?) {
         updateTransfer(id) { if (failure == null) it.copy(finished = true, failure = null) else it.copy(failure = failure) }
         fileHandles.remove(id)?.let { runCatching { it.close() } }

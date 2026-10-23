@@ -288,7 +288,7 @@ private fun TransferRow(client: RemoteClient, t: RemoteTransfer) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(t.name, color = c.text, style = UmbraRemoteType.fileName, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                StatusLine(t)
+                if (!RemoteFilePush.rejectedWhileControlled(t.failure)) StatusLine(t)
             }
             Spacer(Modifier.width(8.dp))
             when {
@@ -335,6 +335,16 @@ private fun TransferRow(client: RemoteClient, t: RemoteTransfer) {
             }
         }
         if (t.running) Box(Modifier.padding(end = 10.dp)) { UmbraProgressBar(fraction(t), c.orange) }
+        // 控制中推文件被拒（remote_active）：三段式，不印码（批次 290 §六 3）。为什么不排队见 RemoteFilePush。
+        if (RemoteFilePush.rejectedWhileControlled(t.failure)) Column(Modifier.padding(end = 10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Row(verticalAlignment = Alignment.Top) {
+                UmbraIcon(UmbraIconPaths.alertTriangle, c.warningText, size = 12.dp, strokeWidth = 2.2f, modifier = Modifier.padding(top = 2.dp))
+                Spacer(Modifier.width(4.dp))
+                Text(stringResource(R.string.remote_android_push_controlledTitle, client.hostName), color = c.warningText, style = UmbraRemoteType.transferStatus)
+            }
+            Text(stringResource(R.string.remote_android_push_controlledBody), color = c.muted, style = UmbraRemoteType.transferStatus)
+            Row { Spacer(Modifier.weight(1f)); RowAction(stringResource(R.string.common_gotIt)) { client.dismissTransfer(t.id) } }
+        }
     }
 }
 

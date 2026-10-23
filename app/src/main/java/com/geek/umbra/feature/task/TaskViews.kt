@@ -238,8 +238,7 @@ fun TaskListView() {
 private fun TaskRow(task: TaskItem) {
     val c = UmbraTheme.colors
     val st = taskStatusOf(task.status)
-    val total = task.steps_total ?: 0
-    val done = task.steps_done ?: 0
+    val prog = TaskProgress.make(task.steps_done, task.steps_total)
     Column(
         Modifier.fillMaxWidth().clip(CardShape).background(c.card).border(1.dp, c.border, CardShape)
             .clickable { AppGraph.router.go(Route.TaskDetail(task.id)) }
@@ -265,7 +264,7 @@ private fun TaskRow(task: TaskItem) {
             Text("· ${TaskTime.relative(task.updated_at)}", color = c.faint, style = TextStyle(fontSize = 13.sp), maxLines = 1)
         }
         // 进度只在服务端真给了步骤数时画：一根永远 0% 的条比不画更容易被当成「卡住了」。
-        if (st == TaskStatusKind.Running && total > 0) UmbraProgressBar(done.toFloat() / total, c.orange)
+        if (st == TaskStatusKind.Running && prog != null) UmbraProgressBar(prog.fraction, c.orange)
     }
 }
 
@@ -402,12 +401,15 @@ private fun DetailSection(modifier: Modifier = Modifier, content: @Composable ()
     }
 }
 
-private fun doneCount(d: TaskDetail) = d.steps.count { taskStatusOf(it.status) == TaskStatusKind.Done }
+/** 详情的步数进度：和列表、小组件、通知同一个算法（先取任务上的计数）。iOS: TaskViews.swift detailProgress */
+private fun progressOfDetail(d: TaskDetail): TaskProgress? = TaskProgress.detail(
+    d.task.steps_done, d.task.steps_total,
+    d.steps.count { taskStatusOf(it.status) == TaskStatusKind.Done }, d.steps.size,
+)
 
 private fun progressOf(d: TaskDetail): Float {
     if (d.task.status == "done") return 1f
-    if (d.steps.isEmpty()) return 0f
-    return doneCount(d).toFloat() / d.steps.size
+    return progressOfDetail(d)?.fraction ?: 0f
 }
 
 /** 第一个失败步骤的结构化错误（失败卡画不画、画什么都看它）。 */
@@ -447,9 +449,14 @@ private fun androidx.compose.foundation.lazy.LazyListScope.detailContent(d: Task
             Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     UmbraFieldLabel("总进度", Modifier.weight(1f))
-                    Text("${doneCount(d)} / ${d.steps.size}", color = c.text, style = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 13.sp, fontWeight = UmbraType.weight560))
+                    val prog = progressOfDetail(d)
+                    Text(prog?.stepLine ?: "0 / 0", color = c.text, style = TextStyle(fontSize = 13.sp, fontWeight = UmbraType.weight560))
                 }
                 UmbraProgressBar(progressOf(d), st.ui().bar(), height = 8.dp)
+                // 正在做的那一步另起一行，不和完成数挤在一起（批次 290 §六）。
+                if (st == TaskStatusKind.Running) progressOfDetail(d)?.currentStep?.let {
+                    Text(TaskProgress.currentLine(it, null), color = c.muted, style = TextStyle(fontSize = 13.sp))
+                }
             }
         }
     }
@@ -461,7 +468,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.detailContent(d: Task
             TaskDetailRules.channelLabel(d.task.channel)?.let { add("来源" to it) }
             add("创建" to TaskTime.absolute(d.task.created_at))
             add("更新" to TaskTime.absolute(d.task.updated_at))
-            add("步骤" to "${doneCount(d)} / ${d.steps.size}")
+            progressOfDetail(d)?.let { add("步骤" to it.stepLine) }
             val failed = d.steps.count { taskStatusOf(it.status) == TaskStatusKind.Failed }
             if (failed > 0) add("失败步骤" to "$failed")
         }

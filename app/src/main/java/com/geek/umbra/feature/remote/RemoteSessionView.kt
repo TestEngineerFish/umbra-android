@@ -1410,7 +1410,7 @@ private fun UnattendedPage(client: RemoteClient) {
                     UnattendedStep.Face -> stringResource(R.string.remote_unattended_faceBody, client.hostName)
                     UnattendedStep.Pin -> stringResource(R.string.remote_pin_sub)
                     UnattendedStep.Locked -> stringResource(R.string.remote_pin_locked, client.hostName, lockedAt)
-                    UnattendedStep.Code -> stringResource(if (client.codeRecheck) R.string.remote_android_verify_recheckBody else R.string.remote_verify_body)
+                    UnattendedStep.Code -> stringResource(if (client.codeRecheck) R.string.remote_android_verify_recheckBody else R.string.remote_android_verify_body) // 批次 290 §四：短码在被控端顶部提示条上
                 },
                 color = c.muted, style = UmbraRemoteType.unattendedBody, textAlign = TextAlign.Center,
             )

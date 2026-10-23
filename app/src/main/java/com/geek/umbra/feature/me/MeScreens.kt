@@ -6,6 +6,12 @@
 //   · 通知页没有分类开关 —— 服务端没有推送订阅接口，这一页只做本机通知权限的入口。
 package com.geek.umbra.feature.me
 
+import com.geek.umbra.designsystem.UmbraDateText
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Arrangement
 import android.content.Intent
 import android.content.res.Resources
 import android.provider.Settings
@@ -534,6 +540,18 @@ fun AboutScreen() {
                 copyPlainText(AppGraph.prefs.clientId); router.showToast("已复制")
             }),
         ))
+        // 产品介绍两句（设计侧批次 290 §五 B）：中文带昵称和名字由来；英文不用昵称。鸟的意象一页最多一处，名字由来那句就是这一处。
+        // ⚠️ 稿上还有一颗［检查更新］：Android 现在没有更新渠道（不走应用商店、也没有版本接口），一颗点了什么都不发生的钮比不放更糟，先不放。
+        item("intro") {
+            val c = UmbraTheme.colors
+            val en = UmbraDateText.english
+            Column(Modifier.padding(horizontal = 4.dp, vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(if (en) "${Brand.displayNameEn} is a personal AI assistant." else "${Brand.productName}是一款私人 AI 助手，也可以叫它${Brand.nickname}。",
+                    color = c.text, style = TextStyle(fontSize = 15.sp, lineHeight = 22.sp))
+                Text(if (en) "The name comes from 雀 (que), Chinese for a small bird, and its long tail." else "英文名 ${Brand.productNameEn}，que 是「雀」的拼音，tail 是尾巴。",
+                    color = c.muted, style = TextStyle(fontSize = 13.sp, lineHeight = 19.sp))
+            }
+        }
         footnoteItem("手机端只做「接头与随手记」：收通知、随手记、随手查、随手答一句。要坐下来配的东西在电脑上做。")
     }
 }

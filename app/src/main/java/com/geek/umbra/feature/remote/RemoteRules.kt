@@ -520,6 +520,19 @@ object RemoteUnattended {
     fun fingerprintChanged(saved: String?, current: String?): Boolean = saved != null && current != null && saved != current
 }
 
+// MARK: - 推文件被拒（批次 290 §六 3）
+
+/**
+ * 控制档进行中往那台电脑推文件，被控端整单拒、回 `remote_active`（PC #129：那个「接收」框是系统对话框，正在控的人能替主人点）。
+ * 原来这个码原样印在「传到 N% 断了：remote_active」里；290 给了单独的三段式。
+ * 按钮选了［知道了］+「结束后再推一次就行。」，不做「等结束后重传」的排队：推文件走的是这场会话的 DataChannel，
+ * 会话一结束通道就没了，Android 没有会话之外往电脑推文件的路，排进队也推不出去。
+ */
+object RemoteFilePush {
+    const val CONTROLLED = "remote_active"
+    fun rejectedWhileControlled(error: String?): Boolean = error == CONTROLLED
+}
+
 // MARK: - 快照降级与画质（§14.5 / RC-3.5）
 
 object RemoteFallback {

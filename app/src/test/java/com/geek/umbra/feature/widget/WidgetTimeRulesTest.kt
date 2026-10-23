@@ -96,7 +96,7 @@ class WidgetTimeRulesTest {
         assertEquals("r", s.runningId)
         assertEquals("存短标题不存 goal（umbra-ios#23）", "连连看网页游戏", s.runningTitle)
         assertEquals(2, s.stepsDone); assertEquals(5, s.stepsTotal)
-        assertEquals("第 3/5 步", s.statusLine)
+        assertEquals("已完成 2/5 步", s.statusLine)
         assertEquals(1, s.todayDone)
         assertEquals(write, s.savedAtMs)
         val idle = WidgetTaskRules.snapshot(items.filter { it.status != "running" }, write, zone)
@@ -107,7 +107,7 @@ class WidgetTimeRulesTest {
 
     @Test fun lineAndPercent() {
         assertEquals("没给步骤数 → 状态词，不编进度", "执行中", WidgetTaskRules.line(TaskItem(status = "running")))
-        assertEquals("最后一步也不超过总数", "第 5/5 步", WidgetTaskRules.line(TaskItem(status = "running", steps_done = 5, steps_total = 5)))
+        assertEquals("分子不越过总数", "已完成 5/5 步", WidgetTaskRules.line(TaskItem(status = "running", steps_done = 7, steps_total = 5)))
         assertEquals("40%", WidgetTaskRules.percentText(2, 5))
         assertEquals("没有步骤数不编百分比", "…", WidgetTaskRules.percentText(0, 0))
     }
