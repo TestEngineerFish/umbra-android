@@ -55,11 +55,11 @@ object VaultTreeUi {
     fun deleteEntryCopy(e: Entry3): Pair<String, String> =
         "删除账号「${e.name.ifEmpty { "未命名" }}」？" to "删除后会移入回收站，保留 30 天。它会同时从自动填充里撤下。"
 
-    /** 多账号页底下那句（293 §九 iOS 03；关掉「参与自动填充」后换 §五第 6 条那句）。 */
+    /** 多账号页底下那句（293 §五第 6 条，两句都照它写全；iOS 03 稿上那句是缩写）。 */
     fun multiFoot(n: Node3): String {
         val k = n.entries.count { it.live }
         return if (!n.flag("autofill", true)) "自动填充已关：这些账号在保险箱里仍能搜到，但 iPhone 和 Android 填密码时查不到。"
-        else "这 $k 个账号都会出现在密码自动填充里：先按网址匹配，没填网址的按名称匹配。"
+        else "这 $k 个账号都能被搜到，也会出现在 iPhone 和 Android 的密码自动填充里：先按网址匹配，没填网址的按名称匹配。"
     }
 
     /** 单个账号页底下那句（293 §九 iOS 04）。 */

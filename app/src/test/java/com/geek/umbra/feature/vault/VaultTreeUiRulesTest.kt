@@ -65,7 +65,7 @@ class VaultTreeUiRulesTest {
     }
 
     @Test fun foots() {
-        assertEquals("这 4 个账号都会出现在密码自动填充里：先按网址匹配，没填网址的按名称匹配。", VaultTreeUi.multiFoot(multi))
+        assertEquals("这 4 个账号都能被搜到，也会出现在 iPhone 和 Android 的密码自动填充里：先按网址匹配，没填网址的按名称匹配。", VaultTreeUi.multiFoot(multi))
         assertEquals("参与自动填充 · 匹配 vercel.com。网址留空时按名称「Vercel」匹配。", VaultTreeUi.entryFoot(multi, multi.entries[3]))
         val off = multi.copy(set = mapOf("autofill" to jb(false)))
         assertEquals("自动填充已关：这些账号在保险箱里仍能搜到，但 iPhone 和 Android 填密码时查不到。", VaultTreeUi.multiFoot(off))
