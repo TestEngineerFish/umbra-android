@@ -26,6 +26,8 @@ import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
 import java.security.MessageDigest
+import java.security.SecureRandom
+import java.util.Base64
 import kotlin.math.abs
 import kotlin.math.floor
 import kotlin.math.max
@@ -430,16 +432,24 @@ object RemoteKeys {
     }
 }
 
-// MARK: - 安全短码（§14.4）
+// MARK: - 安全短码：先承诺、后揭示（§14.4；doc/远程控制-短码加固-承诺揭示.md，10-27）
 
 /**
- * 双方从本地 + 对端 SDP 的 `a=fingerprint` 各算一遍、各自显示，人眼核对两边的四位数一样（iOS: RemoteRules.swift:390）。
+ * 短码算法（协议第三节）。旧算法只拿两端 DTLS 指纹排序后做哈希；被控端证书长期固定，站在信令中转上的中间人
+ * 能离线换自己的证书，凑出两条腿上一样的码（4 位平均试 1 万次，几秒）。现在码里加双方各自的 32 字节随机数，
+ * 被控端先发 `commit = sha256(Na ‖ fpH)`、拿到控制端的 `Nb` 之后才揭示 `Na` —— 中间人得在看到任何一方随机数之前
+ * 定下自己的值，每场只剩一次 1/10000 的机会。旧算法删掉、不留兼容分支：留着的话中间人删掉 commit 就能降级。
  *
- * ⚠️ 两端必须**逐字同一种算法**：
- *   1. 指纹 = SDP 里第一行 `a=fingerprint:` 之后的整段，去首尾空白，**算法名小写、十六进制大写**；
- *   2. 两个指纹按 UTF-8 字节序排序后用 `|` 连起来做 SHA-256，取前 4 字节按**大端**转无符号整数，mod 10000，补齐 4 位。
+ * ⚠️ 各端逐字同一种算法（第七节测试向量三端同验）：
+ *   1. 指纹 = SDP 第一行 `a=fingerprint:` 之后那段，**算法名小写、十六进制大写**，中间一个空格；
+ *   2. `d = sha256(utf8(fpH) ‖ "|" ‖ utf8(fpV) ‖ "|" ‖ Na ‖ Nb)`，**被控端在前、不排序**（旧算法排序，排了就算错）；
+ *      取前 4 字节按大端转无符号整数，mod 10000，左补 0 到 4 位；
+ *   3. `Na` / `Nb` / `commit` 在帧里是 base64url、不带 `=`；参与哈希的是解出来的原始 32 字节。
  */
 object RemoteSafetyCode {
+    /** 随机数与 commit 都是 32 字节；解出来不是这个长度一律按核对失败。 */
+    const val BYTES = 32
+
     fun fingerprint(sdp: String): String? {
         // 按 \r 和 \n 都切：SDP 行尾是 CRLF（iOS 那边第一版就是因为只按一种换行切，整份 SDP 被当成一行）。
         for (raw in sdp.split('\r', '\n')) {
@@ -453,29 +463,107 @@ object RemoteSafetyCode {
         return null
     }
 
-    /** 无符号字节序比较（Kotlin 的 Byte 有符号，直接比会把 ≥0x80 的排到前面）。 */
-    private fun utf8Compare(a: String, b: String): Int {
-        val x = a.toByteArray(Charsets.UTF_8); val y = b.toByteArray(Charsets.UTF_8)
-        for (i in 0 until min(x.size, y.size)) {
-            val d = (x[i].toInt() and 0xFF) - (y[i].toInt() and 0xFF)
-            if (d != 0) return d
-        }
-        return x.size - y.size
+    /** 这一场的随机数（密码学安全随机源，每场新生成、不复用）。 */
+    fun nonce(): ByteArray = ByteArray(BYTES).also { SecureRandom().nextBytes(it) }
+
+    /** 帧里的写法：base64url、不带填充（32 字节 = 43 个字符）。 */
+    fun encode(b: ByteArray): String = Base64.getUrlEncoder().withoutPadding().encodeToString(b)
+
+    /**
+     * 帧里的值 → 32 字节。带 `=` 填充的也收（发送方不该带，但收到要能解）；不是合法 base64url（含 `+` `/` 等）
+     * 或解出来不是 32 字节 → null，调用方按核对失败处理。
+     */
+    fun decode(s: String?): ByteArray? {
+        if (s == null) return null
+        val b = runCatching { Base64.getUrlDecoder().decode(s) }.getOrNull() ?: return null
+        return b.takeIf { it.size == BYTES }
     }
 
-    fun code(local: String, remote: String): String {
-        val joined = listOf(local, remote).sortedWith(::utf8Compare).joinToString("|")
-        val d = MessageDigest.getInstance("SHA-256").digest(joined.toByteArray(Charsets.UTF_8))
+    fun commit(na: ByteArray, fpH: String): ByteArray = sha256(na + fpH.toByteArray(Charsets.UTF_8))
+
+    /** 揭示出来的 Na 对不对得上先前的承诺。定长比较（`MessageDigest.isEqual`），不按第一个不同的字节提前返回。 */
+    fun commitMatches(commit: ByteArray, na: ByteArray, fpH: String): Boolean = MessageDigest.isEqual(commit(na, fpH), commit)
+
+    fun code(fpH: String, fpV: String, na: ByteArray, nb: ByteArray): String {
+        val d = sha256("$fpH|$fpV|".toByteArray(Charsets.UTF_8) + na + nb)
         val n = ((d[0].toLong() and 0xFF) shl 24) or ((d[1].toLong() and 0xFF) shl 16) or
             ((d[2].toLong() and 0xFF) shl 8) or (d[3].toLong() and 0xFF)
         return "%04d".format(n % 10_000)
     }
 
-    /** 从两份 SDP 直接算；任一份没有指纹回 null（不显示短码，而不是显示一个假的）。 */
-    fun codeFromSdp(localSdp: String, remoteSdp: String): String? {
-        val l = fingerprint(localSdp) ?: return null
-        val r = fingerprint(remoteSdp) ?: return null
-        return code(l, r)
+    private fun sha256(b: ByteArray): ByteArray = MessageDigest.getInstance("SHA-256").digest(b)
+}
+
+/**
+ * 控制端这一侧的承诺 / 揭示核对（协议第四节「控制端」+ 第五节）。纯状态机：[RemoteClient] 把 offer / 自己的 answer /
+ * rc_reveal 喂进来，按返回值动作（answer 带不带 nb、断开、显示短码、放开输入）。15 秒揭示计时在 RemoteClient 里，
+ * 到点时 [verified] 还是 false 就按核对失败断开。
+ *
+ * 新旧版本**只看字段在不在**（第六节）：首次 offer 没有 commit = 旧版被控端，拒绝 —— 不退回旧算法。
+ */
+class RemoteRevealCheck(private val nb: ByteArray = RemoteSafetyCode.nonce()) {
+    /** 断开的两种说法：对方版本太旧（升级就好） / 连接被中途改动过（按安全失败处理，可重试）。 */
+    enum class Failure { Outdated, Tampered }
+
+    sealed interface Offer {
+        /** 照常 answer。[nb] 只在首次 offer 的 answer 里带；restart 的 answer 不带。 */
+        data class Answer(val nb: String?) : Offer
+        data class Reject(val why: Failure) : Offer
+    }
+
+    sealed interface Reveal {
+        data class Verified(val code: String) : Reveal
+        /** 第二次到的 reveal：直接忽略，不算失败（第四节控制端 2）。 */
+        data object Ignore : Reveal
+        data object Tampered : Reveal
+    }
+
+    private var commit: ByteArray? = null
+    /** 首次 offer 里被控端的指纹（fpH）。restart 时规整后的指纹必须和它一样。 */
+    var hostFingerprint: String? = null; private set
+    private var viewerFingerprint: String? = null
+    /** 核对通过后的短码；null = 还没通过（这之前不发输入、剪贴板、文件帧）。 */
+    var code: String? = null; private set
+    val verified: Boolean get() = code != null
+
+    /**
+     * 收到一份 offer（[fp] = 它规整后的指纹）。还没有首次记录时一律当首次看 —— 哪怕它自称 `restart`：
+     * 不然中间人给首次 offer 标个 restart、删掉 commit 就绕过了。之后的 offer 都按 restart 核：指纹必须不变（DTLS 不重协商）。
+     */
+    fun offer(fp: String?, commit: String?): Offer {
+        val first = hostFingerprint
+        if (first != null) return if (fp == first) Offer.Answer(null) else Offer.Reject(Failure.Tampered)
+        if (commit == null) return Offer.Reject(Failure.Outdated)
+        val c = RemoteSafetyCode.decode(commit) ?: return Offer.Reject(Failure.Tampered)
+        if (fp == null) return Offer.Reject(Failure.Tampered)
+        this.commit = c
+        hostFingerprint = fp
+        return Offer.Answer(RemoteSafetyCode.encode(nb))
+    }
+
+    /** 首次 answer 已发出（[fp] = 自己 answer 的指纹 fpV）。自己的 SDP 里没有指纹 → false（算不出码，按失败处理）。 */
+    fun answered(fp: String?): Boolean {
+        if (fp == null) return false
+        viewerFingerprint = fp
+        return true
+    }
+
+    /** 收到 `rc_reveal.na`。answer 之前就到、解不出 32 字节、对不上 commit → Tampered。 */
+    fun reveal(na: String?): Reveal {
+        if (verified) return Reveal.Ignore
+        val c = commit ?: return Reveal.Tampered
+        val fpH = hostFingerprint ?: return Reveal.Tampered
+        val fpV = viewerFingerprint ?: return Reveal.Tampered
+        val a = RemoteSafetyCode.decode(na) ?: return Reveal.Tampered
+        if (!RemoteSafetyCode.commitMatches(c, a, fpH)) return Reveal.Tampered
+        val k = RemoteSafetyCode.code(fpH, fpV, a, nb)
+        code = k
+        return Reveal.Verified(k)
+    }
+
+    companion object {
+        /** 揭示计时：首次 answer 发出后这么久没收到合法的 rc_reveal → 核对失败（新版被控端一定会发）。 */
+        const val REVEAL_WAIT = 15.0
     }
 }
 
@@ -603,8 +691,11 @@ object RemoteCopy {
     /** 「重新连接」也是同一个答案的几种：只给「关闭」（给了就是让人重试一个必然失败的动作）。 */
     val closeOnlyReasons = listOf("replaced", "host_sleep", "access_off", "pin_locked", "no_membership", "revoked", "signed_out")
 
-    /** 发起被拒时哪些码值得重来一次：没连上服务器 / 对方离线 / 对方忙。要会员、对方没开、缺权限重来也是同一句。 */
-    val retryableErrors = listOf("not_connected", "offline", "busy")
+    /**
+     * 发起被拒时哪些码值得重来一次：没连上服务器 / 对方离线 / 对方忙。要会员、对方没开、缺权限重来也是同一句。
+     * tampered（本地判的短码核对失败）带［重试］：重来是新的一场、新的随机数（协议第五节）；outdated 不带，对方升级前重来也一样。
+     */
+    val retryableErrors = listOf("not_connected", "offline", "busy", "tampered")
 
     /**
      * 结束卡的钮（iOS: RemoteRules.swift:505）。`busyKind`（服务端 `rc_error.busy_kind`，只在 busy 时有）：
@@ -810,8 +901,10 @@ object RemoteSignal {
         if (!askId.isNullOrEmpty()) put("ask_id", askId)
     }
 
-    fun answer(sessionId: String, sdp: String): JsonObject = buildJsonObject {
+    /** [nb]：对首次 offer 的 answer 必带（承诺揭示，第四节）；对 restart offer 的 answer 不带。 */
+    fun answer(sessionId: String, sdp: String, nb: String?): JsonObject = buildJsonObject {
         put("type", "rc_answer"); put("session_id", sessionId); put("sdp", sdp)
+        if (nb != null) put("nb", nb)
     }
 
     /** `usernameFragment` 从 candidate 串里的 `ufrag` 取（libwebrtc 的 IceCandidate 不单独给这个字段）；取不到就不带。 */

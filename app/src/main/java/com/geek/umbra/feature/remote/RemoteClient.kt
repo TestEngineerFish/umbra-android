@@ -257,6 +257,7 @@ class RemoteClient(val launch: RemoteLaunch) {
         (launch.manifest?.displays ?: emptyList()).let { ds -> ds.firstOrNull { it.primary }?.id ?: ds.firstOrNull()?.id ?: "1" },
     ); private set
     var quality by mutableStateOf("auto"); private set
+    /** 安全短码。承诺揭示核对通过（[reveal]）之后才有；之前是 null，会话页不显示。 */
     var safetyCode by mutableStateOf<String?>(null); private set
     /** 被控端要 PIN（无人值守，§14.6）、且本机认证已经过了 —— 两样都满足才弹 PIN 输入。 */
     var pinRequested by mutableStateOf(false); private set
@@ -288,7 +289,7 @@ class RemoteClient(val launch: RemoteLaunch) {
     var codeVerified by mutableStateOf(false); private set
     /** 这次要核的短码是「指纹变了」那一档（标题念「要重新核对」，不念「第一次连」）。 */
     var codeRecheck by mutableStateOf(false); private set
-    /** 这次会话里电脑那一侧的 DTLS 指纹（对端 SDP 的 `a=fingerprint`）。点「一致」时按 deviceId 记下它。 */
+    /** 这次会话里电脑那一侧的 DTLS 指纹（首次 offer 的 `a=fingerprint`，rc_reveal 核对通过后才填）。点「一致」时按 deviceId 记下它。 */
     private var hostFingerprint: String? = null
     val fileLists = mutableStateMapOf<String, List<RemoteFileItem>>()
     val transfers = mutableStateListOf<RemoteTransfer>()
@@ -296,6 +297,11 @@ class RemoteClient(val launch: RemoteLaunch) {
     var videoTrack by mutableStateOf<VideoTrack?>(null); private set
 
     private val gate = RemoteSignalGate(UUID.randomUUID().toString(), null)
+    /**
+     * 承诺揭示核对（doc/远程控制-短码加固-承诺揭示.md）。每个会话对象一份、自带新的 Nb ——［重试］换新的 RemoteClient，随机数也跟着换。
+     * 核对通过之前画面可以先出来，但不发输入、剪贴板、文件帧（[secured]）。
+     */
+    private val reveal = RemoteRevealCheck()
     private val buffered = mutableListOf<JsonObject>()
     private var iceServers: List<RemoteIceServer> = emptyList()
     private var connectingSince: Double? = null
@@ -413,7 +419,8 @@ class RemoteClient(val launch: RemoteLaunch) {
                 fail(RemoteJson.str(j["code"]) ?: "bad_request", RemoteJson.str(j["message"]))
             }
             "rc_state" -> RemoteState.parse(j)?.let(::applyState)
-            "rc_offer" -> RemoteJson.str(j["sdp"])?.let(::handleOffer)
+            "rc_offer" -> RemoteJson.str(j["sdp"])?.let { handleOffer(it, RemoteJson.str(j["commit"])) }
+            "rc_reveal" -> handleReveal(RemoteJson.str(j["na"]))
             "rc_ice" -> handleRemoteCandidate(j)
         }
     }
@@ -539,7 +546,7 @@ class RemoteClient(val launch: RemoteLaunch) {
      */
     private fun maybeAskVerify() {
         if (!unattended || !localAuthPassed || codeVerified) return
-        val fp = hostFingerprint ?: return          // 指纹还没算出来：等 makeAnswer 算出来再进这里
+        val fp = hostFingerprint ?: return          // 承诺揭示还没核过：等 rc_reveal 核对通过再进这里
         val saved = verifyPrefs().getString(fingerprintKey, null)
         if (RemoteUnattended.fingerprintMatches(saved, fp)) codeVerified = true
         else { codeRecheck = RemoteUnattended.fingerprintChanged(saved, fp); askVerifyCode = true }
@@ -568,7 +575,7 @@ class RemoteClient(val launch: RemoteLaunch) {
             pinError = str(R.string.remote_pin_invalid)
             return
         }
-        if (!RemoteUnattended.maySendPin(localAuthPassed, codeVerified)) return
+        if (!RemoteUnattended.maySendPin(localAuthPassed, codeVerified) || !secured) return
         pinBusy = true
         pinError = null
         sendCommand(RemoteCommand.pin(pin))
@@ -674,9 +681,12 @@ class RemoteClient(val launch: RemoteLaunch) {
             }
             return
         }
-        if (pinRequested) return
+        if (pinRequested || !secured) return
         for (i in inputs) sendCommand(i.json(currentDisplay))
     }
+
+    /** 承诺揭示核对过了：这之后才发输入、剪贴板、文件、PIN 这些帧（协议第四节控制端 5）。换屏、画质、ping 不带内容，不拦。 */
+    private val secured: Boolean get() = reveal.verified
 
     /** `rc` 通道发一条 JSON。 */
     private fun sendCommand(o: JsonObject) {
@@ -704,6 +714,7 @@ class RemoteClient(val launch: RemoteLaunch) {
      * 判法同常用语的 {clipboard}：调保险箱的 `VaultClipboard.holdsSensitive()`，**判不准（抛异常）按「是敏感值」处理**。
      */
     fun sendClipboard() {
+        if (!secured) return
         val sensitive = runCatching { com.geek.umbra.feature.vault.VaultClipboard.holdsSensitive() }.getOrDefault(true)
         if (sensitive) {
             toast = str(R.string.remote_clip_sensitive)
@@ -719,7 +730,7 @@ class RemoteClient(val launch: RemoteLaunch) {
         toast = str(R.string.remote_clip_sent)
     }
 
-    fun fetchClipboard() = sendCommand(RemoteCommand.clipGet())
+    fun fetchClipboard() { if (secured) sendCommand(RemoteCommand.clipGet()) }
 
     // MARK: 文件（M2）
 
@@ -728,10 +739,11 @@ class RemoteClient(val launch: RemoteLaunch) {
 
     val relayPath: Boolean get() = path == "relay"
 
-    fun listFiles(dir: String) = sendCommand(RemoteCommand.filesList(dir))
+    fun listFiles(dir: String) { if (secured) sendCommand(RemoteCommand.filesList(dir)) }
 
     /** 从被控端拉一个文件。超过上限（中继 100 MB / 直连 500 MB）不发起 —— 中继那一档会计入流量（RC-6.2）。 */
     fun pull(item: RemoteFileItem, dir: String, resume: RemoteTransfer? = null) {
+        if (!secured) return
         val limit = RemoteFileCodec.limit(relayPath)
         if (item.size > limit) {
             toast = str(if (relayPath) R.string.remote_files_tooBigRelay else R.string.remote_files_tooBig)
@@ -760,6 +772,7 @@ class RemoteClient(val launch: RemoteLaunch) {
      * 一口气塞进去会把 SCTP 的发送缓冲撑爆（libwebrtc 超过 16 MB 直接关通道）。
      */
     fun push(uri: Uri) {
+        if (!secured) return
         val cr = ctx.contentResolver
         var name = "file"
         var size = 0L
@@ -998,23 +1011,31 @@ class RemoteClient(val launch: RemoteLaunch) {
         if (r.isFailure || pc == null) fallBackToSnapshot()
     }
 
-    /** 被控端的 offer（首次 / ICE restart 都走这里）→ setRemote → 补上攒着的候选 → answer → setLocal → rc_answer。 */
-    private fun handleOffer(sdp: String) {
+    /**
+     * 被控端的 offer（首次 / ICE restart 都走这里）→ 承诺核对 → setRemote → 补上攒着的候选 → answer → setLocal → rc_answer。
+     * 首次没 commit = 对方版本太旧；commit 解不出、restart 换了指纹 = 被改过：都当场断开，不进 setRemote。
+     */
+    private fun handleOffer(sdp: String, commit: String?) {
         if (snapshotMode || phase == Phase.Ended) return
+        val nb = when (val r = reveal.offer(RemoteSafetyCode.fingerprint(sdp), commit)) {
+            is RemoteRevealCheck.Offer.Reject -> { securityFail(r.why); return }
+            is RemoteRevealCheck.Offer.Answer -> r.nb
+        }
         if (pc == null) preparePeer()
         val p = pc ?: return
         p.setRemoteDescription(object : SdpAdapter() {
             override fun onSetSuccess() = post {
                 if (pc !== p) return@post
                 flushCandidates()
-                makeAnswer(sdp)
+                makeAnswer(nb)
             }
 
             override fun onSetFailure(error: String?) = post { if (pc === p) fallBackToSnapshot() }
         }, SessionDescription(SessionDescription.Type.OFFER, sdp))
     }
 
-    private fun makeAnswer(remoteSdp: String) {
+    /** [nb] 非 null = 这是对首次 offer 的 answer：带上 nb、记下自己的指纹、开始 15 秒揭示计时。 */
+    private fun makeAnswer(nb: String?) {
         val p = pc ?: return
         val c = MediaConstraints().apply {
             mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveVideo", "true"))
@@ -1027,16 +1048,50 @@ class RemoteClient(val launch: RemoteLaunch) {
                     override fun onSetSuccess() = post {
                         val sid = sessionId ?: return@post
                         if (pc !== p) return@post
-                        AppGraph.socket.send(RemoteSignal.answer(sid, desc.description))
-                        safetyCode = RemoteSafetyCode.codeFromSdp(desc.description, remoteSdp)
-                        // 同一会话里重新协商换了对端指纹：先前核过的不算数，重新比对 / 重新核。
-                        val fp = RemoteSafetyCode.fingerprint(remoteSdp)
-                        if (fp != hostFingerprint) { hostFingerprint = fp; codeVerified = false }
-                        maybeAskVerify()
+                        AppGraph.socket.send(RemoteSignal.answer(sid, desc.description, nb))
+                        if (nb == null) return@post
+                        if (!reveal.answered(RemoteSafetyCode.fingerprint(desc.description))) {
+                            securityFail(RemoteRevealCheck.Failure.Tampered); return@post
+                        }
+                        // 新版被控端一定会发 reveal；旧版在首次 offer 那一步已经拦下了，所以到点没来只可能是被吞掉或改过。
+                        schedule("reveal", RemoteRevealCheck.REVEAL_WAIT) {
+                            if (!reveal.verified && !snapshotMode) securityFail(RemoteRevealCheck.Failure.Tampered)
+                        }
                     }
                 }, desc)
             }
         }, c)
+    }
+
+    /**
+     * `rc_reveal`：核对 sha256(Na ‖ fpH) == commit，过了才算出短码、放开输入（协议第四节控制端 2）。
+     * 已经降到快照就不管它了 —— 快照不走 DTLS，短码本来就不显示、也不发输入。
+     */
+    private fun handleReveal(na: String?) {
+        if (snapshotMode) return
+        when (val r = reveal.reveal(na)) {
+            RemoteRevealCheck.Reveal.Ignore -> Unit
+            RemoteRevealCheck.Reveal.Tampered -> securityFail(RemoteRevealCheck.Failure.Tampered)
+            is RemoteRevealCheck.Reveal.Verified -> {
+                tasks.remove("reveal")?.cancel()
+                safetyCode = r.code
+                hostFingerprint = reveal.hostFingerprint
+                maybeAskVerify()
+            }
+        }
+    }
+
+    /**
+     * 核对失败 / 对方版本太旧：发 rc_end、进错误态（协议第五节）。不退回旧算法 —— 不然中间人删掉 commit 就能降级。
+     * tampered 带［重试］（[RemoteCopy.retryableErrors]），outdated 不带。
+     */
+    private fun securityFail(why: RemoteRevealCheck.Failure) {
+        if (phase == Phase.Ended) return
+        sessionId?.let { AppGraph.socket.send(RemoteSignal.end(it)) }
+        when (why) {
+            RemoteRevealCheck.Failure.Outdated -> fail("outdated", str(R.string.remote_android_handshake_outdated, str(R.string.brand_name)))
+            RemoteRevealCheck.Failure.Tampered -> fail("tampered", str(R.string.remote_android_handshake_tampered))
+        }
     }
 
     private fun handleRemoteCandidate(j: JsonObject) {

@@ -11,6 +11,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.long
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
@@ -192,22 +193,118 @@ class RemoteRulesTest {
 
     // MARK: 安全短码
 
-    @Test fun safetyCode() {
+    @Test fun safetyFingerprint() {
         val sdpA = "v=0\r\no=- 1 2 IN IP4 127.0.0.1\r\na=fingerprint:SHA-256 ab:cd:ef:01\r\na=setup:actpass\r\n"
         val sdpB = "v=0\na=group:BUNDLE 0\na=fingerprint:sha-256 11:22:33:44\na=fingerprint:sha-256 99:99\n"
         assertEquals("指纹：算法小写、十六进制大写", "sha-256 AB:CD:EF:01", RemoteSafetyCode.fingerprint(sdpA))
         assertEquals("多行指纹取第一行", "sha-256 11:22:33:44", RemoteSafetyCode.fingerprint(sdpB))
         assertNull("没有指纹回 null", RemoteSafetyCode.fingerprint("v=0\n"))
         assertNull("指纹行残缺回 null", RemoteSafetyCode.fingerprint("a=fingerprint:sha-256\n"))
-        val a = RemoteSafetyCode.fingerprint(sdpA)!!
-        val b = RemoteSafetyCode.fingerprint(sdpB)!!
-        assertEquals("两端调换位置短码相同", RemoteSafetyCode.code(a, b), RemoteSafetyCode.code(b, a))
-        assertEquals("从 SDP 直接算 = 先取指纹再算", RemoteSafetyCode.code(a, b), RemoteSafetyCode.codeFromSdp(sdpA, sdpB))
-        // 已知答案：与 python hashlib 独立计算一致（iOS 用例同一个数）。
-        assertEquals("已知答案", "1123", RemoteSafetyCode.code(a, b))
-        assertEquals("短码恒为 4 位（补零）", 4, RemoteSafetyCode.code("x", "y").length)
-        assertNull("一边没指纹不显示假短码", RemoteSafetyCode.codeFromSdp(sdpA, "v=0"))
-        assertNotEquals("指纹差一位短码就变", RemoteSafetyCode.code(a, b), RemoteSafetyCode.code(a, "sha-256 11:22:33:45"))
+    }
+
+    /** 协议文档第七节的 3 组测试向量（Python / Node 各算过一遍）：commit 与 code 逐字一致。 */
+    private data class Vector(val na: String, val nb: String, val fpH: String, val fpV: String, val commit: String, val code: String)
+
+    private val vectors = listOf(
+        Vector(
+            "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8", "ICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj8",
+            "sha-256 4A:17:96:AC:49:35:25:FF:45:C4:E7:4E:EF:19:D7:A3:0D:2B:FF:F7:E6:93:EF:67:E2:A7:E8:EF:E6:2A:98:EF",
+            "sha-256 63:A9:E8:A8:C2:D8:DA:E1:9C:FF:C6:06:F5:C7:88:CB:C6:39:CD:79:94:B6:D3:89:43:F6:CB:32:1C:AC:75:E7",
+            "qIQWfdeFAYJ_4iHBDMdrQG_TYohWWCr1j_VUJ-Mj3f8", "2517",
+        ),
+        Vector(
+            "__________________________________________8", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+            "sha-256 34:FE:8E:D8:2C:46:92:46:9E:BF:8C:C1:90:0D:F4:38:5A:FE:CC:C3:79:F3:3A:5B:AE:71:2C:27:58:37:86:00",
+            "sha-256 61:7B:A8:60:31:43:72:93:6A:F4:43:1F:95:20:6E:17:B0:8E:4E:AC:87:CE:62:18:14:69:65:B6:48:D5:AF:B7",
+            "j6DllMa4sEsdbOe0NV0gcMvxqF-ltQVYerIn5umy1eQ", "0731",
+        ),
+        Vector(
+            "kP9oUGcjQMIF2EhZ4j5lOkclBEylW4FeFkcgR-2WehI", "9bdN66YRuwqBFBC8roDGtVkdqsxNMBz_uwoJLysdI20",
+            "sha-256 6D:8E:D2:46:48:F4:E1:24:23:C0:E5:16:04:04:FC:A9:5D:E5:D7:A9:86:85:96:7C:40:43:23:D9:BC:DF:1F:D4",
+            "sha-256 25:42:BD:F7:08:8C:2E:3A:9D:C5:04:C4:72:DC:53:9B:19:5F:B3:C7:3A:84:95:85:0B:67:7D:AE:07:C8:8A:96",
+            "-TSugTvBkrBc3SjxHjgtxlmRo6b9B4rFwvrEj2RIwrs", "8249",
+        ),
+    )
+
+    @Test fun safetyCodeVectors() {
+        for ((i, v) in vectors.withIndex()) {
+            val na = RemoteSafetyCode.decode(v.na)!!
+            val nb = RemoteSafetyCode.decode(v.nb)!!
+            assertEquals("第 ${i + 1} 组 commit", v.commit, RemoteSafetyCode.encode(RemoteSafetyCode.commit(na, v.fpH)))
+            assertEquals("第 ${i + 1} 组 code", v.code, RemoteSafetyCode.code(v.fpH, v.fpV, na, nb))
+            assertTrue(RemoteSafetyCode.commitMatches(RemoteSafetyCode.decode(v.commit)!!, na, v.fpH))
+            assertEquals("编码回去逐字一致（43 字符、不带 =）", v.na, RemoteSafetyCode.encode(na))
+        }
+        assertTrue("第 3 组 fpH 字典序在 fpV 后面：排了序会算成 3793", vectors[2].fpH > vectors[2].fpV)
+    }
+
+    @Test fun safetyCodeCounterexamples() {
+        val v = vectors[0]
+        val na = RemoteSafetyCode.decode(v.na)!!
+        val commit = RemoteSafetyCode.decode(v.commit)!!
+        // 反例 1：Na 任意一个字节改掉，commit 核对必须失败。
+        for (i in na.indices) {
+            val bad = na.copyOf().also { it[i] = (it[i].toInt() xor 0x01).toByte() }
+            assertFalse("改第 $i 个字节", RemoteSafetyCode.commitMatches(commit, bad, v.fpH))
+        }
+        // 反例 2：交换 fpH 和 fpV，短码必须变（不排序）。
+        for (w in vectors) {
+            val a = RemoteSafetyCode.decode(w.na)!!; val b = RemoteSafetyCode.decode(w.nb)!!
+            assertNotEquals(RemoteSafetyCode.code(w.fpH, w.fpV, a, b), RemoteSafetyCode.code(w.fpV, w.fpH, a, b))
+        }
+        // 反例 3：长度不是 43、带非法字符 → 解不出（按核对失败处理）。
+        assertNull("42 个字符", RemoteSafetyCode.decode(v.na.dropLast(1)))
+        assertNull("44 个字符", RemoteSafetyCode.decode(v.na + "A"))
+        assertNull("标准 base64 的 +", RemoteSafetyCode.decode("+" + v.na.drop(1)))
+        assertNull("标准 base64 的 /", RemoteSafetyCode.decode("/" + v.na.drop(1)))
+        assertNull("非法字符", RemoteSafetyCode.decode("!" + v.na.drop(1)))
+        assertNull("空串", RemoteSafetyCode.decode(""))
+        assertNull("缺字段", RemoteSafetyCode.decode(null))
+        assertArrayEquals("带 = 填充也要能解", na, RemoteSafetyCode.decode(v.na + "="))
+        assertEquals("随机数 32 字节、每次不同", 32, RemoteSafetyCode.nonce().size)
+        assertFalse(RemoteSafetyCode.nonce().contentEquals(RemoteSafetyCode.nonce()))
+    }
+
+    @Test fun revealCheck() {
+        val v = vectors[0]
+        val nb = RemoteSafetyCode.decode(v.nb)!!
+        fun fresh() = RemoteRevealCheck(nb)
+        val tampered = RemoteRevealCheck.Offer.Reject(RemoteRevealCheck.Failure.Tampered)
+
+        // 正常一场：首次 offer → answer 带 nb → reveal 核对通过 → 短码与向量一致。
+        val ok = fresh()
+        assertEquals(RemoteRevealCheck.Offer.Answer(v.nb), ok.offer(v.fpH, v.commit))
+        assertTrue(ok.answered(v.fpV))
+        assertFalse("揭示之前不放开", ok.verified)
+        assertEquals(RemoteRevealCheck.Reveal.Verified(v.code), ok.reveal(v.na))
+        assertTrue(ok.verified)
+        assertEquals("第二次到的 reveal 忽略、不算失败", RemoteRevealCheck.Reveal.Ignore, ok.reveal("garbage"))
+        assertEquals("restart：指纹不变 → answer 不带 nb", RemoteRevealCheck.Offer.Answer(null), ok.offer(v.fpH, null))
+        assertEquals("restart：指纹变了 → 核对失败", tampered, ok.offer(v.fpV, null))
+        assertEquals("短码不变", v.code, ok.code)
+
+        assertEquals("首次 offer 没 commit = 对方版本太旧", RemoteRevealCheck.Offer.Reject(RemoteRevealCheck.Failure.Outdated), fresh().offer(v.fpH, null))
+        assertEquals("commit 解不出 32 字节", tampered, fresh().offer(v.fpH, v.commit.dropLast(1)))
+        assertEquals("首次 offer 没有指纹", tampered, fresh().offer(null, v.commit))
+
+        val early = fresh()
+        early.offer(v.fpH, v.commit)
+        assertEquals("answer 之前就到", RemoteRevealCheck.Reveal.Tampered, early.reveal(v.na))
+        assertEquals("还没 offer 就到", RemoteRevealCheck.Reveal.Tampered, fresh().reveal(v.na))
+
+        val bad = fresh()
+        bad.offer(v.fpH, v.commit); bad.answered(v.fpV)
+        assertEquals("Na 对不上 commit", RemoteRevealCheck.Reveal.Tampered, bad.reveal(vectors[1].na))
+        assertFalse(bad.verified)
+        val short = fresh()
+        short.offer(v.fpH, v.commit); short.answered(v.fpV)
+        assertEquals("na 长度不对", RemoteRevealCheck.Reveal.Tampered, short.reveal(v.na.dropLast(2)))
+        assertFalse("自己的 answer 没指纹", fresh().answered(null))
+
+        assertTrue("核对失败带［重试］", RemoteCopy.EndButton.Retry in RemoteCopy.endButtons("tampered", null, null))
+        assertEquals("版本太旧只给关闭", listOf(RemoteCopy.EndButton.Close), RemoteCopy.endButtons("outdated", null, null))
+        assertEquals("answer 带 nb", v.nb, RemoteJson.str(RemoteSignal.answer("s", "sdp", v.nb)["nb"]))
+        assertNull("restart 的 answer 不带 nb", RemoteSignal.answer("s", "sdp", null)["nb"])
     }
 
     // MARK: 快照降级 / 画质
@@ -388,7 +485,7 @@ class RemoteRulesTest {
         assertEquals("rtt_ms", 42, st["rtt_ms"]?.jsonPrimitive?.int)
         assertNull("之后的统计不带 connected", RemoteSignal.stats("s", false, "direct", -5, null)["connected"])
         assertEquals("relay_bytes 不发负数", 0L, RemoteSignal.stats("s", false, "direct", -5, null)["relay_bytes"]?.jsonPrimitive?.long)
-        assertEquals("rc_answer", "rc_answer", RemoteSignal.answer("s", "x")["type"]?.jsonPrimitive?.content)
+        assertEquals("rc_answer", "rc_answer", RemoteSignal.answer("s", "x", null)["type"]?.jsonPrimitive?.content)
         assertEquals("rc_handback", "rc_handback", RemoteSignal.handback("s")["type"]?.jsonPrimitive?.content)
         assertEquals("rc_attach", "rc_attach", RemoteSignal.attach("s")["type"]?.jsonPrimitive?.content)
 

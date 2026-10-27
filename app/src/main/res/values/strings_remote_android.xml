@@ -1,10 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   远程控制里 iOS 文案点名了 iPhone / Face ID 的几句，Android 换成平台字面（手写，不由 gen_strings.py 生成）。
+  短码承诺揭示那两句（handshake_*）：协议文档第五节先写的字面，iOS 还没有 key；产品名走 %1$s ← brand_name（Brand.kt 生成）。
   生物识别统一叫「生物识别」：设计侧《答复实现侧 · Android 平台差异》第 13 条。
 -->
 <resources>
     <string name="remote_android_unattended_faceId">用生物识别</string>
     <string name="remote_android_unattended_faceTitle">用生物识别确认是你</string>
     <string name="remote_android_files_push">从手机推一个过去</string>
+    <string name="remote_android_handshake_outdated">对方的%1$s版本太旧，升级后再连</string>
+    <string name="remote_android_handshake_tampered">连接被中途改动过，已断开</string>
 </resources>
