@@ -163,8 +163,8 @@ object VaultNodeDefaults {
 // MARK: - 迁移
 
 object VaultMigrate3 {
-    // 方案 §七第 6 条，名称待设计侧定稿；与 PC 逐字一致。
-    const val ORPHAN_ATT_TITLE = "未归类的附件"
+    // 设计侧 296 §三第 5 条；与 PC migrate3.ts 逐字一致（迁移要确定，只写中文）。
+    const val ORPHAN_ATT_TITLE = "升级时找回的附件"
 
     private val ID_RE = Regex("^[A-Za-z0-9_-]{1,64}$")
 

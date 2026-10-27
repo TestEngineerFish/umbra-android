@@ -177,13 +177,13 @@ object VaultSyncRules {
      * 按 id 合并两份快照：库与类型取并集；记录 revision 高者胜（相等时 updatedAt 晚者胜）；附件字节取并集
      * （拉取这一侧分不开「远端删了」还是「那台还没拿到」，误删比多留贵；孤儿在推之前剔）。
      */
-    fun merge(local: VSnapshot, remote: VSnapshot): VSnapshot {
+    fun merge(local: VSnapshot, remote: VSnapshot, deviceName: String = ""): VSnapshot {
         val vaults = local.vaults.toMutableList()
         for (rv in remote.vaults) if (vaults.none { it.id == rv.id }) vaults += rv
         val data = local.data.toMutableMap()
         for ((vid, rdata) in remote.data) {
             val ld = data[vid] ?: VData.EMPTY
-            if (ld.isTree || rdata.isTree) { data[vid] = mergeTree(ld, rdata); continue }
+            if (ld.isTree || rdata.isTree) { data[vid] = mergeTree(ld, rdata, deviceName); continue }
             val types = ld.types.toMutableList()
             for (t in rdata.types) if (types.none { it.id == t.id }) types += t
             val byId = LinkedHashMap<String, VItem>()
@@ -206,10 +206,10 @@ object VaultSyncRules {
      * ⚠️ 本机那一边是 fmt 2 时，Store 应当已经先走过「备份 → 迁移 → 自检」那一套（[VaultStore] 的 migrateLocal）；
      * 这里再迁一次只是兜底，保证合并永远拿两棵树比。
      */
-    fun mergeTree(local: VData, remote: VData): VData {
+    fun mergeTree(local: VData, remote: VData, deviceName: String = ""): VData {
         val lt = local.tree ?: VaultMigrate3.migrate(local.items.map { it.toJson() })
         val rt = remote.tree ?: VaultMigrate3.migrate(remote.items.map { it.toJson() })
-        return VData(emptyList(), emptyList(), emptyMap(), maxOf(local.fmt, remote.fmt, 3), VaultMerge3.merge(lt, rt), remote.extra + local.extra)
+        return VData(emptyList(), emptyList(), emptyMap(), maxOf(local.fmt, remote.fmt, 3), VaultMerge3.merge(lt, rt, deviceName), remote.extra + local.extra)
     }
 
     // MARK: fmt 3 迁移的时机与备份（方案 §二第 2 条、§六）

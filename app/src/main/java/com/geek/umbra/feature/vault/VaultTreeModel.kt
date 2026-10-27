@@ -227,9 +227,9 @@ object Fmt3 {
     /** 提示记录的固定 id。新版读到就跳过：不迁、不显示、不算数。 */
     const val NOTICE_ID = "fmt3-upgrade-notice"
 
-    // 方案 §七第 1 条，文案待设计侧定稿；与 PC fmt3.ts 逐字一致（这条记录写进数据里，没法跟着语言走，只能写中文）。
-    const val NOTICE_TITLE = "保险箱已升级，请更新长尾雀"
-    const val NOTICE_BODY = "保险箱已在别的设备上升级成新格式。这台要先升级长尾雀才能改。这里显示的是升级前的内容，改动同步不上去；更新到最新版以后会自动合并，本机的改动不会丢。"
+    // 设计侧 296 §三第 1 条定稿；与 PC fmt3.ts（e578d9f）逐字一致 —— 这条记录写进数据里，三端必须一样，也没法跟着语言走，只写中文。
+    const val NOTICE_TITLE = "先升级长尾雀：保险箱已换新格式"
+    const val NOTICE_BODY = "保险箱已在别的设备上升级成新格式。这台的长尾雀版本太旧，还能看升级前的内容，但在这里的改动同步不上去。升级到最新版以后会自动合并，这台上的改动不会丢。"
 
     /** 给旧版看的那条 fmt 2 记录：旧三端都认 `fmt: 2` 的画布记录，必填键一个不缺（PC `noticeItem()`）。 */
     fun noticeItem(): JsonObject = JsonObject(linkedMapOf(

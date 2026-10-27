@@ -378,7 +378,7 @@
       "items": [
         {
           "id": "fmt3-upgrade-notice",
-          "title": "保险箱已升级，请更新长尾雀",
+          "title": "先升级长尾雀：保险箱已换新格式",
           "icon": "info",
           "typeId": "",
           "blocks": [],
@@ -398,7 +398,7 @@
               "h": 180,
               "title": "说明",
               "data": {
-                "body": "保险箱已在别的设备上升级成新格式。这台要先升级长尾雀才能改。这里显示的是升级前的内容，改动同步不上去；更新到最新版以后会自动合并，本机的改动不会丢。"
+                "body": "保险箱已在别的设备上升级成新格式。这台的长尾雀版本太旧，还能看升级前的内容，但在这里的改动同步不上去。升级到最新版以后会自动合并，这台上的改动不会丢。"
               },
               "set": {
                 "masked": false,
@@ -646,7 +646,7 @@
         {
           "id": "iWork-att",
           "kind": "file",
-          "title": "未归类的附件",
+          "title": "升级时找回的附件",
           "parent": "iWork",
           "ord": "004V",
           "data": {
@@ -869,6 +869,7 @@
   "merge": [
     {
       "name": "两边各改一个节点：都留",
+      "deviceName": "",
       "local": {
         "nodes": [
           {
@@ -1010,6 +1011,7 @@
     },
     {
       "name": "移动和改标题撞在同一个节点：rev 大的赢",
+      "deviceName": "",
       "local": {
         "nodes": [
           {
@@ -1157,6 +1159,7 @@
     },
     {
       "name": "多账号两边各改一条：条目逐条合并",
+      "deviceName": "",
       "local": {
         "nodes": [
           {
@@ -1329,6 +1332,7 @@
     },
     {
       "name": "删除和编辑 rev、时间都一样：删除赢",
+      "deviceName": "",
       "local": {
         "nodes": [
           {
@@ -1400,6 +1404,7 @@
     },
     {
       "name": "首合：本机是迁移来的 rev 0、迁移前更新过；云端迁移后又改过 → 两份都留",
+      "deviceName": "",
       "local": {
         "nodes": [
           {
@@ -1525,7 +1530,303 @@
           {
             "id": "w~9",
             "kind": "acct",
-            "title": "邮箱（另一台设备上没同步的改动）",
+            "title": "邮箱（合并时多出的一份）",
+            "parent": "c",
+            "ord": "0VV",
+            "data": {
+              "user": "u",
+              "pwd": "本机离线改的",
+              "seed": "",
+              "url": "",
+              "note": ""
+            },
+            "set": {},
+            "rev": 1,
+            "createdAt": 1,
+            "updatedAt": 1
+          }
+        ],
+        "links": [],
+        "atts": []
+      }
+    },
+    {
+      "name": "首合（带设备名）：副本标题「邮箱（来自 sam 的 MacBook Pro）」",
+      "deviceName": "sam 的 MacBook Pro",
+      "local": {
+        "nodes": [
+          {
+            "id": "c",
+            "kind": "cat",
+            "title": "工作",
+            "parent": null,
+            "ord": "0V",
+            "data": {},
+            "set": {},
+            "rev": 0,
+            "createdAt": 1,
+            "updatedAt": 1,
+            "mig": {
+              "src": 9
+            }
+          },
+          {
+            "id": "w",
+            "kind": "acct",
+            "title": "邮箱",
+            "parent": "c",
+            "ord": "0V",
+            "data": {
+              "user": "u",
+              "pwd": "本机离线改的",
+              "seed": "",
+              "url": "",
+              "note": ""
+            },
+            "set": {},
+            "rev": 0,
+            "createdAt": 1,
+            "updatedAt": 1,
+            "mig": {
+              "src": 9
+            }
+          }
+        ],
+        "links": [],
+        "atts": []
+      },
+      "remote": {
+        "nodes": [
+          {
+            "id": "c",
+            "kind": "cat",
+            "title": "工作",
+            "parent": null,
+            "ord": "0V",
+            "data": {},
+            "set": {},
+            "rev": 0,
+            "createdAt": 1,
+            "updatedAt": 1,
+            "mig": {
+              "src": 7
+            }
+          },
+          {
+            "id": "w",
+            "kind": "acct",
+            "title": "邮箱",
+            "parent": "c",
+            "ord": "0V",
+            "data": {
+              "user": "u",
+              "pwd": "云端改的",
+              "seed": "",
+              "url": "",
+              "note": ""
+            },
+            "set": {},
+            "rev": 1,
+            "createdAt": 1,
+            "updatedAt": 50,
+            "mig": {
+              "src": 7
+            }
+          }
+        ],
+        "links": [],
+        "atts": []
+      },
+      "expected": {
+        "nodes": [
+          {
+            "id": "c",
+            "kind": "cat",
+            "title": "工作",
+            "parent": null,
+            "ord": "0V",
+            "data": {},
+            "set": {},
+            "rev": 0,
+            "createdAt": 1,
+            "updatedAt": 1,
+            "mig": {
+              "src": 9
+            }
+          },
+          {
+            "id": "w",
+            "kind": "acct",
+            "title": "邮箱",
+            "parent": "c",
+            "ord": "0V",
+            "data": {
+              "user": "u",
+              "pwd": "云端改的",
+              "seed": "",
+              "url": "",
+              "note": ""
+            },
+            "set": {},
+            "rev": 1,
+            "createdAt": 1,
+            "updatedAt": 50,
+            "mig": {
+              "src": 7
+            }
+          },
+          {
+            "id": "w~9",
+            "kind": "acct",
+            "title": "邮箱（来自 sam 的 MacBook Pro）",
+            "parent": "c",
+            "ord": "0VV",
+            "data": {
+              "user": "u",
+              "pwd": "本机离线改的",
+              "seed": "",
+              "url": "",
+              "note": ""
+            },
+            "set": {},
+            "rev": 1,
+            "createdAt": 1,
+            "updatedAt": 1
+          }
+        ],
+        "links": [],
+        "atts": []
+      }
+    },
+    {
+      "name": "首合（带设备名，英文名）：副本标题「邮箱（来自 Pixel 8）」",
+      "deviceName": "Pixel 8",
+      "local": {
+        "nodes": [
+          {
+            "id": "c",
+            "kind": "cat",
+            "title": "工作",
+            "parent": null,
+            "ord": "0V",
+            "data": {},
+            "set": {},
+            "rev": 0,
+            "createdAt": 1,
+            "updatedAt": 1,
+            "mig": {
+              "src": 9
+            }
+          },
+          {
+            "id": "w",
+            "kind": "acct",
+            "title": "邮箱",
+            "parent": "c",
+            "ord": "0V",
+            "data": {
+              "user": "u",
+              "pwd": "本机离线改的",
+              "seed": "",
+              "url": "",
+              "note": ""
+            },
+            "set": {},
+            "rev": 0,
+            "createdAt": 1,
+            "updatedAt": 1,
+            "mig": {
+              "src": 9
+            }
+          }
+        ],
+        "links": [],
+        "atts": []
+      },
+      "remote": {
+        "nodes": [
+          {
+            "id": "c",
+            "kind": "cat",
+            "title": "工作",
+            "parent": null,
+            "ord": "0V",
+            "data": {},
+            "set": {},
+            "rev": 0,
+            "createdAt": 1,
+            "updatedAt": 1,
+            "mig": {
+              "src": 7
+            }
+          },
+          {
+            "id": "w",
+            "kind": "acct",
+            "title": "邮箱",
+            "parent": "c",
+            "ord": "0V",
+            "data": {
+              "user": "u",
+              "pwd": "云端改的",
+              "seed": "",
+              "url": "",
+              "note": ""
+            },
+            "set": {},
+            "rev": 1,
+            "createdAt": 1,
+            "updatedAt": 50,
+            "mig": {
+              "src": 7
+            }
+          }
+        ],
+        "links": [],
+        "atts": []
+      },
+      "expected": {
+        "nodes": [
+          {
+            "id": "c",
+            "kind": "cat",
+            "title": "工作",
+            "parent": null,
+            "ord": "0V",
+            "data": {},
+            "set": {},
+            "rev": 0,
+            "createdAt": 1,
+            "updatedAt": 1,
+            "mig": {
+              "src": 9
+            }
+          },
+          {
+            "id": "w",
+            "kind": "acct",
+            "title": "邮箱",
+            "parent": "c",
+            "ord": "0V",
+            "data": {
+              "user": "u",
+              "pwd": "云端改的",
+              "seed": "",
+              "url": "",
+              "note": ""
+            },
+            "set": {},
+            "rev": 1,
+            "createdAt": 1,
+            "updatedAt": 50,
+            "mig": {
+              "src": 7
+            }
+          },
+          {
+            "id": "w~9",
+            "kind": "acct",
+            "title": "邮箱（来自 Pixel 8）",
             "parent": "c",
             "ord": "0VV",
             "data": {
@@ -1547,6 +1848,7 @@
     },
     {
       "name": "两边都是迁移来的 rev 0：迁移前那条记录更新的赢",
+      "deviceName": "",
       "local": {
         "nodes": [
           {

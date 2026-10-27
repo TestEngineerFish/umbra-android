@@ -792,7 +792,7 @@ object VaultStore {
         migrateIfDue()
         if (migrationBlockedGen == unlockGen) return VaultMergeResult.Failed(VaultMergeFailure.Unreadable)
         val cur = snapshot ?: return VaultMergeResult.Failed(VaultMergeFailure.Superseded)
-        val merged = VaultSyncRules.merge(cur, remote)
+        val merged = VaultSyncRules.merge(cur, remote, mergeDeviceName())
         record = rd; syncRev = rev
         applySnapshot(merged)
         return VaultMergeResult.Merged
@@ -900,6 +900,15 @@ object VaultStore {
             }
         }
     }
+
+    /**
+     * 首合副本标题里的设备名（296 §三第 3 条）：用这台在服务端登记的名字（`Prefs.deviceName`，发起请求时的 client_name 也是它；
+     * 用户没改过时它自己退到「厂商 型号」），空了再退系统设备名 Settings.Global.DEVICE_NAME；都没有就空（标题走兜底那句）。
+     */
+    private fun mergeDeviceName(): String =
+        AppGraph.prefs.deviceName.trim().ifEmpty {
+            runCatching { android.provider.Settings.Global.getString(AppGraph.context.contentResolver, android.provider.Settings.Global.DEVICE_NAME) }.getOrNull()?.trim().orEmpty()
+        }
 
     /** 服务端版本闸的错误码（`X-Umbra-Error`，HTTP 426）。 */
     private const val UPGRADE_REQUIRED = "upgrade_required"

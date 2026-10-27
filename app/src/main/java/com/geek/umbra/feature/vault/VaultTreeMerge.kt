@@ -10,8 +10,15 @@
 package com.geek.umbra.feature.vault
 
 object VaultMerge3 {
-    // 方案 §七第 4 条，后缀待设计侧定稿；与 PC 逐字一致。
-    const val LOCAL_COPY_SUFFIX = "（另一台设备上没同步的改动）"
+    /**
+     * 首合多出来那份的标题（设计侧 296 §三第 3 条；PC merge3.ts `copyTitle`）：「{原标题}（来自 {设备名}）」，没有设备名用「（合并时多出的一份）」。
+     * 设备名是**做首次合并的那台**自己的名字（多出来那份就是它本机的改动）；合并只在这一台做、结果同步出去，别的设备不重算，
+     * 所以不要求三端算出同一个标题。设备名由调用方显式传进来，函数里不自己取。
+     */
+    fun copyTitle(title: String, deviceName: String, en: Boolean = false): String = when {
+        en -> if (deviceName.isNotEmpty()) "$title (from $deviceName)" else "$title (extra copy from merge)"
+        else -> if (deviceName.isNotEmpty()) "$title（来自 $deviceName）" else "$title（合并时多出的一份）"
+    }
 
     private fun tomb(gone: Boolean, del: Boolean): Int = if (gone) 2 else if (del) 1 else 0
 
@@ -53,7 +60,7 @@ object VaultMerge3 {
      * （旧版设备在云端已是 fmt 3、自己推不上去的那段时间里改的），内容又确实不同 → **两份都留**：用 rev ≥ 1 那份，
      * rev 0 那份作为它的兄弟加进去（id `<原id>~<src>`，标题加后缀）。副本 id 是确定的，两台设备各自合出来是同一个。
      */
-    fun pickNode(a: Node3, b: Node3): List<Node3> {
+    fun pickNode(a: Node3, b: Node3, deviceName: String = ""): List<Node3> {
         val (old, cur) = when {
             a.rev == 0.0 && b.rev >= 1 -> a to b
             b.rev == 0.0 && a.rev >= 1 -> b to a
@@ -61,7 +68,7 @@ object VaultMerge3 {
         }
         if (old != null && cur != null && old.migSrc != null && !old.gone && !cur.gone && old.migSrc > (cur.migSrc ?: -1.0) && !sameContent(old, cur)) {
             val copy = old.copy(
-                id = "${old.id}~${VaultTreeText.num(old.migSrc)}", title = old.title + LOCAL_COPY_SUFFIX,
+                id = "${old.id}~${VaultTreeText.num(old.migSrc)}", title = copyTitle(old.title, deviceName),
                 parent = cur.parent, ord = cur.ord + "V", rev = 1.0, del = null, migSrc = null, pos = null,
             )
             return listOf(withEntries(cur, old), copy)
@@ -75,15 +82,15 @@ object VaultMerge3 {
         return listOf(withEntries(win, lose))
     }
 
-    /** 合并两份 fmt 3 的库。不改参数，回一份新的；三张表都按 id 升序。 */
-    fun merge(local: Tree3, remote: Tree3): Tree3 {
+    /** 合并两份 fmt 3 的库。不改参数，回一份新的；三张表都按 id 升序。[deviceName] 只影响首合副本的标题（[copyTitle]）。 */
+    fun merge(local: Tree3, remote: Tree3, deviceName: String): Tree3 {
         val byId = LinkedHashMap<String, Node3>()
         for (n in local.nodes) byId[n.id] = n
         val extra = ArrayList<Node3>()
         for (r in remote.nodes) {
             val l = byId[r.id]
             if (l == null) { byId[r.id] = r; continue }
-            val picked = pickNode(l, r)
+            val picked = pickNode(l, r, deviceName)
             byId[r.id] = picked[0]
             extra += picked.drop(1)
         }

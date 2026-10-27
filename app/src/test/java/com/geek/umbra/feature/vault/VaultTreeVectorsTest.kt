@@ -79,9 +79,11 @@ class VaultTreeVectorsTest {
             val name = o["name"]!!.jsonPrimitive.content
             val local = Tree3.from(o["local"]!!.jsonObject)
             val remote = Tree3.from(o["remote"]!!.jsonObject)
+            // 两个方向带同一个设备名（空串 = 没有，副本标题走兜底那句）。
+            val device = o["deviceName"]?.jsonPrimitive?.content ?: ""
             fun js(t: Tree3) = JsonObject(mapOf("nodes" to JsonArray(t.nodes.map { it.toJson() }), "links" to JsonArray(t.links.map { it.toJson() }), "atts" to JsonArray(t.atts.map { it.toJson() })))
-            same("$name（本机并云端）", o["expected"], js(VaultMerge3.merge(local, remote)))
-            same("$name（云端并本机）", o["expected"], js(VaultMerge3.merge(remote, local)))
+            same("$name（本机并云端）", o["expected"], js(VaultMerge3.merge(local, remote, device)))
+            same("$name（云端并本机）", o["expected"], js(VaultMerge3.merge(remote, local, device)))
         }
     }
 
