@@ -2,6 +2,10 @@
 // 由 [UmbraAutofillService] 里那条要认证的 dataset 拉起；挑好一条就把 Dataset 经 EXTRA_AUTHENTICATION_RESULT 交回系统填进去。
 package com.geek.umbra.feature.autofill
 
+import com.geek.umbra.designsystem.UmbraIconPaths
+import com.geek.umbra.designsystem.UmbraIcon
+import com.geek.umbra.designsystem.UmbraExtraIcons
+import com.geek.umbra.feature.vault.VaultAutofill3
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
@@ -210,6 +214,40 @@ private fun AutofillPanel(activity: FragmentActivity, parsed: ParsedFields, onPi
                 // 有生物识别那颗橙按钮时，这颗降成次要样式 —— 一屏一个橙实底。
                 UmbraButton(if (st.loading) "解锁中…" else "解锁并填充", { unlockWith(password, secretKey) }, Modifier.fillMaxWidth(),
                     kind = if (faceAvailable) UmbraButtonKind.Secondary else UmbraButtonKind.Primary, enabled = !st.loading, height = 46.dp)
+            }
+            return@Column
+        }
+        // 树形库：一张列表，行 = 第一行账户（等宽）、第二行「名称 · 路径 › 节点」（293 §六、稿 iOS 05；没有分类芯片）。
+        st.tree?.let { tree ->
+            val rows = AutofillRules.treeCandidates(tree, target, query)
+            Column(Modifier.padding(horizontal = 16.dp).padding(top = 12.dp, bottom = 18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                UmbraSearchField(query, { query = it }, placeholder = "搜索名称、账户或网址")
+                Text(AutofillRules.listCaption(query, domain, "", null), color = c.faint, style = TextStyle(fontSize = 11.5.sp, fontWeight = UmbraType.weight560))
+                if (rows.isEmpty()) {
+                    Text(AutofillRules.emptyText(VaultAutofill3.candidates(tree).isEmpty(), query, domain, ""), color = c.muted,
+                        style = TextStyle(fontSize = 13.sp, lineHeight = 20.sp), modifier = Modifier.padding(top = 20.dp))
+                } else {
+                    val shape = RoundedCornerShape(12.dp)
+                    LazyColumn(Modifier.fillMaxWidth().clip(shape).background(c.card).border(1.dp, c.border, shape)) {
+                        rows.forEachIndexed { i, r ->
+                            item(r.recordIdentifier) {
+                                if (i > 0) UmbraRowDivider()
+                                Row(Modifier.fillMaxWidth().heightIn(min = 62.dp).clickable { onPick(r.user, r.pwd) }.padding(horizontal = 12.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically) {
+                                    Box(Modifier.size(32.dp).clip(RoundedCornerShape(9.dp)).background(c.chip), contentAlignment = Alignment.Center) {
+                                        UmbraIcon(if (':' in r.recordIdentifier) UmbraExtraIcons.users else UmbraIconPaths.user, c.text, size = 17.dp, strokeWidth = 1.9f)
+                                    }
+                                    Spacer(Modifier.width(12.dp))
+                                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                        Text(r.line1, color = c.text, style = TextStyle(fontSize = 15.sp, fontFamily = FontFamily.Monospace), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                        Text(r.line2, color = c.muted, style = TextStyle(fontSize = 13.sp), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    }
+                                    Text("填充", color = c.orangeText, style = TextStyle(fontSize = 12.5.sp, fontWeight = UmbraType.weight560), textAlign = TextAlign.End)
+                                }
+                            }
+                        }
+                    }
+                }
             }
             return@Column
         }

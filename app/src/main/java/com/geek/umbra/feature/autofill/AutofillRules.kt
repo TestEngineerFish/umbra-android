@@ -4,7 +4,9 @@
 package com.geek.umbra.feature.autofill
 
 import com.geek.umbra.feature.vault.VAccount
+import com.geek.umbra.feature.vault.Tree3
 import com.geek.umbra.feature.vault.VItem
+import com.geek.umbra.feature.vault.VaultAutofill3
 import com.geek.umbra.net.UmbraUrl
 
 /** 列表里的一行 = 一条记录里的**一个**账号（umbra-ios#14：一条记录两个账号就是两行）。 */
@@ -116,4 +118,40 @@ object AutofillRules {
         if (cat.isNotEmpty()) return "这个分类下没有可填充的记录。点「全部」看看别的。"
         return "没有带账号的记录 —— 只有含账号控件的记录才能用来填充。"
     }
+
+    // MARK: 树形库（fmt 3，方案 §五第 4 条；293 §六）
+    //
+    // 候选来自 [VaultAutofill3.candidates]（acct 节点一条、多账号每条活的条目一条，「参与自动填充」关了的整组跳过）。
+    // 两行：第一行账户、第二行「名称 · 路径 › 节点」—— 和 fmt 2 的行序是反的（那边第一行是「记录 · 节点」）。
+
+    /**
+     * 这一条是不是「属于当前站点 / App」：有网址照旧（网页按域名标签边界、App 按包名段）；**网址空着按名称匹配**
+     * （名称转小写去空白、至少 3 个字，等于目标按 `.` 切开后的某一整段，293 §五第 2 条）。
+     */
+    fun treeSame(target: AutofillTarget, c: VaultAutofill3.Candidate): Boolean {
+        if (c.url.isNotBlank()) return sameTarget(target, c.url)
+        val t = target.domain.ifEmpty { target.packageName }
+        return t.isNotEmpty() && VaultAutofill3.nameMatches(c.name, t)
+    }
+
+    /** 选账号页的命中与分数：+2 同站 / 同 App，+1 用户自己打的字命中名称、网址、账户、备注、第二行（子串）。筛选口径同 [matched]。 */
+    fun treeMatched(t: Tree3, target: AutofillTarget, query: String): List<Pair<VaultAutofill3.Candidate, Int>> {
+        val q = typedQuery(query, target.domain)
+        val scored = VaultAutofill3.candidates(t).map { c ->
+            var score = 0
+            if (treeSame(target, c)) score += 2
+            if (q.isNotEmpty() && listOf(c.name, c.url, c.user, c.note, c.line2).any { it.lowercase().contains(q) }) score += 1
+            c to score
+        }
+        val filtering = q.isNotEmpty() || domainScoped(query, target.domain)
+        return if (filtering) scored.filter { it.second > 0 } else scored
+    }
+
+    /** 选账号页的行：先按分数，同分保持树的前序（稳定排序）。 */
+    fun treeCandidates(t: Tree3, target: AutofillTarget, query: String): List<VaultAutofill3.Candidate> =
+        treeMatched(t, target, query).sortedByDescending { it.second }.map { it.first }
+
+    /** 输入框下面直接给的那几条：只给同站 / 同 App 的，**按第二行排**、最多 5 条（方案 §五第 4 条）。 */
+    fun treeDirect(t: Tree3, target: AutofillTarget, max: Int = 5): List<VaultAutofill3.Candidate> =
+        VaultAutofill3.candidates(t).filter { treeSame(target, it) }.sortedBy { it.line2 }.take(max)
 }

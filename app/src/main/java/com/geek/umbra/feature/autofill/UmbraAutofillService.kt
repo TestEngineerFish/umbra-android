@@ -109,7 +109,11 @@ class UmbraAutofillService : AutofillService() {
         if (parsed.password.isEmpty() && parsed.username.isEmpty() || parsed.packageName == packageName) return callback.onSuccess(null)
         val b = FillResponse.Builder()
         val open = runCatching { VaultStore.s.unlocked && !VaultSession.s.softLocked }.getOrDefault(false)
-        if (open) {
+        val tree = if (open) VaultStore.s.tree else null
+        if (tree != null) {
+            // 树形库：Dataset 两行 = 第一行账户、第二行「名称 · 路径 › 节点」（293 §六）；值直接写进 dataset，不用回查。
+            for (c in AutofillRules.treeDirect(tree, parsed.target)) datasetFor(this, parsed, c.user, c.pwd, c.line1, c.line2)?.let { b.addDataset(it) }
+        } else if (open) {
             for (r in AutofillRules.directSuggestions(VaultStore.s.items, parsed.target)) {
                 datasetFor(this, parsed, r.account.user, r.account.pwd, AutofillRules.rowTitle(r), r.account.user.ifEmpty { "（没有账号）" })?.let { b.addDataset(it) }
             }
