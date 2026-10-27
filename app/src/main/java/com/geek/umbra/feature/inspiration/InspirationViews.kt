@@ -114,8 +114,8 @@ private fun confirmDelete(onConfirm: () -> Unit) {
     AppGraph.router.confirm(
         UmbraAlert(
             title = "确认删除这条灵感？",
-            message = "删除后移入回收站，保留 30 天，之后彻底删除。",
-            confirmLabel = "移入回收站",
+            message = "删除后会移入回收站，保留 30 天。",
+            confirmLabel = "删除",
             destructive = true,
             onConfirm = onConfirm,
         ),

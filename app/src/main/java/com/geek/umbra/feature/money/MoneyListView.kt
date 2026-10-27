@@ -458,7 +458,7 @@ private fun confirmDelete(e: MoneyEntryDTO) {
     router.confirm(
         UmbraAlert(
             title = "删除「$name · ${MoneyFmt.yuan(e.cents)}」这一笔？",
-            message = "删除后移入回收站，保留 30 天。其它设备上的这条也会一并删掉。",
+            message = "删除后会移入回收站，保留 30 天。其它设备上的这条也会一并删掉。",
             confirmLabel = "删除",
             destructive = true,
         ) {

@@ -278,8 +278,8 @@ private fun ReminderRow(r: Reminder, leaving: Boolean, onToggle: () -> Unit) {
     val trailing = buildList {
         add(UmbraSwipeAction("删除", UmbraIconPaths.trash, c.danger) {
             router.confirm(UmbraAlert(
-                title = "删除「${r.text}」？", message = "删除后移入回收站，保留 30 天，之后彻底删除。",
-                confirmLabel = "移入回收站", destructive = true,
+                title = "删除「${r.text}」？", message = "删除后会移入回收站，保留 30 天。",
+                confirmLabel = "删除", destructive = true,
             ) { store.delete(r.id); router.showToast("已移入回收站 · 保留 30 天") })
         })
         if (r.canSnoozeNow) add(UmbraSwipeAction("再等 10 分钟", UmbraExtraIcons.alarmClock, c.warning) {
