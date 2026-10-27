@@ -70,4 +70,14 @@ class VaultTreeUiRulesTest {
         val off = multi.copy(set = mapOf("autofill" to jb(false)))
         assertEquals("自动填充已关：这些账号在保险箱里仍能搜到，但 iPhone 和 Android 填密码时查不到。", VaultTreeUi.multiFoot(off))
     }
+
+    /** @ 引用：节点 id 迁移时沿用，按节点 id 在整棵树里解析现名；回收站里的 / 找不到的回 null（显示备份名并标缺失）。 */
+    @Test fun mentions() {
+        val r = VaultTreeUi.mentionResolver(t)
+        assertEquals("GitHub", r("old-record-id", "k"))
+        assertNull(r("c", "ghost"))
+        val t2 = VaultTrash3.trashNode(t, "k", 1.0).first
+        assertNull(VaultTreeUi.mentionResolver(t2)("c", "k"))
+        assertEquals("见 @GitHub", VaultMentionRules.plainText("见 @[旧名](c/k)", r))
+    }
 }

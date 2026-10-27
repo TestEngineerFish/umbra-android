@@ -254,11 +254,11 @@ internal fun VaultRecordContent(id: String, initialFind: String) {
     }
 }
 
-private fun fmtTime(ms: Double): String =
+internal fun fmtTime(ms: Double): String =
     SimpleDateFormat("yyyy年M月d日 HH:mm", Locale.CHINA).format(Date(ms.toLong()))
 
 @Composable
-private fun InfoRow(label: String, value: String) {
+internal fun InfoRow(label: String, value: String) {
     val c = UmbraTheme.colors
     Row(Modifier.fillMaxWidth().heightIn(min = UmbraDimens.rowMinH).padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(label, color = c.text, style = TextStyle(fontSize = 15.sp), modifier = Modifier.weight(1f))
@@ -378,9 +378,10 @@ private fun Rows(rows: List<@Composable () -> Unit>) {
 
 /** 详情页的一张节点卡。只往**可搜字段**的那几行传 mark —— 密码、验证码、遮盖正文、密文列一律不拿它。 */
 @Composable
-internal fun VaultNodeCard(node: VNode, item: VItem, items: List<VItem>, mark: VaultFindMark?) {
+internal fun VaultNodeCard(node: VNode, item: VItem, items: List<VItem>, mark: VaultFindMark?, resolver: MentionResolve? = null) {
     val c = UmbraTheme.colors
-    val resolve = mentionResolver(item, items)
+    // 树形库传自己的解析（按节点 id 在整棵树里查）；fmt 2 照旧按记录查。
+    val resolve = resolver ?: mentionResolver(item, items)
     fun plain(s: String) = VaultMentionRules.plainText(s, resolve)
     val maskedCols = (node.set["mask"].vArray ?: emptyList()).mapNotNull { it.vNumber }.mapNotNull { VNum.int(it) }.toSet()
     var tableMasked by rememberSaveable(node.id) { mutableStateOf(node.flag("masked", true)) }

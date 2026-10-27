@@ -485,7 +485,7 @@ private fun DetailScreen(st: VaultState, t: Tree3, n: Node3) {
     ) {
         if (st.upgradeRequired) item("upgrade") { VaultUpgradeBanner() }
         item("sub") { SubHead(pathOf(t, n)) }
-        item("card") { VaultNodeCard(VaultTreeUi.asVNode(n), shell, emptyList(), null) }
+        item("card") { VaultNodeCard(VaultTreeUi.asVNode(n), shell, emptyList(), null, remember(t) { VaultTreeUi.mentionResolver(t) }) }
         val links = t.links.filter { !it.gone && (it.a == n.id || it.b == n.id) }
             .mapNotNull { l -> t.node(if (l.a == n.id) l.b else l.a)?.takeIf { it.live }?.let { it to l.label } }
         if (links.isNotEmpty()) {
@@ -504,6 +504,13 @@ private fun DetailScreen(st: VaultState, t: Tree3, n: Node3) {
             }
         }
         childGroup(t, n)
+        // 旧记录详情底部的「记录信息」（创建 / 更新时间）在树形详情里照样给，按这个节点自己的时间。
+        item("info") {
+            Column {
+                UmbraFieldLabel("节点信息", Modifier.padding(horizontal = 4.dp, vertical = 6.dp))
+                VaultRowsCard(rows = listOf({ InfoRow("创建", fmtTime(n.createdAt)) }, { InfoRow("更新", fmtTime(n.updatedAt)) }))
+            }
+        }
         item("tail") { VaultNote("敏感值显示 8 秒后会自动重新遮盖；复制出来的内容 60 秒后自动清空剪贴板。删除在右上「⋯」里。") }
     }
 }

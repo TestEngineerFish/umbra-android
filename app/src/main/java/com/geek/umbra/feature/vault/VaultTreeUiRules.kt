@@ -87,7 +87,7 @@ object VaultTreeUi {
         val idx = VaultTreeIndex.children(t.nodes)
         for (n in VaultTreeIndex.preorder(t.nodes)) {
             val path = VaultTreeIndex.ancestors(t.nodes, n.id).map { title(it) }
-            if (asVNode(n).searchParts().any { it.lowercase().contains(q) } || (n.kind == "cat" && n.data["sub"].vString.lowercase().contains(q))) {
+            if (asVNode(n).searchParts(mentionResolver(t)).any { it.lowercase().contains(q) } || (n.kind == "cat" && n.data["sub"].vString.lowercase().contains(q))) {
                 out += Hit(n, null, title(n), sub(n, t, idx[n.id]?.size ?: 0), path)
             }
             if (n.kind == "multi") for (e in n.entries) {
@@ -99,6 +99,12 @@ object VaultTreeUi {
         }
         return out
     }
+
+    /**
+     * @ 引用在树形库里的解析：`@[备份名](记录id/节点id)` 的节点 id 迁移时原样沿用（记录 id 迁成了类别 id），
+     * 所以只按节点 id 在整棵树里找活着的那个，回它现在的标题；不在了回 null（显示备份名并标缺失）。
+     */
+    fun mentionResolver(t: Tree3): MentionResolve = { _, nodeId -> t.node(nodeId)?.takeIf { it.live }?.let { title(it) } }
 
     /** 路由 id 拆开：多账号里的一条是 `<nodeId>:<entryId>`。 */
     fun splitId(id: String): Pair<String, String?> {
