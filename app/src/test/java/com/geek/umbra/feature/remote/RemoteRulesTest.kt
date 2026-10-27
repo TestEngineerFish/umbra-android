@@ -302,7 +302,9 @@ class RemoteRulesTest {
         assertFalse("自己的 answer 没指纹", fresh().answered(null))
 
         assertTrue("核对失败带［重试］", RemoteCopy.EndButton.Retry in RemoteCopy.endButtons("tampered", null, null))
-        assertEquals("版本太旧只给关闭", listOf(RemoteCopy.EndButton.Close), RemoteCopy.endButtons("outdated", null, null))
+        assertEquals("版本太旧只给关闭", listOf(RemoteCopy.EndButton.Close), RemoteCopy.endButtons("host_outdated", null, null))
+        assertEquals("字面读 iOS key", "remote.err.host_outdated", RemoteCopy.errorKey("host_outdated"))
+        assertEquals("remote.err.tampered", RemoteCopy.errorKey("tampered"))
         assertEquals("answer 带 nb", v.nb, RemoteJson.str(RemoteSignal.answer("s", "sdp", v.nb)["nb"]))
         assertNull("restart 的 answer 不带 nb", RemoteSignal.answer("s", "sdp", null)["nb"])
     }

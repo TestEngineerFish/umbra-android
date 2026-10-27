@@ -693,7 +693,7 @@ object RemoteCopy {
 
     /**
      * 发起被拒时哪些码值得重来一次：没连上服务器 / 对方离线 / 对方忙。要会员、对方没开、缺权限重来也是同一句。
-     * tampered（本地判的短码核对失败）带［重试］：重来是新的一场、新的随机数（协议第五节）；outdated 不带，对方升级前重来也一样。
+     * tampered（本地判的短码核对失败）带［重试］：重来是新的一场、新的随机数（协议第五节）；host_outdated 不带，对方升级前重来也一样。
      */
     val retryableErrors = listOf("not_connected", "offline", "busy", "tampered")
 
@@ -773,7 +773,7 @@ object RemoteCopy {
     fun endReasonKey(r: String?): String = if (r != null && r in endReasons) "remote.end.$r" else "remote.end.error"
 
     /** 服务端 `REJECT_CODES` + 本地「发不出去」（长连接没连上）。 */
-    val errorCodes = listOf("offline", "remote_off", "no_permission", "need_membership", "busy", "bad_request", "locate_gone", "not_connected")
+    val errorCodes = listOf("offline", "remote_off", "no_permission", "need_membership", "busy", "bad_request", "locate_gone", "not_connected", "host_outdated", "tampered")
 
     fun errorKey(code: String?): String = if (code != null && code in errorCodes) "remote.err.$code" else "remote.err.bad_request"
 

@@ -276,10 +276,14 @@ private fun ReminderRow(r: Reminder, leaving: Boolean, onToggle: () -> Unit) {
     val router = AppGraph.router
     val store = ReminderStore
     val trailing = buildList {
+        // 删除确认读 iOS key（iOS: ReminderViews.swift:1727），文案只在 iOS 那一处维护。
+        val delTitle = stringResource(R.string.reminder_deleteTitle, r.text)
+        val delBody = stringResource(R.string.trash_deleteBody)
+        val delOk = stringResource(R.string.trash_deleteConfirm)
         add(UmbraSwipeAction("删除", UmbraIconPaths.trash, c.danger) {
             router.confirm(UmbraAlert(
-                title = "删除「${r.text}」？", message = "删除后会移入回收站，保留 30 天。",
-                confirmLabel = "删除", destructive = true,
+                title = delTitle, message = delBody,
+                confirmLabel = delOk, destructive = true,
             ) { store.delete(r.id); router.showToast("已移入回收站 · 保留 30 天") })
         })
         if (r.canSnoozeNow) add(UmbraSwipeAction("再等 10 分钟", UmbraExtraIcons.alarmClock, c.warning) {

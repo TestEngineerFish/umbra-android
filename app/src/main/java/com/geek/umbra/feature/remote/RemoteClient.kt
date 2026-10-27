@@ -688,6 +688,16 @@ class RemoteClient(val launch: RemoteLaunch) {
     /** 承诺揭示核对过了：这之后才发输入、剪贴板、文件、PIN 这些帧（协议第四节控制端 5）。换屏、画质、ping 不带内容，不拦。 */
     private val secured: Boolean get() = reveal.verified
 
+    /**
+     * 剪贴板 / 文件这几个人点出来的动作：短码还没核过时不发，说一句为什么（不然「已发出」是假话、拉取的进度条永远不动）。
+     * 回 true = 可以往下做（iOS: RemoteClient.swift:956）。
+     */
+    private fun verifiedOrToast(): Boolean {
+        if (secured) return true
+        toast = str(R.string.remote_verifying)
+        return false
+    }
+
     /** `rc` 通道发一条 JSON。 */
     private fun sendCommand(o: JsonObject) {
         val ch = rcChannel ?: return
@@ -714,7 +724,7 @@ class RemoteClient(val launch: RemoteLaunch) {
      * 判法同常用语的 {clipboard}：调保险箱的 `VaultClipboard.holdsSensitive()`，**判不准（抛异常）按「是敏感值」处理**。
      */
     fun sendClipboard() {
-        if (!secured) return
+        if (!verifiedOrToast()) return
         val sensitive = runCatching { com.geek.umbra.feature.vault.VaultClipboard.holdsSensitive() }.getOrDefault(true)
         if (sensitive) {
             toast = str(R.string.remote_clip_sensitive)
@@ -730,7 +740,7 @@ class RemoteClient(val launch: RemoteLaunch) {
         toast = str(R.string.remote_clip_sent)
     }
 
-    fun fetchClipboard() { if (secured) sendCommand(RemoteCommand.clipGet()) }
+    fun fetchClipboard() { if (verifiedOrToast()) sendCommand(RemoteCommand.clipGet()) }
 
     // MARK: 文件（M2）
 
@@ -743,7 +753,7 @@ class RemoteClient(val launch: RemoteLaunch) {
 
     /** 从被控端拉一个文件。超过上限（中继 100 MB / 直连 500 MB）不发起 —— 中继那一档会计入流量（RC-6.2）。 */
     fun pull(item: RemoteFileItem, dir: String, resume: RemoteTransfer? = null) {
-        if (!secured) return
+        if (!verifiedOrToast()) return
         val limit = RemoteFileCodec.limit(relayPath)
         if (item.size > limit) {
             toast = str(if (relayPath) R.string.remote_files_tooBigRelay else R.string.remote_files_tooBig)
@@ -772,7 +782,7 @@ class RemoteClient(val launch: RemoteLaunch) {
      * 一口气塞进去会把 SCTP 的发送缓冲撑爆（libwebrtc 超过 16 MB 直接关通道）。
      */
     fun push(uri: Uri) {
-        if (!secured) return
+        if (!verifiedOrToast()) return
         val cr = ctx.contentResolver
         var name = "file"
         var size = 0L
@@ -1083,15 +1093,13 @@ class RemoteClient(val launch: RemoteLaunch) {
 
     /**
      * 核对失败 / 对方版本太旧：发 rc_end、进错误态（协议第五节）。不退回旧算法 —— 不然中间人删掉 commit 就能降级。
-     * tampered 带［重试］（[RemoteCopy.retryableErrors]），outdated 不带。
+     * tampered 带［重试］（[RemoteCopy.retryableErrors]），host_outdated 不带。
      */
     private fun securityFail(why: RemoteRevealCheck.Failure) {
         if (phase == Phase.Ended) return
         sessionId?.let { AppGraph.socket.send(RemoteSignal.end(it)) }
-        when (why) {
-            RemoteRevealCheck.Failure.Outdated -> fail("outdated", str(R.string.remote_android_handshake_outdated, str(R.string.brand_name)))
-            RemoteRevealCheck.Failure.Tampered -> fail("tampered", str(R.string.remote_android_handshake_tampered))
-        }
+        // 字面走 RemoteCopy.errorKey → remote.err.host_outdated / remote.err.tampered（iOS: RemoteClient.swift:946）。
+        fail(if (why == RemoteRevealCheck.Failure.Outdated) "host_outdated" else "tampered", null)
     }
 
     private fun handleRemoteCandidate(j: JsonObject) {

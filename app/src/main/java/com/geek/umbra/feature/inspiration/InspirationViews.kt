@@ -110,12 +110,14 @@ private fun sourceLabel(raw: String?): String = when (raw) {
 
 private val CardShape = RoundedCornerShape(18.dp)
 
+/** 删除确认（iOS: InspirationViews.swift:283）：标题 / 正文 / 钮都读 iOS key，文案只在 iOS 那一处维护。 */
 private fun confirmDelete(onConfirm: () -> Unit) {
+    val ctx = AppGraph.context
     AppGraph.router.confirm(
         UmbraAlert(
-            title = "确认删除这条灵感？",
-            message = "删除后会移入回收站，保留 30 天。",
-            confirmLabel = "删除",
+            title = ctx.getString(R.string.insp_deleteTitle),
+            message = ctx.getString(R.string.trash_deleteBody),
+            confirmLabel = ctx.getString(R.string.trash_deleteConfirm),
             destructive = true,
             onConfirm = onConfirm,
         ),
