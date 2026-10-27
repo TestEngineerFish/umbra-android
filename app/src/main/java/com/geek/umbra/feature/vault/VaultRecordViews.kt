@@ -100,6 +100,9 @@ object VaultNodeKind {
         "img" -> UmbraIconPaths.image; "file" -> UmbraIconPaths.paperclip; else -> UmbraIconPaths.layoutGrid
     }
 
+    /** 图片节点开了「默认模糊」（`set.blur`）：列表 / 详情里不露图，点开看大图才清晰。 */
+    fun blurred(n: VNode): Boolean = n.kind == "img" && n.flag("blur", false)
+
     /** 卡头的标题：节点自己的标题，空了用种类名。 */
     fun title(n: VNode): String = n.title.ifEmpty { name(n.kind) }
 
@@ -560,13 +563,14 @@ private fun ImgBody(node: VNode, item: VItem, mark: VaultFindMark?) {
     }
     if (list.isEmpty()) { NoteRow("还没有图片。图片要在电脑上添加。"); return }
     Row(Modifier.horizontalScroll(rememberScrollState()).padding(13.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        for ((attId, name, att) in list) ImageTile(attId, name, att, node.flag("names", true), mark)
+        val blurred = VaultNodeKind.blurred(node)
+        for ((attId, name, att) in list) ImageTile(attId, name, att, node.flag("names", true), mark, blurred)
     }
 }
 
 /** 一张缩略图。字节来源三档：快照里内联的旧 base64 → 云端 fileId（拉密文、VaultKey 解）→ 都没有就只有名字。 */
 @Composable
-private fun ImageTile(attId: String, name: String, att: VAtt?, showName: Boolean, mark: VaultFindMark?) {
+private fun ImageTile(attId: String, name: String, att: VAtt?, showName: Boolean, mark: VaultFindMark?, blurred: Boolean) {
     val c = UmbraTheme.colors
     var image by remember(attId) { mutableStateOf<ImageBitmap?>(null) }
     var loading by remember(attId) { mutableStateOf(false) }
@@ -588,6 +592,9 @@ private fun ImageTile(attId: String, name: String, att: VAtt?, showName: Boolean
             contentAlignment = Alignment.Center) {
             val img = image
             when {
+                // 「默认模糊」：格子里只画锁 + 灰块，点开大图才清晰（293 §九之二；隐私设置，电脑上开了手机上不能直接露图）。
+                // 不用 Modifier.blur：它要 API 31，minSdk 28 上会原样画出清晰的图。
+                img != null && blurred -> UmbraIcon(UmbraIconPaths.lock, c.faint, size = 20.dp, strokeWidth = 1.8f)
                 img != null -> Image(img, null, Modifier.size(112.dp, 84.dp), contentScale = ContentScale.Crop)
                 loading -> CircularProgressIndicator(Modifier.size(20.dp), color = c.muted, strokeWidth = 2.dp)
                 else -> Column(horizontalAlignment = Alignment.CenterHorizontally) {

@@ -1,6 +1,7 @@
 package com.geek.umbra.feature.vault
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -79,5 +80,13 @@ class VaultTreeUiRulesTest {
         val t2 = VaultTrash3.trashNode(t, "k", 1.0).first
         assertNull(VaultTreeUi.mentionResolver(t2)("c", "k"))
         assertEquals("见 @GitHub", VaultMentionRules.plainText("见 @[旧名](c/k)", r))
+    }
+
+    /** 「默认模糊」是隐私设置：开了的图片节点格子里不露图（293 §九之二）；没开 / 不是图片节点照常。 */
+    @Test fun imageBlur() {
+        assertTrue(VaultNodeKind.blurred(VaultTreeUi.asVNode(t.node("im")!!)))
+        assertFalse(VaultNodeKind.blurred(VaultTreeUi.asVNode(t.node("im")!!.copy(set = emptyMap()))))
+        assertFalse("迁移来的旧图片节点默认不模糊", VaultNodeKind.blurred(VNode("x", "img", set = VaultNodeDefaults.set("img"))))
+        assertFalse(VaultNodeKind.blurred(VaultTreeUi.asVNode(t.node("x")!!)))
     }
 }
