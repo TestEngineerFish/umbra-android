@@ -10,8 +10,11 @@ typealias MentionResolve = (itemId: String, nodeId: String) -> String?
  * ⚠️ 正则与标记格式是**两端冻结的契约**（PC `mentionKit.ts` 的 `MENTION_RE`），改之前先改 PC 和夹具。
  */
 object VaultMentionRules {
-    /** 与 PC `MENTION_RE` 逐字相同。 */
-    const val PATTERN = """@\[([^\[\]()]*)\]\(([A-Za-z0-9_-]+)/([A-Za-z0-9_-]+)\)"""
+    /**
+     * 与 PC `tree/mention.ts` 的 `MENTION_RE`（10b3c88）逐字相同：fmt 3 写单段 `@[名](节点id)`，fmt 2 旧写法 `@[名](记录id/节点id)` 也认
+     * （迁移改写不过去的旧 token 原样留着）。单段时 [Seg.Mention.itemId] 是空串，按节点 id 找。
+     */
+    const val PATTERN = """@\[([^\[\]()]*)\]\(([A-Za-z0-9_-]+)(?:/([A-Za-z0-9_-]+))?\)"""
     private val regex = Regex(PATTERN)
 
     sealed interface Seg {
@@ -29,7 +32,9 @@ object VaultMentionRules {
         var last = 0
         for (m in regex.findAll(text)) {
             if (m.range.first > last) out += Seg.Text(text.substring(last, m.range.first))
-            out += Seg.Mention(m.groupValues[2], m.groupValues[3], m.groupValues[1])
+            // 旧写法第三段才是节点 id；单段的只有节点 id。
+            val two = m.groups[3] != null
+            out += Seg.Mention(if (two) m.groupValues[2] else "", if (two) m.groupValues[3] else m.groupValues[2], m.groupValues[1])
             last = m.range.last + 1
         }
         if (last < text.length) out += Seg.Text(text.substring(last))

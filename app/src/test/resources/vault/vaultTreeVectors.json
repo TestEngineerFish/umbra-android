@@ -82,7 +82,7 @@
               "h": 130,
               "title": "备注",
               "data": {
-                "body": "前台密码在抽屉"
+                "body": "前台密码在抽屉，邮箱见 @[邮箱](iWork/nMail)，密钥见 @[密钥](iSecret/nKeyA)；@[旧的](iGone/nX) 已经没了"
               },
               "set": {
                 "masked": false,
@@ -128,7 +128,7 @@
                   ],
                   [
                     "db",
-                    "10.0.0.2",
+                    "@[邮箱](iWork/nMail)",
                     "y"
                   ]
                 ]
@@ -359,6 +359,51 @@
           "revision": 9
         },
         {
+          "id": "iDup",
+          "title": "撞 id 的记录",
+          "typeId": "",
+          "blocks": [],
+          "fmt": 2,
+          "createdAt": 3,
+          "updatedAt": 3,
+          "revision": 1,
+          "order": 2,
+          "nodes": [
+            {
+              "id": "nMail",
+              "kind": "acct",
+              "x": 0,
+              "y": 0,
+              "w": 280,
+              "h": 240,
+              "title": "另一个邮箱",
+              "data": {
+                "user": "dup@x",
+                "pwd": "d",
+                "seed": "",
+                "url": "",
+                "note": ""
+              },
+              "set": {}
+            },
+            {
+              "id": "nDupNote",
+              "kind": "text",
+              "x": 0,
+              "y": 300,
+              "w": 280,
+              "h": 130,
+              "title": "说明",
+              "data": {
+                "body": "看 @[另一个邮箱](iDup/nMail)"
+              },
+              "set": {}
+            }
+          ],
+          "edges": [],
+          "attachments": []
+        },
+        {
           "id": "fmt3-upgrade-notice",
           "title": "x",
           "typeId": "",
@@ -555,7 +600,7 @@
           "parent": "iWork",
           "ord": "001V",
           "data": {
-            "body": "前台密码在抽屉"
+            "body": "前台密码在抽屉，邮箱见 @[邮箱](nMail)，密钥见 @[密钥](nKeyA)；@[旧的](iGone/nX) 已经没了"
           },
           "set": {
             "masked": false,
@@ -588,7 +633,7 @@
               ],
               [
                 "db",
-                "10.0.0.2",
+                "@[邮箱](nMail)",
                 "y"
               ]
             ]
@@ -669,11 +714,82 @@
           }
         },
         {
+          "id": "iDup",
+          "kind": "cat",
+          "title": "撞 id 的记录",
+          "parent": null,
+          "ord": "002V",
+          "data": {
+            "icon": "",
+            "iconImg": false,
+            "sub": "",
+            "tags": [],
+            "secretAcct": "iDup-0"
+          },
+          "set": {},
+          "rev": 0,
+          "createdAt": 3,
+          "updatedAt": 3,
+          "mig": {
+            "src": 1
+          }
+        },
+        {
+          "id": "iDup-0",
+          "kind": "acct",
+          "title": "另一个邮箱",
+          "parent": "iDup",
+          "ord": "000V",
+          "data": {
+            "user": "dup@x",
+            "pwd": "d",
+            "seed": "",
+            "url": "",
+            "note": ""
+          },
+          "set": {
+            "user": true,
+            "pwd": true,
+            "totp": true,
+            "url": true,
+            "note": false,
+            "pwdMasked": true,
+            "copy": true,
+            "strength": false
+          },
+          "rev": 0,
+          "createdAt": 3,
+          "updatedAt": 3,
+          "mig": {
+            "src": 1
+          }
+        },
+        {
+          "id": "nDupNote",
+          "kind": "text",
+          "title": "说明",
+          "parent": "iDup",
+          "ord": "001V",
+          "data": {
+            "body": "看 @[另一个邮箱](iDup-0)"
+          },
+          "set": {
+            "masked": false,
+            "fmt": "text"
+          },
+          "rev": 0,
+          "createdAt": 3,
+          "updatedAt": 3,
+          "mig": {
+            "src": 1
+          }
+        },
+        {
           "id": "iLegacy",
           "kind": "cat",
           "title": "家里路由器",
           "parent": null,
-          "ord": "002V",
+          "ord": "003V",
           "data": {
             "icon": "wifi",
             "iconImg": false,
@@ -764,7 +880,7 @@
           "kind": "cat",
           "title": "旧公司 VPN",
           "parent": null,
-          "ord": "003V",
+          "ord": "004V",
           "data": {
             "icon": "lock",
             "iconImg": false,
@@ -823,7 +939,7 @@
           "kind": "cat",
           "title": "",
           "parent": null,
-          "ord": "004V",
+          "ord": "005V",
           "data": {},
           "set": {},
           "rev": 0,

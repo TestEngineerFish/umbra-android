@@ -168,7 +168,8 @@ object VaultMigrate3 {
 
     private val ID_RE = Regex("^[A-Za-z0-9_-]{1,64}$")
 
-    private class Raw5(val id: String, val kind: String, val title: String, val data: Map<String, JsonElement>, val set: Map<String, JsonElement>)
+    /** [orig] = 迁移前的节点 id（旧 @ 引用里写的那个；撞名被换过 id 时它和 [id] 不同）。 */
+    private class Raw5(val id: String, val kind: String, val title: String, val data: Map<String, JsonElement>, val set: Map<String, JsonElement>, val orig: String? = null)
     private class Kids(val list: List<Raw5>, val firstAcct: String?)
 
     /** 类别顺序：有 `order` 的在前按升序；没有的按 `updatedAt` 降序；再按 id（迁移要确定）。 */
@@ -236,7 +237,7 @@ object VaultMigrate3 {
             var set = VaultNodeDefaults.set(kind) + (if (kind == "table") mapOf("cellCopy" to jb(true)) else emptyMap()) + JsSem.obj(n["set"])
             if (kind == "table") set = tableSet3(set, data)
             if (kind == "acct" && firstAcct == null) firstAcct = id
-            got += Got(Raw5(id, kind, JsSem.str(n["title"]) ?: "", data, set), JsSem.num(n["y"]) ?: 0.0, JsSem.num(n["x"]) ?: 0.0, i)
+            got += Got(Raw5(id, kind, JsSem.str(n["title"]) ?: "", data, set, JsSem.str(n["id"])), JsSem.num(n["y"]) ?: 0.0, JsSem.num(n["x"]) ?: 0.0, i)
         }
         val sorted = got.sortedWith(compareBy<Got> { it.y }.thenBy { it.x }.thenBy { it.i })
         return Kids(sorted.map { it.r }, firstAcct)
@@ -297,7 +298,7 @@ object VaultMigrate3 {
             seen += id
             val set = if (n.kind == "table") tableSet3(n.set, n.data) else n.set
             if (n.kind == "acct" && firstAcct == null) firstAcct = id
-            Raw5(id, n.kind, n.title, n.data, set)
+            Raw5(id, n.kind, n.title, n.data, set, n.id)
         }
         return Kids(list, firstAcct)
     }
@@ -328,6 +329,7 @@ object VaultMigrate3 {
         val atts = ArrayList<Att3>()
         val attSeen = HashSet<String>()
         val seen = its.map { JsSem.str(it["id"])!! }.toHashSet()   // 节点 id 不许和任何类别 id 撞
+        val mentionMap = HashMap<String, String>()                   // 「记录id/原节点id」→ 新节点 id
 
         its.forEachIndexed { ci, it ->
             val itId = JsSem.str(it["id"])!!
@@ -362,6 +364,7 @@ object VaultMigrate3 {
             }
             val del = if (state == "trashed") Del3(updatedAt, itId) else null
             nodes += cat.copy(data = catData, del = del)
+            for (r in list) if (r.orig != null) mentionMap["$itId/${r.orig}"] = r.id
             list.forEachIndexed { i, r ->
                 nodes += Node3(r.id, r.kind, r.title, itId, VaultOrd.at(i), r.data, r.set,
                     rev = 0.0, createdAt = createdAt, updatedAt = updatedAt, del = del, migSrc = src)
@@ -388,7 +391,33 @@ object VaultMigrate3 {
                 atts += Att3(LinkedHashMap(o).apply { put("rev", jn(0.0)) })
             }
         }
-        return Tree3(nodes, links, atts)
+        // 第二遍：文本正文、表格格子里的 @ 引用改写成 fmt 3 的写法（要等全部记录都迁完，跨记录的引用才找得到）。
+        val rewritten = nodes.map { n ->
+            when {
+                n.kind == "text" && JsSem.str(n.data["body"]) != null ->
+                    n.copy(data = n.data + ("body" to js(rewriteMentions(JsSem.str(n.data["body"])!!, mentionMap))))
+                n.kind == "table" && n.data["rows"] is JsonArray -> n.copy(data = n.data + ("rows" to ja((n.data["rows"] as JsonArray).map { r ->
+                    if (r is JsonArray) ja(r.map { c -> JsSem.str(c)?.let { js(rewriteMentions(it, mentionMap)) } ?: c }) else r
+                })))
+                else -> n
+            }
+        }
+        return Tree3(rewritten, links, atts)
+    }
+
+    /** fmt 2 的 @ 引用写法 `@[显示名](记录id/节点id)`（PC migrate3 `LEGACY_MENTION_RE`）。 */
+    private val LEGACY_MENTION = Regex("""@\[([^\[\]()]*)\]\(([A-Za-z0-9_-]+)/([A-Za-z0-9_-]+)\)""")
+
+    /**
+     * 把一段字里的旧 @ 引用改写成 fmt 3 的 `@[显示名](新节点id)`（向量 md 第二节第 13 条）：[map] 是「记录id/原节点id」→ 新节点 id；
+     * 找不到的（指到已彻底删除的记录、别的身份库、不存在的节点）原样留着，界面画成失效引用。显示名原样搬。
+     */
+    fun rewriteMentions(text: String, map: Map<String, String>): String {
+        if (!text.contains("@[")) return text
+        return LEGACY_MENTION.replace(text) { m ->
+            val to = map["${m.groupValues[2]}/${m.groupValues[3]}"]
+            if (to != null) "@[${m.groupValues[1]}]($to)" else m.value
+        }
     }
 
     // MARK: 自检（方案 §二第 4 条）：迁移前后各数一遍，任何一项不等就一个字节都不写

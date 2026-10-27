@@ -80,6 +80,10 @@ class VaultTreeUiRulesTest {
         val t2 = VaultTrash3.trashNode(t, "k", 1.0).first
         assertNull(VaultTreeUi.mentionResolver(t2)("c", "k"))
         assertEquals("见 @GitHub", VaultMentionRules.plainText("见 @[旧名](c/k)", r))
+        // fmt 3 的单段写法 @[名](节点id)：同样按节点 id 解析；旧两段写法照认（迁移改写不过去的原样留着）。
+        assertEquals("见 @GitHub 和 @GitHub", VaultMentionRules.plainText("见 @[旧名](k) 和 @[旧名](c/k)", r))
+        assertEquals("找不到的退回备份名", "@已删", VaultMentionRules.plainText("@[已删](ghost)", r))
+        assertEquals(listOf(VaultMentionRules.Seg.Mention("", "k", "名")), VaultMentionRules.parse("@[名](k)"))
     }
 
     /** 「默认模糊」是隐私设置：开了的图片节点格子里不露图（293 §九之二）；没开 / 不是图片节点照常。 */

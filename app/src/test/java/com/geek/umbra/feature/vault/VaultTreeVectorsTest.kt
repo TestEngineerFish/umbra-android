@@ -63,6 +63,13 @@ class VaultTreeVectorsTest {
         assertEquals(emptyList<String>(), VaultMigrate3.selfCheck(VaultMigrate3.countsBefore(items), VaultMigrate3.countsAfter(VaultMigrate3.migrate(items))))
     }
 
+    /** @ 引用改写（向量 md 第二节第 13 条）：同记录 / 跨记录 / 撞名换过 id 的照新 id；找不到的原样留着；显示名不改。 */
+    @Test fun mentionRewrite() {
+        val map = mapOf("iWork/nMail" to "nMail", "iDup/nMail" to "iDup-0")
+        assertEquals("@[邮箱](nMail) @[另一个](iDup-0) @[旧](iGone/nX)", VaultMigrate3.rewriteMentions("@[邮箱](iWork/nMail) @[另一个](iDup/nMail) @[旧](iGone/nX)", map))
+        assertEquals("没有引用原样回", "a@b.com", VaultMigrate3.rewriteMentions("a@b.com", map))
+    }
+
     /** v1 不认识的块：正文要和 JS 的 JSON.stringify(data, null, 2) 逐字一致（PC 特别提醒）。 */
     @Test fun unknownBlockBodyMatchesJsStringify() {
         val data = Json.parseToJsonElement("""{"foo":1,"bar":[1.5,true,null,"a\"b\n"],"o":{},"a":[],"big":1e21,"tiny":1.5e-7,"neg":-0.000001}""")
