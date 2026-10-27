@@ -305,6 +305,9 @@ class RemoteRulesTest {
         assertEquals("版本太旧只给关闭", listOf(RemoteCopy.EndButton.Close), RemoteCopy.endButtons("host_outdated", null, null))
         assertEquals("字面读 iOS key", "remote.err.host_outdated", RemoteCopy.errorKey("host_outdated"))
         assertEquals("remote.err.tampered", RemoteCopy.errorKey("tampered"))
+        assertEquals("核对失败 → 标题单独一句（296 §二）", "remote.err.tamperedTitle", RemoteCopy.endTitleKey("tampered"))
+        assertEquals("对方忙 →「没连上」", "remote.busy.title", RemoteCopy.endTitleKey("busy"))
+        assertEquals("其余 →「会话结束了」", "remote.ended.title", RemoteCopy.endTitleKey(null))
         assertEquals("answer 带 nb", v.nb, RemoteJson.str(RemoteSignal.answer("s", "sdp", v.nb)["nb"]))
         assertNull("restart 的 answer 不带 nb", RemoteSignal.answer("s", "sdp", null)["nb"])
     }

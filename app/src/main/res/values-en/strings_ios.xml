@@ -1001,7 +1001,8 @@
     <string name="remote_err_not_connected">Not connected to the server. Try again once connected</string>
     <string name="remote_err_offline">The computer is offline</string>
     <string name="remote_err_remote_off">Remote access is off on the computer. Turn it on there and try again</string>
-    <string name="remote_err_tampered">The connection was tampered with along the way and was closed.</string>
+    <string name="remote_err_tampered">The network may be unstable, or someone may be intercepting it. Switch to a network you trust, then try again.</string>
+    <string name="remote_err_tamperedTitle">Couldn\'t verify this connection, so it was closed</string>
     <string name="remote_files_blockedBody">Files can\'t be sent to it while it\'s being controlled. Send it again after the session ends.</string>
     <string name="remote_files_blockedOk">Got it</string>
     <string name="remote_files_blockedShort">it\'s being remotely controlled</string>
@@ -1118,7 +1119,7 @@
     <string name="remote_verify_recheckTitle">Verify “%s” again</string>
     <string name="remote_verify_same">They match</string>
     <string name="remote_verify_title">First time connecting to \"%s\"</string>
-    <string name="remote_verifying">Still checking this connection. Try again in a moment.</string>
+    <string name="remote_verifying">Still verifying this connection. Try again in a few seconds.</string>
     <string name="remote_wait_cancel">Stop connecting</string>
     <string name="remote_wait_left">A consent card popped up on that computer. %s seconds left; if nobody taps it, it counts as declined.</string>
     <string name="remote_wait_sub">A consent card popped up on that computer. If nobody taps it within 10 seconds, it counts as declined.</string>

@@ -1036,14 +1036,15 @@
     <string name="remote_entry_viewSub">实时看画面，不能操作</string>
     <string name="remote_err_bad_request">没发起成功，稍后再试</string>
     <string name="remote_err_busy">对方正在被别的设备远程</string>
-    <string name="remote_err_host_outdated">对方的长尾雀版本太旧，升级后再连</string>
+    <string name="remote_err_host_outdated">对方设备上的长尾雀版本太旧，升级后再连</string>
     <string name="remote_err_locate_gone">那次求助已经结束了</string>
     <string name="remote_err_need_membership">远程控制是会员功能，开通会员后就能用</string>
     <string name="remote_err_no_permission">对方电脑缺系统权限</string>
     <string name="remote_err_not_connected">没连上服务器，连上之后再试</string>
     <string name="remote_err_offline">对方离线</string>
     <string name="remote_err_remote_off">对方没开远程访问，在电脑上打开后再试</string>
-    <string name="remote_err_tampered">连接被中途改动过，已断开</string>
+    <string name="remote_err_tampered">可能是网络不稳，也可能有人在中间截获。换一个你信得过的网络再重试。</string>
+    <string name="remote_err_tamperedTitle">没能核对这条连接，已断开</string>
     <string name="remote_files_blockedBody">被控制的时候，不能往那台电脑推文件。结束后再推一次就行。</string>
     <string name="remote_files_blockedOk">知道了</string>
     <string name="remote_files_blockedShort">那台电脑正在被远程控制</string>
@@ -1160,7 +1161,7 @@
     <string name="remote_verify_recheckTitle">「%s」要重新核对</string>
     <string name="remote_verify_same">一致，继续</string>
     <string name="remote_verify_title">第一次连「%s」</string>
-    <string name="remote_verifying">还在核对这条连接，过一会儿再试</string>
+    <string name="remote_verifying">还在核对这条连接，几秒后再试</string>
     <string name="remote_wait_cancel">停止连接</string>
     <string name="remote_wait_left">对方电脑上弹出了同意卡。还剩 %s 秒，没人点就按拒绝处理。</string>
     <string name="remote_wait_sub">对方电脑上弹出了同意卡。10 秒内没人点就按拒绝处理。</string>

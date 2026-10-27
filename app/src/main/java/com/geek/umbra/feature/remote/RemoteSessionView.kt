@@ -1170,7 +1170,7 @@ private fun Overlay(client: RemoteClient) {
             }
         }
         RemoteClient.Phase.Ended -> {
-            // 结束卡：对方忙时标题是「没连上」（批次 264 §五），其余「会话结束了」；钮照 RemoteCopy.endButtons（原因用端上推出来的那个）。
+            // 结束卡：标题照 RemoteCopy.endTitleKey（对方忙 / 短码核对失败各有一句）；钮照 RemoteCopy.endButtons（原因用端上推出来的那个）。
             val reason = RemoteCopy.effectiveEndReason(client.endReason, client.bye, client.endedDuringConsent)
             val buttons = RemoteCopy.endButtons(client.errorCode, client.busyKind, reason).map { b ->
                 when (b) {
@@ -1181,7 +1181,7 @@ private fun Overlay(client: RemoteClient) {
             }
             CoverCard(
                 spin = false,
-                title = stringResource(if (client.errorCode == "busy") R.string.remote_busy_title else R.string.remote_ended_title),
+                title = remoteString(RemoteCopy.endTitleKey(client.errorCode)),
                 body = endText(client), buttons = buttons,
             )
         }

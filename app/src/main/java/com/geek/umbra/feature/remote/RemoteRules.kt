@@ -764,6 +764,16 @@ object RemoteCopy {
             else -> EndCopy(endReasonKey(r), emptyList())
         }
 
+    /**
+     * 结束卡的标题 key（iOS: RemoteRules.swift `endTitleKey`，f165276）：对方忙 →「没连上」（264 §五）；短码核对失败 →
+     * 「没能核对这条连接，已断开」（296 §二：标题要说清是**核对**没过，正文才好接着说可能有人在中间截获）；其余「会话结束了」。
+     */
+    fun endTitleKey(errorCode: String?): String = when (errorCode) {
+        "busy" -> "remote.busy.title"
+        "tampered" -> "remote.err.tamperedTitle"
+        else -> "remote.ended.title"
+    }
+
     /** 「没连上」那一句的 key（批次 264 §五）。不是 busy → null（走结束原因 / 拒绝码那一套）。 */
     fun busyKey(errorCode: String?, busyKind: String?): String? {
         if (errorCode != "busy") return null
