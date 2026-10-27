@@ -168,6 +168,9 @@ internal fun VaultHomeContent() {
         return
     }
 
+    // 树形（fmt 3）的库走逐层推入那一套（设计侧 293 §九）。
+    if (st.tree != null) { VaultTreeHomeContent(st, noteClosed) { noteClosed = true }; return }
+
     val audit = remember(st.items) { VaultAudit(st.items) }
     val q = query.trim().lowercase()
     val rows = st.items.filter { it ->
@@ -208,6 +211,9 @@ internal fun VaultHomeContent() {
             item("note") { UnlockedNote(se.autoLockMinutes, onSilence = { VaultSession.silenceLockNote() }, onClose = { noteClosed = true }) }
         }
         // 未登录（单机）时本机这份就是全部数据：「离线 / 连上网会补推」都不成立，不画；syncProblem 照旧画。
+        // 迁移自检没过时库还是 fmt 2，条幅挂在这一套首页上（296 §三第 2 条）。
+        if (st.migrateFailed) item("migrateFailed") { VaultMigrateFailedBanner() }
+        if (st.upgradeRequired) item("upgrade") { VaultUpgradeBanner() }
         if ((st.offline && !signedOut) || st.syncProblem.isNotEmpty()) item("offline") { OfflineNote(st) }
         item("profile") { ProfileCard(st) { switchProfile(st) { cat = "" } } }
         item("search") { UmbraSearchField(query, { query = it }, placeholder = "搜名称、账号或网址") }
@@ -433,7 +439,7 @@ private fun offerBiometryIfFirstTime(password: String) {
  * 文案与 PC 那一句逐字同源（[VaultLockNote.text]）。
  */
 @Composable
-private fun UnlockedNote(minutes: Int, onSilence: () -> Unit, onClose: () -> Unit) {
+internal fun UnlockedNote(minutes: Int, onSilence: () -> Unit, onClose: () -> Unit) {
     val c = UmbraTheme.colors
     val shape = RoundedCornerShape(14.dp)
     Row(Modifier.fillMaxWidth().clip(shape).background(c.card).border(UmbraDimens.borderW, c.border, shape).padding(start = 13.dp, top = 11.dp, bottom = 3.dp), verticalAlignment = Alignment.Top) {
@@ -453,7 +459,7 @@ private fun UnlockedNote(minutes: Int, onSilence: () -> Unit, onClose: () -> Uni
 
 /** 离线 / 没推上去的提示。syncProblem 优先：它是「连着网也推不上去」的那几种，说成「离线」就给错了下一步。 */
 @Composable
-private fun OfflineNote(st: VaultState) {
+internal fun OfflineNote(st: VaultState) {
     val c = UmbraTheme.colors
     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(UmbraDimens.radiusControl)).background(c.warningSoft).padding(start = UmbraDimens.sp4, top = 9.dp, bottom = 9.dp), verticalAlignment = Alignment.Top) {
         UmbraIcon(UmbraIconPaths.alertTriangle, c.warningText, size = 15.dp, strokeWidth = 2f, modifier = Modifier.padding(top = 1.dp))
@@ -489,7 +495,7 @@ private fun confirmRelock() {
 }
 
 @Composable
-private fun ProfileCard(st: VaultState, onClick: () -> Unit) {
+internal fun ProfileCard(st: VaultState, onClick: () -> Unit) {
     val c = UmbraTheme.colors
     val cur = st.vaults.firstOrNull { it.id == st.curVaultId }
     val shape = RoundedCornerShape(UmbraDimens.radiusCard)
@@ -503,13 +509,13 @@ private fun ProfileCard(st: VaultState, onClick: () -> Unit) {
         Spacer(Modifier.width(11.dp))
         Column(Modifier.weight(1f)) {
             Text(cur?.name ?: "默认库", color = c.text, style = UmbraType.rowTitle)
-            Text("当前身份库 · ${st.items.size} 条记录", color = c.faint, style = TextStyle(fontSize = 12.sp))
+            Text(st.tree?.let { t -> "当前身份库 · ${t.nodes.count { it.live }} 个节点" } ?: "当前身份库 · ${st.items.size} 条记录", color = c.faint, style = TextStyle(fontSize = 12.sp))
         }
         Text("切换", color = c.orangeText, style = TextStyle(fontSize = 13.sp, fontWeight = UmbraType.weight560))
     }
 }
 
-private fun switchProfile(st: VaultState, onSwitched: () -> Unit) {
+internal fun switchProfile(st: VaultState, onSwitched: () -> Unit) {
     val items = st.vaults.map { v ->
         UmbraChoiceItem(v.name, checked = v.id == st.curVaultId) { VaultStore.switchVault(v.id); onSwitched() }
     } + UmbraChoiceItem("管理身份库") { AppGraph.router.go(Route.VaultProfiles) }
@@ -630,16 +636,16 @@ private fun movePicker(it: VItem) {
 }
 
 /** 「⋯」动作面板：每一行带**当下的真实值**（几项待处理、几个分组、几分钟自动锁）。 */
-private fun presentMoreSheet(audit: VaultAudit) {
+internal fun presentMoreSheet(audit: VaultAudit) {
     val st = VaultStore.s
     val se = VaultSession.s
     val r = AppGraph.router
     val vaultName = st.vaults.firstOrNull { it.id == st.curVaultId }?.name ?: "默认库"
     val bio = if (se.faceIDEnabled && se.hasBiometricCredential) "${VaultSession.biometryName}已开启" else "只用主密码"
-    val items = mutableListOf(
-        UmbraChoiceItem("安全体检", if (audit.total == 0) "没有发现问题" else "${audit.total} 项需要处理") { r.go(Route.VaultCheck) },
-        UmbraChoiceItem("密码生成器", "本机随机，不联网") { r.go(Route.VaultGen) },
-    )
+    val items = mutableListOf<UmbraChoiceItem>()
+    // 树形库的体检还没接（体检按 fmt 2 的记录算，拿树去算会一直说「没有发现问题」，那是假话）：先不给这一行。
+    if (st.tree == null) items += UmbraChoiceItem("安全体检", if (audit.total == 0) "没有发现问题" else "${audit.total} 项需要处理") { r.go(Route.VaultCheck) }
+    items += UmbraChoiceItem("密码生成器", "本机随机，不联网") { r.go(Route.VaultGen) }
     // 画布版没有分组：types 为空时这一行不给（给了点进去是一页空的）。
     if (st.types.isNotEmpty()) items += UmbraChoiceItem("分组", "${st.types.size} 个") { r.go(Route.VaultGroups) }
     items += listOf(
@@ -651,5 +657,5 @@ private fun presentMoreSheet(audit: VaultAudit) {
             VaultStore.lock(); VaultSession.markManualLock(); r.showToast("已重新上锁")
         },
     )
-    UmbraChoice.present(title = "保险箱", items = items, subtitle = "${st.items.size} 条记录 · $vaultName")
+    UmbraChoice.present(title = "保险箱", items = items, subtitle = (st.tree?.let { t -> "${t.nodes.count { it.live }} 个节点" } ?: "${st.items.size} 条记录") + " · $vaultName")
 }

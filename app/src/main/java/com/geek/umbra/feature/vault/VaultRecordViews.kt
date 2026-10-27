@@ -145,6 +145,7 @@ internal fun mentionResolver(item: VItem, items: List<VItem>): MentionResolve = 
 @Composable
 internal fun VaultRecordContent(id: String, initialFind: String) {
     val st by VaultStore.state.collectAsState()
+    if (st.tree != null) { VaultTreeNodeContent(id, initialFind); return }
     val router = AppGraph.router
     val c = UmbraTheme.colors
     val item = st.items.firstOrNull { it.id == id }

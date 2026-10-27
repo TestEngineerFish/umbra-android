@@ -170,7 +170,12 @@ internal fun VaultTrashContent() {
                 for (r in vaultRows) item("v-${r.id}") {
                     TrashCard(UmbraIconPaths.lock, r.title, "${r.from} · ${whenText(r.deletedAtMs)}", r.leftDays,
                         onRestore = {
-                            router.confirm(UmbraAlert(title = "找回「${r.title}」？", message = "条目会回到保险箱原来的分组。", confirmLabel = "找回") {
+                            router.confirm(UmbraAlert(title = "找回「${r.title}」？", message = when {
+                                // 树形库整组回来（293 §八）；组根原来的上一层不在了，就落到最上层（tree 现算生效父节点）。
+                                r.tree && r.descendants > 0 -> "会和它下面的 ${r.descendants} 个节点一起回到原来的位置；原来的上一层不在了就放到最上层。"
+                                r.tree -> "会回到原来的位置；原来的上一层不在了就放到最上层。"
+                                else -> "条目会回到保险箱原来的分组。"
+                            }, confirmLabel = "找回") {
                                 AppGraph.scope.launch { VaultStore.restoreTrash(r.vaultId, r.itemId) }
                             })
                         },

@@ -65,6 +65,8 @@ data class VaultState(
      * 界面顶上挂 295 §四 的条幅，想改东西时吐司说一次、不进编辑态；本机已有的改动留着，升级后再推。
      */
     val upgradeRequired: Boolean = false,
+    /** 这一轮解锁里迁移自检没过（数据一点没改）：首页挂 296 §三第 2 条那张条幅，［再试一次］。 */
+    val migrateFailed: Boolean = false,
 )
 
 /** 工具页卡片要的三样（iOS ToolCardRules.vaultSub 的输入）。 */
@@ -424,7 +426,7 @@ object VaultStore {
         unlockGen++   // 在路上的 pullMerge 回来时认得出「已经不是那一轮了」
         snapshot = null; vaultKeys.clear(); attPlain.clear()
         putSaidUpgrade = false
-        set { it.copy(unlocked = false, syncProblem = "", needsReunlock = false, items = emptyList(), types = emptyList(), tree = null, upgradeRequired = false, snapTick = it.snapTick + 1) }
+        set { it.copy(unlocked = false, syncProblem = "", needsReunlock = false, items = emptyList(), types = emptyList(), tree = null, upgradeRequired = false, migrateFailed = false, snapTick = it.snapTick + 1) }
     }
 
     /** 「锁定并重新解锁」（umbra-ios#28）：上锁，并**忘掉手上这份旧 record**、记下「以云端为准」。 */
@@ -524,7 +526,11 @@ object VaultStore {
     }
 
     /** 回收站里的一条（**跨所有身份库**）。from 是类型名。 */
-    data class TrashRow(val vaultId: String, val itemId: String, val title: String, val from: String, val deletedAtMs: Double, val leftDays: Int) {
+    data class TrashRow(
+        val vaultId: String, val itemId: String, val title: String, val from: String, val deletedAtMs: Double, val leftDays: Int,
+        /** 树形库的一组：[itemId] 是组（grp），[descendants] = 组里除组根外的节点数（「和它下面的 N 个节点一起」）。 */
+        val tree: Boolean = false, val descendants: Int = 0,
+    ) {
         val id: String get() = "$vaultId:$itemId"
     }
 
@@ -535,7 +541,7 @@ object VaultStore {
         val out = mutableListOf<TrashRow>()
         for ((vid, d) in snap.data) {
             d.tree?.let { t ->
-                for (g in VaultTrash3.groups(t, now)) out += TrashRow(vid, g.grp, g.title.ifEmpty { "（无标题）" }, Fmt3.kindName(g.rootKind), g.at, g.leftDays)
+                for (g in VaultTrash3.groups(t, now)) out += TrashRow(vid, g.grp, g.title.ifEmpty { "（无标题）" }, Fmt3.kindName(g.rootKind), g.at, g.leftDays, true, g.descendants)
             }
             val typeName = d.types.associate { it.id to it.name }
             for (it in d.items) if (isTrashed(it)) {
@@ -674,16 +680,17 @@ object VaultStore {
     }
 
     /**
-     * 新建一个节点，挂在 [parent] 下（null = 根），排在兄弟的最后（[VaultOrd.after]）。data / set 铺该种类的默认值。
-     * 回新节点（只读 / 没解锁回 null）。
+     * 新建一个节点，挂在 [parent] 下（null = 根），排在兄弟的最后（[VaultOrd.after]）。[data] / [set] 先铺该种类的默认值再盖。
+     * 新建的东西在编辑页「保存」时才落库（见 [VaultTreeUi.newId]）。回新节点（只读 / 没解锁回 null）。
      */
-    suspend fun addNode(kind: String, parent: String?, title: String): Node3? {
+    suspend fun createNode(kind: String, parent: String?, title: String, data: Map<String, kotlinx.serialization.json.JsonElement> = emptyMap(),
+                           set: Map<String, kotlinx.serialization.json.JsonElement> = emptyMap()): Node3? {
         val t = curTree() ?: return null
         if (!guardWritable()) return null
         val siblings = VaultTreeIndex.children(t.nodes)[parent] ?: emptyList()
         val at = now()
         val n = Node3(VaultCrypto.rid("n"), kind, title, parent, VaultOrd.after(siblings),
-            VaultNodeDefaults.data(kind), VaultNodeDefaults.set(kind), rev = 1.0, createdAt = at, updatedAt = at)
+            VaultNodeDefaults.data(kind) + data, VaultNodeDefaults.set(kind) + set, rev = 1.0, createdAt = at, updatedAt = at)
         commitTree(s.curVaultId, t.withNode(n))
         return n
     }
@@ -897,8 +904,6 @@ object VaultStore {
     /** 服务端版本闸的错误码（`X-Umbra-Error`，HTTP 426）。 */
     private const val UPGRADE_REQUIRED = "upgrade_required"
 
-    /** 迁移自检没过 / 迁移时抛了异常（方案 §二第 4 条；文案待设计侧定稿）。 */
-    const val MIGRATE_FAILED = "保险箱升级没完成，数据没有动，已经记在日志里。下次解锁会再试一次。"
 
     // MARK: - fmt 2 → 3 迁移（方案 §二第 2–4、6 条）
 
@@ -929,7 +934,7 @@ object VaultStore {
         if (migrated == null || !backupFmt2Cache()) {
             android.util.Log.w("UmbraVault", "fmt 3 迁移没完成：${next.exceptionOrNull()?.message ?: "备份没写成"}")
             migrationBlockedGen = unlockGen
-            set { it.copy(syncProblem = MIGRATE_FAILED) }
+            set { it.copy(migrateFailed = true) }
             return false
         }
         snapshot = migrated
@@ -938,11 +943,19 @@ object VaultStore {
         if (encodeForPush() == null) {
             // 落不了盘：内存里已经是树了，但盘上还是 fmt 2 的那份 —— 照「没完成」处理，这一轮不推。
             migrationBlockedGen = unlockGen
-            set { it.copy(syncProblem = MIGRATE_FAILED) }
+            set { it.copy(migrateFailed = true) }
             return false
         }
-        set { it.copy(pendingPush = true) }
+        set { it.copy(pendingPush = true, migrateFailed = false) }
         return true
+    }
+
+    /** 条幅上的［再试一次］：当场再走一遍迁移（备份 → 自检 → 落盘），过了就整份拉一次再推。 */
+    suspend fun retryMigration() {
+        if (auk == null) return
+        migrationBlockedGen = -1
+        set { it.copy(migrateFailed = false) }
+        if (migrateIfDue()) syncNow()
     }
 
     /**

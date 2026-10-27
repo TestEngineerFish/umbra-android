@@ -86,6 +86,7 @@ private fun newNodeId() = "n" + java.util.UUID.randomUUID().toString().replace("
 @Composable
 internal fun VaultEditContent(id: String?) {
     val st by VaultStore.state.collectAsState()
+    if (st.tree != null) { VaultTreeEditContent(id); return }
     val router = AppGraph.router
     val c = UmbraTheme.colors
     val d = remember(id) { EditDraft(id) }
@@ -261,7 +262,7 @@ private fun AutosaveSlot(sv: VaultSaveState, savedAt: Long?, onAction: () -> Uni
 
 /** 一个可编辑的字段：标签 + 输入框（单行可带「生成」，多行最小高 88）。 */
 @Composable
-private fun EditField(label: String, value: String, mono: Boolean = false, secure: Boolean = false, multiline: Boolean = false, onChange: (String) -> Unit) {
+internal fun EditField(label: String, value: String, mono: Boolean = false, secure: Boolean = false, multiline: Boolean = false, onChange: (String) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(UmbraDimens.sp2)) {
         UmbraFieldLabel(label)
         // 密码用明文输入框：编辑时看不见自己在打什么最容易出错（真正要遮的是详情页的展示）。长按复制由外框改道走敏感剪贴板。
@@ -320,7 +321,7 @@ private fun BlockEditor(b: VBlock, idx: Int, count: Int, onChange: (VBlock) -> U
 
 /** 一个节点的输入：只改值（text 正文、acct 五个字段、table 单元格）；img / file 只说一句「在电脑上管理」。 */
 @Composable
-private fun NodeEditor(node: VNode, onChange: (VNode) -> Unit) {
+internal fun NodeEditor(node: VNode, onChange: (VNode) -> Unit) {
     val c = UmbraTheme.colors
     fun str(k: String) = node.data[k].vString
     fun setStr(k: String, v: String) = onChange(node.copy(data = node.data + (k to js(v))))
