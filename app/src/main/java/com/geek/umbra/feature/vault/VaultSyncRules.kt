@@ -19,6 +19,11 @@ sealed interface VaultPutReply {
     data object Unreachable : VaultPutReply
     /** 服务端明确回了不是 ok、也不是 conflict 的东西。 */
     data object Rejected : VaultPutReply
+    /**
+     * 426 `upgrade_required`：云端的保险箱格式比这一版认识的新（方案 §三第 3 条，为以后的 fmt 4 留的口子）。
+     * 和 [Rejected] 分开：那一种给［重试］，这一种重试没用，给「去应用商店升级」。
+     */
+    data object UpgradeRequired : VaultPutReply
 }
 
 enum class VaultMergeFailure {
@@ -52,6 +57,8 @@ sealed interface VaultPushOutcome {
     /** 本机这份编不出来（原因调用方另记 [VaultEncodeFailure]）。 */
     data object EncodeFailed : VaultPushOutcome
     data object Rejected : VaultPushOutcome
+    /** 服务端说要先升级（426 `upgrade_required`）：不再重试，本机改动留着，升级后再推。 */
+    data object UpgradeRequired : VaultPushOutcome
     /** 三趟都回了冲突（按现在的协议走不到：第三趟一定带 force；走到了说明服务端没认 force）。 */
     data object GaveUp : VaultPushOutcome
 }
@@ -98,6 +105,7 @@ object VaultSyncRules {
                 is VaultPutReply.Ok -> return VaultPushOutcome.Pushed(reply.rev, blob)
                 VaultPutReply.Unreachable -> return VaultPushOutcome.Offline
                 VaultPutReply.Rejected -> return VaultPushOutcome.Rejected
+                VaultPutReply.UpgradeRequired -> return VaultPushOutcome.UpgradeRequired
                 is VaultPutReply.Conflict -> when (val m = merge(reply.rev, reply.blob)) {
                     VaultMergeResult.Merged -> merged = true
                     is VaultMergeResult.Failed -> return VaultPushOutcome.MergeFailed(m.why)
@@ -175,6 +183,7 @@ object VaultSyncRules {
         val data = local.data.toMutableMap()
         for ((vid, rdata) in remote.data) {
             val ld = data[vid] ?: VData.EMPTY
+            if (ld.isTree || rdata.isTree) { data[vid] = mergeTree(ld, rdata); continue }
             val types = ld.types.toMutableList()
             for (t in rdata.types) if (types.none { it.id == t.id }) types += t
             val byId = LinkedHashMap<String, VItem>()
@@ -185,9 +194,61 @@ object VaultSyncRules {
             }
             val atts = ld.attachments.toMutableMap()
             for ((aid, b) in rdata.attachments) if (atts[aid] == null) atts[aid] = b
-            data[vid] = VData(types, byId.values.toList(), atts)
+            data[vid] = VData(types, byId.values.toList(), atts, extra = rdata.extra + ld.extra)
         }
-        return VSnapshot(local.v, vaults, data)
+        val v = if (data.values.any { it.isTree }) maxOf(local.v, remote.v, 3) else local.v
+        return VSnapshot(v, vaults, data)
+    }
+
+    /**
+     * 有一边是树形（fmt 3）的库：fmt 2 那一边先按确定性迁移迁成树（同一份 fmt 2 在哪迁都一样，所以「云端还是 fmt 2」时
+     * 合并就是普通的 rev 大者胜，方案 §二第 6 条），再按 [VaultMerge3] 逐对象合并。fmt 取两边大的。
+     * ⚠️ 本机那一边是 fmt 2 时，Store 应当已经先走过「备份 → 迁移 → 自检」那一套（[VaultStore] 的 migrateLocal）；
+     * 这里再迁一次只是兜底，保证合并永远拿两棵树比。
+     */
+    fun mergeTree(local: VData, remote: VData): VData {
+        val lt = local.tree ?: VaultMigrate3.migrate(local.items.map { it.toJson() })
+        val rt = remote.tree ?: VaultMigrate3.migrate(remote.items.map { it.toJson() })
+        return VData(emptyList(), emptyList(), emptyMap(), maxOf(local.fmt, remote.fmt, 3), VaultMerge3.merge(lt, rt), remote.extra + local.extra)
+    }
+
+    // MARK: fmt 3 迁移的时机与备份（方案 §二第 2 条、§六）
+
+    /**
+     * 本机的 fmt 2 现在迁不迁：**没登录的本机库直接迁**（没有别的设备要照顾）；登录着的，要么云端已经是 fmt 3，
+     * 要么服务端开关 `fmtTarget >= 3`。两个都还不知道（这一轮没拉到云端）就先不迁 —— 宁可晚一点，别抢在开关前面
+     * 把旧版手机上的保险箱变成只读。
+     */
+    fun shouldMigrate(signedIn: Boolean, cloudFmt: Int?, fmtTarget: Int?): Boolean =
+        !signedIn || (cloudFmt ?: 2) >= 3 || (fmtTarget ?: 2) >= 3
+
+    /**
+     * 迁移前那份 fmt 2 本机缓存的原样拷贝（方案 §二第 2 条：拷贝的本来就是密文；只留最近一份，保留 90 天）。
+     * 名字带 UTC 时间戳，字典序 = 时间序；和「读不出来的缓存」那组备份（[CacheBackup]）前缀不同，互不清理。
+     */
+    object Fmt2Backup {
+        const val PREFIX = "umbra-vault-cache.fmt2-"
+        const val SUFFIX = ".bak.json"
+        const val KEEP_MS = 90L * 24 * 3600 * 1000
+        private val fmt = DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss.SSS'Z'").withZone(ZoneOffset.UTC)
+
+        fun name(atMs: Long): String = PREFIX + fmt.format(Instant.ofEpochMilli(atMs)) + SUFFIX
+        fun isBackup(fileName: String): Boolean = fileName.startsWith(PREFIX) && fileName.endsWith(SUFFIX)
+
+        /** 文件名里的时间（毫秒）；不是这种文件 / 解析不了回 null。 */
+        fun timeOf(fileName: String): Long? {
+            if (!isBackup(fileName)) return null
+            val stamp = fileName.removePrefix(PREFIX).removeSuffix(SUFFIX)
+            return runCatching { Instant.from(fmt.parse(stamp)).toEpochMilli() }.getOrNull()
+        }
+
+        /** 该删的：除了最新的那一份全删；最新那份超过 90 天也删。别的文件一个不碰。 */
+        fun prune(fileNames: List<String>, nowMs: Long): List<String> {
+            val mine = fileNames.filter { isBackup(it) }.sortedDescending()
+            val old = mine.drop(1)
+            val newest = mine.firstOrNull()?.takeIf { n -> timeOf(n)?.let { nowMs - it > KEEP_MS } ?: true }
+            return old + listOfNotNull(newest)
+        }
     }
 
     enum class MergeGate { Proceed, NothingNewer, Superseded }
@@ -250,7 +311,7 @@ object VaultSyncRules {
 
     fun retryAction(needsReunlock: Boolean): RetryAction = if (needsReunlock) RetryAction.Relock else RetryAction.SyncNow
 
-    enum class ProblemUpdate { Clear, Keep, Reunlock, CannotMerge, Rejected, GaveUp, CannotEncode }
+    enum class ProblemUpdate { Clear, Keep, Reunlock, CannotMerge, Rejected, GaveUp, CannotEncode, UpgradeRequired }
 
     /** 一次推送之后 syncProblem / needsReunlock 怎么改。断网清掉旧原因，唯独「云端换过主密码」不清。 */
     fun problemAfter(outcome: VaultPushOutcome, needsReunlock: Boolean, encodeFailure: VaultEncodeFailure?): ProblemUpdate = when (outcome) {
@@ -264,6 +325,7 @@ object VaultSyncRules {
             VaultMergeFailure.Superseded -> ProblemUpdate.Keep
         }
         VaultPushOutcome.Rejected -> ProblemUpdate.Rejected
+        VaultPushOutcome.UpgradeRequired -> ProblemUpdate.UpgradeRequired
         VaultPushOutcome.GaveUp -> ProblemUpdate.GaveUp
         VaultPushOutcome.EncodeFailed -> when (encodeFailure) {
             VaultEncodeFailure.KeyMismatch -> ProblemUpdate.Reunlock

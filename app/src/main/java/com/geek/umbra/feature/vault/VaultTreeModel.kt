@@ -269,6 +269,13 @@ object Fmt3 {
     const val COL_W_DEFAULT = 150; const val COL_W_MIN = 60; const val COL_W_MAX = 480
     const val ROW_H_DEFAULT = 36; const val ROW_H_MIN = 30; const val ROW_H_MAX = 200
 
+    /** 种类的中文名（回收站「来自」、添加菜单、行上无障碍描述）。 */
+    fun kindName(kind: String): String = when (kind) {
+        "cat" -> "类别"; "text" -> "文本"; "acct" -> "账号"; "multi" -> "多账号"; "table" -> "表格"; "img" -> "图片"; "file" -> "附件"
+        "entry" -> "多账号里的账号"
+        else -> "节点"
+    }
+
     /** 回收站保留期（同 fmt 2 / 服务端，30 天）。 */
     const val TRASH_KEEP_MS = 30.0 * 24 * 3600 * 1000
 

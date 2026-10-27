@@ -58,6 +58,13 @@ data class VaultState(
     val trashCount: Int = 0,
     /** 快照每换一次 +1：回收站行这类从私有快照现算的东西靠它触发重组。 */
     val snapTick: Int = 0,
+    /** 当前身份库是树形（fmt 3）时的正文；null = 还是 fmt 2（界面走 [items] 那一套）。 */
+    val tree: Tree3? = null,
+    /**
+     * 只读：保险箱格式比这一版认识的新（快照 v > 3 / 库 fmt > 3，或 PUT 回了 426 `upgrade_required`）。
+     * 界面顶上挂 295 §四 的条幅，想改东西时吐司说一次、不进编辑态；本机已有的改动留着，升级后再推。
+     */
+    val upgradeRequired: Boolean = false,
 )
 
 /** 工具页卡片要的三样（iOS ToolCardRules.vaultSub 的输入）。 */
@@ -71,7 +78,7 @@ object VaultStore {
 
     /** 工具页读的：是否存在（云端认过有 / 本机有确认过的 SK）、是否解锁、条数。 */
     val toolStatus: StateFlow<VaultToolStatus> = _state.map {
-        VaultToolStatus(it.recordExists || it.hasSecretKey, it.unlocked, it.items.size)
+        VaultToolStatus(it.recordExists || it.hasSecretKey, it.unlocked, it.tree?.nodes?.count { n -> n.live } ?: it.items.size)
     }.stateIn(AppGraph.scope, SharingStarted.Eagerly, VaultToolStatus(false, false, 0))
 
     private inline fun set(f: (VaultState) -> VaultState) = _state.update(f)
@@ -99,6 +106,13 @@ object VaultStore {
     private var lastEncodeFailure: VaultEncodeFailure? = null
     /** 这个进程里已经确认过盘上那份缓存「读得出来 / 根本没有」。 */
     private var cacheVouched = false
+    /** 最近一次 GET /vault/sync 回的云端格式（没拉到过 = null）与服务端开关 `fmtTarget`。迁移时机由它们判（[VaultSyncRules.shouldMigrate]）。 */
+    private var cloudFmt: Int? = null
+    private var fmtTarget: Int? = null
+    /** 这一轮解锁里迁移自检没过：这一次不同步（方案 §二第 4 条），下次解锁再试。存的是那一轮的代次。 */
+    private var migrationBlockedGen = -1
+    /** PUT 回过 426 `upgrade_required`（这一轮解锁内有效）。 */
+    private var putSaidUpgrade = false
 
     private val http: UmbraHttp get() = AppGraph.http
 
@@ -160,7 +174,7 @@ object VaultStore {
     /** 「彻底忘掉」：缓存与它的备份一起删 —— 备份同样是这台设备上的密文。 */
     private fun clearCache() {
         cacheFile.delete()
-        cacheDir.list()?.filter { VaultSyncRules.CacheBackup.isBackup(it) }?.forEach { File(cacheDir, it).delete() }
+        cacheDir.list()?.filter { VaultSyncRules.CacheBackup.isBackup(it) || VaultSyncRules.Fmt2Backup.isBackup(it) }?.forEach { File(cacheDir, it).delete() }
         cacheVouched = true
     }
 
@@ -211,6 +225,7 @@ object VaultStore {
                 val obj = parseSync(r.body) ?: run { fallBackToCache("服务器响应异常"); return }
                 val exists = (obj["exists"] as? JsonPrimitive)?.booleanOrNull ?: false
                 val rev = (obj["rev"] as? JsonPrimitive)?.intOrNull ?: 0
+                noteFmt(obj)
                 val blobStr = (obj["blob"] as? JsonPrimitive)?.takeIf { it.isString }?.content
                 val rd = blobStr?.let { VRecord.parse(it) }
                 if (blobStr == null || rd == null) {
@@ -241,6 +256,12 @@ object VaultStore {
                 }
             }
         }
+    }
+
+    /** 记下回包里的 `fmt` / `fmtTarget`（老服务端没有这两个键：不覆盖已知的值）。 */
+    private fun noteFmt(obj: JsonObject) {
+        (obj["fmt"] as? JsonPrimitive)?.intOrNull?.let { cloudFmt = it }
+        (obj["fmtTarget"] as? JsonPrimitive)?.intOrNull?.let { fmtTarget = it }
     }
 
     /** 解锁态下「看看云端有没有新的」：**只经 pullMerge**；有待推的改动时才推。 */
@@ -311,10 +332,14 @@ object VaultStore {
             cloudPrompted = false
             VaultKeychain.save(sk)
             set { it.copy(hasSecretKey = true) }
+            putSaidUpgrade = false
             applySnapshot(snap)
             set { it.copy(unlocked = true) }
-            // 解开的是一份带着离线改动的缓存：解锁这一刻就去「拉合并 → 推」。
-            if (s.pendingPush) AppGraph.scope.launch { syncNow() }
+            pruneFmt2Backups()
+            // 到了迁移的时候（没登录 / 云端已是 3 / 开关翻了）：备份 → 迁移 → 自检 → 落盘 → syncRev 归零，然后整份拉一次再推。
+            val migrated = migrateIfDue()
+            // 解开的是一份带着离线改动的缓存（或刚迁完）：解锁这一刻就去「拉合并 → 推」。
+            if (s.pendingPush || migrated) AppGraph.scope.launch { syncNow() }
             // 回收站的到期清理借解锁这一刻做（锁着时没有密钥）。不 await：杂务不该拖慢解锁。
             AppGraph.scope.launch { sweepExpiredTrash() }
             // iOS 这里还会把可填充的记录登记进系统身份库（QuickType）。Android 自动填充没有预登记身份的机制，
@@ -354,7 +379,7 @@ object VaultStore {
         set { it.copy(recordExists = true, hasSecretKey = true, error = "") }
         applySnapshot(snap)
         set { it.copy(unlocked = true) }
-        encodeForPush()
+        if (!migrateIfDue()) encodeForPush()
         set { it.copy(pendingPush = true) }
         return sk
     }
@@ -372,7 +397,7 @@ object VaultStore {
         auk?.let { a -> for (v in snap.vaults) VaultCrypto.aesDecrypt(a, v.keyWrapped)?.let { vaultKeys[v.id] = it } }
         val vaults = snap.vaults.sortedBy { it.order }
         val cur = s.curVaultId.takeIf { id -> vaults.any { it.id == id } } ?: vaults.firstOrNull()?.id ?: ""
-        set { it.copy(vaults = vaults, curVaultId = cur) }
+        set { it.copy(vaults = vaults, curVaultId = cur, upgradeRequired = snap.fromFuture || putSaidUpgrade) }
         loadCurrent()
     }
 
@@ -382,6 +407,7 @@ object VaultStore {
             it.copy(
                 types = (d?.types ?: emptyList()).sortedBy { t -> t.order },
                 items = (d?.items ?: emptyList()).filter { i -> i.deleted != true }.sortedByDescending { i -> i.updatedAt },
+                tree = d?.tree,
                 snapTick = it.snapTick + 1,
             )
         }
@@ -397,7 +423,8 @@ object VaultStore {
         auk = null; unlockedVerifier = null
         unlockGen++   // 在路上的 pullMerge 回来时认得出「已经不是那一轮了」
         snapshot = null; vaultKeys.clear(); attPlain.clear()
-        set { it.copy(unlocked = false, syncProblem = "", needsReunlock = false, items = emptyList(), types = emptyList(), snapTick = it.snapTick + 1) }
+        putSaidUpgrade = false
+        set { it.copy(unlocked = false, syncProblem = "", needsReunlock = false, items = emptyList(), types = emptyList(), tree = null, upgradeRequired = false, snapTick = it.snapTick + 1) }
     }
 
     /** 「锁定并重新解锁」（umbra-ios#28）：上锁，并**忘掉手上这份旧 record**、记下「以云端为准」。 */
@@ -427,7 +454,9 @@ object VaultStore {
     fun imageData(attId: String): ByteArray? =
         snapshot?.data?.get(s.curVaultId)?.attachments?.get(attId)?.let { VaultCrypto.b64Decode(it) }
 
-    fun attName(attId: String): String = s.items.flatMap { it.attachments }.firstOrNull { it.id == attId }?.name ?: "文件"
+    fun attName(attId: String): String =
+        s.tree?.atts?.firstOrNull { it.id == attId }?.name?.ifEmpty { null }
+            ?: s.items.flatMap { it.attachments }.firstOrNull { it.id == attId }?.name ?: "文件"
 
     /**
      * 画布版附件：从云端 `GET /files/{fileId}` 拉那份密文、用**当前库**的 VaultKey 解开。拉不到 / 解不开 / 没解锁 → null。
@@ -452,6 +481,7 @@ object VaultStore {
     /** 保存改动到内存快照并推送。已有的抬 revision、改 updatedAt；新的 createdAt = updatedAt = 现在、revision = 1。 */
     suspend fun saveItem(item: VItem) {
         val snap = snapshot ?: return
+        if (!guardWritable()) return
         val d = snap.data[s.curVaultId] ?: return
         val now = System.currentTimeMillis().toDouble()
         val i = d.items.indexOfFirst { it.id == item.id }
@@ -479,6 +509,7 @@ object VaultStore {
     /** 删除 = **移进回收站**：只置标志、抬 revision，内容与附件一个都不动（三态与 PC trash.ts 一字不差）。 */
     suspend fun deleteItem(id: String) {
         val snap = snapshot ?: return
+        if (!guardWritable()) return
         val d = snap.data[s.curVaultId] ?: return
         val i = d.items.indexOfFirst { it.id == id }
         if (i >= 0 && d.items[i].deleted != true) {
@@ -503,6 +534,9 @@ object VaultStore {
         val now = System.currentTimeMillis().toDouble()
         val out = mutableListOf<TrashRow>()
         for ((vid, d) in snap.data) {
+            d.tree?.let { t ->
+                for (g in VaultTrash3.groups(t, now)) out += TrashRow(vid, g.grp, g.title.ifEmpty { "（无标题）" }, Fmt3.kindName(g.rootKind), g.at, g.leftDays)
+            }
             val typeName = d.types.associate { it.id to it.name }
             for (it in d.items) if (isTrashed(it)) {
                 out += TrashRow(vid, it.id, it.title.ifEmpty { "（无标题）" }, typeName[it.typeId] ?: "记录", it.updatedAt, leftDays(it.updatedAt, now))
@@ -515,6 +549,13 @@ object VaultStore {
     suspend fun restoreTrash(vaultId: String, itemId: String) {
         val snap = snapshot ?: return
         val d = snap.data[vaultId] ?: return
+        if (!guardWritable()) return
+        d.tree?.let { t ->
+            // 树形：itemId 是回收站的组（grp），整组一起回来（293 §八「恢复时整组一起回来」）。
+            val (t2, n) = VaultTrash3.restore(t, itemId, now())
+            if (n > 0) commitTree(vaultId, t2)
+            return
+        }
         val i = d.items.indexOfFirst { it.id == itemId }
         if (i < 0 || !isTrashed(d.items[i])) return
         val it = d.items[i]
@@ -530,6 +571,13 @@ object VaultStore {
     suspend fun purgeTrash(vaultId: String, itemId: String) {
         val snap = snapshot ?: return
         val d = snap.data[vaultId] ?: return
+        if (!guardWritable()) return
+        d.tree?.let { t ->
+            // 手机上不删云端的附件字节（方案 §三之二：删字节只走 PC，并且要带 vaultFmt）；元数据写成 gone 跨端传过去。
+            val r = VaultTrash3.purge(t, itemId, now())
+            if (r.purged > 0) commitTree(vaultId, r.tree)
+            return
+        }
         val i = d.items.indexOfFirst { it.id == itemId }
         if (i < 0 || !isTrashed(d.items[i])) return
         snapshot = snap.copy(data = snap.data + (vaultId to purgeInPlace(d, i)))
@@ -547,6 +595,14 @@ object VaultStore {
         for ((vid, orig) in snap.data) {
             var d = orig
             var changed = false
+            if (snap.fromFuture) break
+            d.tree?.let { t0 ->
+                var t = t0
+                for (g in VaultTrash3.expired(t, now)) { t = VaultTrash3.purge(t, g, now).tree; n++; changed = true }
+                if (changed) data[vid] = d.copy(tree = t)
+                return@let
+            }
+            if (d.isTree) continue
             for (i in d.items.indices) {
                 if (!isTrashed(d.items[i]) || now - d.items[i].updatedAt < TRASH_KEEP_MS) continue
                 d = purgeInPlace(d, i); changed = true; n++
@@ -577,6 +633,93 @@ object VaultStore {
         readCache()?.let { writeCache(it.copy(trashCount = n)) }
     }
 
+    // MARK: - 树形（fmt 3）的增改删
+    //
+    // 每一次改动只动它自己那几行（节点 / 条目），rev + 1、updatedAt = 现在；合并按 rev 逐行比（[VaultMerge3]）。
+
+    private fun now(): Double = System.currentTimeMillis().toDouble()
+
+    /** 只读时（格式比这一版新）不让改：吐司说一次（295 §四），调用方不进编辑态。 */
+    fun guardWritable(): Boolean {
+        if (!s.upgradeRequired) return true
+        AppGraph.router.showToast(READ_ONLY_TOAST)
+        return false
+    }
+
+    /** 295 §四 的吐司（尝试改动时）。 */
+    val READ_ONLY_TOAST: String get() = "这台的${Brand.productName}版本太旧，改不了保险箱 · 先升级"
+
+    /** 换掉当前快照里一个库的树，刷新界面、回收站数，推。 */
+    private suspend fun commitTree(vid: String, t: Tree3) {
+        val snap = snapshot ?: return
+        val d = snap.data[vid] ?: return
+        snapshot = snap.copy(data = snap.data + (vid to d.copy(tree = t)))
+        loadCurrent()
+        refreshTrashCount()
+        push()
+    }
+
+    /** 当前库的树（没解锁 / 不是树形回 null）。 */
+    private fun curTree(): Tree3? = snapshot?.data?.get(s.curVaultId)?.tree
+
+    /** 保存一个节点：已有的 rev = max(旧, 传入) + 1；新的 createdAt = updatedAt = 现在、rev = 1。 */
+    suspend fun saveNode(n: Node3): Boolean {
+        val t = curTree() ?: return false
+        if (!guardWritable()) return false
+        val old = t.node(n.id)
+        val at = now()
+        val next = if (old != null) n.copy(rev = maxOf(old.rev, n.rev) + 1, updatedAt = at) else n.copy(rev = 1.0, createdAt = at, updatedAt = at)
+        commitTree(s.curVaultId, t.withNode(next))
+        return true
+    }
+
+    /**
+     * 新建一个节点，挂在 [parent] 下（null = 根），排在兄弟的最后（[VaultOrd.after]）。data / set 铺该种类的默认值。
+     * 回新节点（只读 / 没解锁回 null）。
+     */
+    suspend fun addNode(kind: String, parent: String?, title: String): Node3? {
+        val t = curTree() ?: return null
+        if (!guardWritable()) return null
+        val siblings = VaultTreeIndex.children(t.nodes)[parent] ?: emptyList()
+        val at = now()
+        val n = Node3(VaultCrypto.rid("n"), kind, title, parent, VaultOrd.after(siblings),
+            VaultNodeDefaults.data(kind), VaultNodeDefaults.set(kind), rev = 1.0, createdAt = at, updatedAt = at)
+        commitTree(s.curVaultId, t.withNode(n))
+        return n
+    }
+
+    /** 多账号里存一条（新增或修改）：条目 rev + 1，节点 rev 也抬（条目合并挂在节点上）。 */
+    suspend fun saveEntry(nodeId: String, e: Entry3): Boolean {
+        val t = curTree() ?: return false
+        if (!guardWritable()) return false
+        val n = t.node(nodeId)?.takeIf { it.live && it.kind == "multi" } ?: return false
+        val at = now()
+        val list = n.entries.toMutableList()
+        val i = list.indexOfFirst { it.id == e.id }
+        if (i >= 0) list[i] = e.copy(rev = maxOf(list[i].rev, e.rev) + 1, updatedAt = at) else list += e.copy(rev = 1.0, updatedAt = at)
+        commitTree(s.curVaultId, t.withNode(n.withEntries(list).copy(rev = n.rev + 1, updatedAt = at)))
+        return true
+    }
+
+    /** 删一个节点（连同全部后代）进回收站。 */
+    suspend fun trashNode(id: String): Boolean {
+        val t = curTree() ?: return false
+        if (!guardWritable()) return false
+        val (t2, k) = VaultTrash3.trashNode(t, id, now())
+        if (k == 0) return false
+        commitTree(s.curVaultId, t2)
+        return true
+    }
+
+    /** 删多账号里的一条进回收站。 */
+    suspend fun trashEntry(nodeId: String, entryId: String): Boolean {
+        val t = curTree() ?: return false
+        if (!guardWritable()) return false
+        val t2 = VaultTrash3.trashEntry(t, nodeId, entryId, now()) ?: return false
+        commitTree(s.curVaultId, t2)
+        return true
+    }
+
     suspend fun toggleFav(id: String) {
         val it = s.items.firstOrNull { i -> i.id == id } ?: return
         saveItem(it.copy(favorite = !(it.favorite ?: false)))
@@ -605,6 +748,7 @@ object VaultStore {
      */
     private suspend fun pullMerge(conflictRev: Int? = null, conflictBlob: String? = null, putBaseRev: Int? = null): VaultMergeResult {
         if (auk == null || snapshot == null) return VaultMergeResult.Failed(VaultMergeFailure.Unreadable)
+        if (migrationBlockedGen == unlockGen) return VaultMergeResult.Failed(VaultMergeFailure.Unreadable)
         val gen = unlockGen
         val baseRev = putBaseRev ?: syncRev
         var rev = conflictRev ?: 0
@@ -618,6 +762,10 @@ object VaultStore {
             val obj = parseSync(body) ?: return VaultMergeResult.Failed(VaultMergeFailure.Unreachable)
             rev = (obj["rev"] as? JsonPrimitive)?.intOrNull ?: 0
             blob = (obj["blob"] as? JsonPrimitive)?.takeIf { it.isString }?.content
+            noteFmt(obj)
+            // 这一拉知道了「云端已是 3 / 开关翻了」：先把本机迁了（syncRev 跟着归零），再**整份**拉一次 —— 不能拿着旧 syncRev 接着并：
+            // 回包可能是「没有新的」，本机迁完的旧数据就会盖掉云端的树（方案〇第 4 条）。
+            if (gen == unlockGen && migrateIfDue()) return pullMerge()
         }
         when (VaultSyncRules.mergeGate(rev, baseRev, conflictRev != null, syncRev, gen == unlockGen)) {
             VaultSyncRules.MergeGate.Proceed -> Unit
@@ -631,6 +779,11 @@ object VaultStore {
             ?: return VaultMergeResult.Failed(VaultMergeFailure.Unreadable)
         // 解密在后台跑过一趟：回来再问一次代次，并在**此刻**取快照合并（含着往返期间所有保存的那份）。
         if (gen != unlockGen) return VaultMergeResult.Failed(VaultMergeFailure.Superseded)
+        if (snapshot == null) return VaultMergeResult.Failed(VaultMergeFailure.Superseded)
+        // 冲突带回来的那份已经是树形：本机还是 fmt 2 的话先走一遍迁移（备份 + 自检）。自检没过就不并。
+        if (remote.data.values.any { it.isTree }) cloudFmt = maxOf(cloudFmt ?: 2, 3)
+        migrateIfDue()
+        if (migrationBlockedGen == unlockGen) return VaultMergeResult.Failed(VaultMergeFailure.Unreadable)
         val cur = snapshot ?: return VaultMergeResult.Failed(VaultMergeFailure.Superseded)
         val merged = VaultSyncRules.merge(cur, remote)
         record = rd; syncRev = rev
@@ -639,16 +792,22 @@ object VaultStore {
     }
 
     /** 发一次 PUT /vault/sync。不看状态码、只看回包 JSON（同 iOS：冲突可能以 4xx + JSON 回来）。 */
-    private suspend fun putSync(blob: String, baseRev: Int, force: Boolean): VaultPutReply {
+    private suspend fun putSync(blob: String, baseRev: Int, force: Boolean, fmt: Int?): VaultPutReply {
         val body = buildJsonObject {
             put("blob", blob); put("baseRev", baseRev); put("deviceId", AppGraph.prefs.clientId); put("force", force)
+            // 明文的格式版本（方案 §三第 1 条）：服务端只升不降；库里已是 3 而这里不带 / 偏低 → 426。
+            if (fmt != null) put("fmt", fmt)
         }.toString().toRequestBody(UmbraHttp.JSON)
         val text = when (val r = http.raw("PUT", "/vault/sync", body = body)) {
             is HttpResult.Ok -> r.body
-            is HttpResult.Fail -> r.body
+            is HttpResult.Fail -> {
+                if (r.code == UPGRADE_REQUIRED) return VaultPutReply.UpgradeRequired
+                r.body
+            }
             else -> return VaultPutReply.Unreachable
         }
         val obj = parseSync(text) ?: return VaultPutReply.Unreachable
+        if ((obj["code"] as? JsonPrimitive)?.content == UPGRADE_REQUIRED) return VaultPutReply.UpgradeRequired
         if ((obj["ok"] as? JsonPrimitive)?.booleanOrNull == true) return VaultPutReply.Ok((obj["rev"] as? JsonPrimitive)?.intOrNull ?: baseRev)
         if ((obj["conflict"] as? JsonPrimitive)?.booleanOrNull == true) {
             return VaultPutReply.Conflict((obj["rev"] as? JsonPrimitive)?.intOrNull ?: 0, (obj["blob"] as? JsonPrimitive)?.takeIf { it.isString }?.content)
@@ -684,6 +843,8 @@ object VaultStore {
 
     private suspend fun push() {
         if (auk == null || snapshot == null || record == null) return
+        // 更新的版本写的格式：一个字节都不往回写（会把 fmt 4 降成 3）。迁移自检没过的这一轮：不同步。
+        if (snapshot?.fromFuture == true || migrationBlockedGen == unlockGen) return
         val gen = unlockGen
         var mySeq = -1
         var encodeFailure: VaultEncodeFailure? = null
@@ -696,7 +857,7 @@ object VaultStore {
                 encodeFailure = lastEncodeFailure
                 b
             },
-            send = { blob, force -> sentBase = syncRev; putSync(blob, sentBase, force) },
+            send = { blob, force -> sentBase = syncRev; putSync(blob, sentBase, force, snapshot?.pushFmt) },
             merge = { rev, blob -> pullMerge(rev, blob, sentBase) },
         )
         when (outcome) {
@@ -716,9 +877,12 @@ object VaultStore {
                 else set { it.copy(pendingPush = true) }
             VaultPushOutcome.EncodeFailed -> if (encodeFailure != null) set { it.copy(pendingPush = true) }
             VaultPushOutcome.Rejected, VaultPushOutcome.GaveUp -> set { it.copy(pendingPush = true) }
+            VaultPushOutcome.UpgradeRequired -> { putSaidUpgrade = true; set { it.copy(pendingPush = true, upgradeRequired = true) } }
         }
         when (VaultSyncRules.problemAfter(outcome, s.needsReunlock, encodeFailure)) {
             VaultSyncRules.ProblemUpdate.Clear -> set { it.copy(syncProblem = "", needsReunlock = false) }
+            // 要升级那一档不写 syncProblem：顶上的条幅（upgradeRequired）已经说了，再挂一条「没接受」黄条是两句话说一件事。
+            VaultSyncRules.ProblemUpdate.UpgradeRequired -> set { it.copy(syncProblem = "") }
             VaultSyncRules.ProblemUpdate.Keep -> Unit
             VaultSyncRules.ProblemUpdate.Reunlock -> set { it.copy(needsReunlock = true, syncProblem = REUNLOCK_PROBLEM) }
             VaultSyncRules.ProblemUpdate.CannotMerge -> set { it.copy(syncProblem = "云端有新的改动，这次没能合并进来，本次没有同步上去（本地改动还在）。") }
@@ -728,6 +892,81 @@ object VaultStore {
                 it.copy(syncProblem = "这次改动没能加密打包，既没存进本机缓存、也没同步上去。改动还在屏上，先别退出 App，点「重试」再试一次。")
             }
         }
+    }
+
+    /** 服务端版本闸的错误码（`X-Umbra-Error`，HTTP 426）。 */
+    private const val UPGRADE_REQUIRED = "upgrade_required"
+
+    /** 迁移自检没过 / 迁移时抛了异常（方案 §二第 4 条；文案待设计侧定稿）。 */
+    const val MIGRATE_FAILED = "保险箱升级没完成，数据没有动，已经记在日志里。下次解锁会再试一次。"
+
+    // MARK: - fmt 2 → 3 迁移（方案 §二第 2–4、6 条）
+
+    /**
+     * 到了迁移的时候就迁本机的 fmt 2 库。回 true = 迁了（快照已换成树形、缓存已落、syncRev 已归零）。
+     *
+     * 顺序（方案 §二第 3 条）：① 备份盘上那份缓存（原样拷贝密文、fsync）→ ② 内存里迁移 → ③ 自检（各项计数相等）→
+     * ④ 落缓存（pending）→ ⑤ syncRev 归零（强制下一次整份拉取，方案〇第 4 条）。任何一步不过：一个字节都不写，
+     * 这一轮不同步，挂「升级没完成」那句，下次解锁再试。
+     */
+    private fun migrateIfDue(): Boolean {
+        val snap = snapshot ?: return false
+        if (snap.data.values.all { it.isTree } || snap.fromFuture) return false
+        if (migrationBlockedGen == unlockGen) return false
+        if (!VaultSyncRules.shouldMigrate(AppGraph.auth.signedIn, cloudFmt, fmtTarget)) return false
+        val next = runCatching {
+            val data = snap.data.mapValues { (vid, d) ->
+                if (d.isTree) return@mapValues d
+                val raw = d.items.map { it.toJson() }
+                val t = VaultMigrate3.migrate(raw)
+                val bad = VaultMigrate3.selfCheck(VaultMigrate3.countsBefore(raw), VaultMigrate3.countsAfter(t))
+                check(bad.isEmpty()) { "身份库 $vid 自检没过：$bad" }
+                VData(emptyList(), emptyList(), emptyMap(), 3, t, d.extra)
+            }
+            snap.copy(v = maxOf(snap.v, 3), data = data)
+        }
+        val migrated = next.getOrNull()
+        if (migrated == null || !backupFmt2Cache()) {
+            android.util.Log.w("UmbraVault", "fmt 3 迁移没完成：${next.exceptionOrNull()?.message ?: "备份没写成"}")
+            migrationBlockedGen = unlockGen
+            set { it.copy(syncProblem = MIGRATE_FAILED) }
+            return false
+        }
+        snapshot = migrated
+        syncRev = 0
+        applySnapshot(migrated)
+        if (encodeForPush() == null) {
+            // 落不了盘：内存里已经是树了，但盘上还是 fmt 2 的那份 —— 照「没完成」处理，这一轮不推。
+            migrationBlockedGen = unlockGen
+            set { it.copy(syncProblem = MIGRATE_FAILED) }
+            return false
+        }
+        set { it.copy(pendingPush = true) }
+        return true
+    }
+
+    /**
+     * 迁移前把盘上那份缓存**原样**拷一份（本来就是密文，不用再加密），写完 fsync。没有缓存文件（从没落过盘）也算成功。
+     * 只留最近一份（[VaultSyncRules.Fmt2Backup]）。
+     */
+    private fun backupFmt2Cache(): Boolean {
+        val src = cacheFile
+        if (!src.exists()) return true
+        return runCatching {
+            val dst = File(cacheDir, VaultSyncRules.Fmt2Backup.name(System.currentTimeMillis()))
+            java.io.FileOutputStream(dst).use { out ->
+                out.write(src.readBytes())
+                out.fd.sync()
+            }
+            pruneFmt2Backups(keepNewest = dst.name)
+            true
+        }.getOrDefault(false)
+    }
+
+    /** 清掉多余 / 过期（90 天）的 fmt 2 备份。解锁时跑一次。 */
+    private fun pruneFmt2Backups(keepNewest: String? = null) {
+        val names = cacheDir.list()?.toList() ?: return
+        for (n in VaultSyncRules.Fmt2Backup.prune(names, System.currentTimeMillis())) if (n != keepNewest) File(cacheDir, n).delete()
     }
 
     /** 「云端换过主密码」那一档的说法。两处会说它，只写一份。 */

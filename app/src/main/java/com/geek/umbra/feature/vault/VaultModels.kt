@@ -468,28 +468,51 @@ data class VEdge(val id: String, val a: String, val b: String, val label: String
 
 // MARK: - 一个库的数据 / 整份快照 / 服务端那份 record
 
-data class VData(val types: List<VType>, val items: List<VItem>, val attachments: Map<String, String>) {
-    fun toJson(): JsonObject = JsonObject(mapOf(
-        "types" to ja(types.map { it.toJson() }),
-        "items" to ja(items.map { it.toJson() }),
-        "attachments" to JsonObject(attachments.mapValues { js(it.value) }),
-    ))
+/**
+ * 一个库的数据。fmt 2：`types / items / attachments`；**fmt 3（树形）**：[tree] 非空，`types / items` 是给旧版看的兼容键，读进来就丢掉
+ * （写出时由 [Fmt3.dataJson] 重新放上提示记录）。[fmt] > 3 是更新的版本写的：读得出 fmt 3 那几张表就照样显示，但只读（方案 §三之二第 5 条）。
+ * [extra] = 这一层不认识的键，原样写回（原来整个丢掉：PC 以后在库这一层加键，手机存一次就抹平了）。
+ */
+data class VData(
+    val types: List<VType>,
+    val items: List<VItem>,
+    val attachments: Map<String, String>,
+    val fmt: Int = 2,
+    val tree: Tree3? = null,
+    val extra: Map<String, JsonElement> = emptyMap(),
+) {
+    val isTree: Boolean get() = tree != null
+
+    fun toJson(): JsonObject {
+        if (tree != null) return JsonObject(Fmt3.dataJson(tree, extra) + ("fmt" to jn(maxOf(fmt, 3).toDouble())))
+        return JsonObject(LinkedHashMap<String, JsonElement>().apply {
+            put("types", ja(types.map { it.toJson() }))
+            put("items", ja(items.map { it.toJson() }))
+            put("attachments", JsonObject(attachments.mapValues { js(it.value) }))
+            for (k in extra.keys.sorted()) if (k !in FMT2_KEYS) put(k, extra.getValue(k))
+        })
+    }
 
     companion object {
         val EMPTY = VData(emptyList(), emptyList(), emptyMap())
+        private val FMT2_KEYS = setOf("types", "items", "attachments")
+
         fun from(e: JsonElement): VData {
             val o = e.asObject("库数据")
+            val fmt = o["fmt"].vNumber?.let { VNum.int(it) } ?: 2
+            if (fmt >= 3) return VData(emptyList(), emptyList(), emptyMap(), fmt, Tree3.from(o), o.filterKeys { it !in Fmt3.DATA_KEYS })
             val atts = o.reqObject("attachments").mapValues { (k, v) ->
                 val p = v as? JsonPrimitive
                 if (p == null || !p.isString) throw VaultDecodeException("附件 $k 不是字符串")
                 p.content
             }
-            return VData(o.reqArray("types").map { VType.from(it) }, o.reqArray("items").map { VItem.from(it) }, atts)
+            return VData(o.reqArray("types").map { VType.from(it) }, o.reqArray("items").map { VItem.from(it) }, atts,
+                extra = o.filterKeys { it !in FMT2_KEYS })
         }
     }
 }
 
-/** 整份快照 `{v, vaults, data:{<vid>: VData}}`。v:1 / v:2 都收（PC 画布版写 v:2）。 */
+/** 整份快照 `{v, vaults, data:{<vid>: VData}}`。v:1 / v:2 / v:3（树形）都收；v > 3 是更新的版本写的 → 只读。 */
 data class VSnapshot(val v: Int, val vaults: List<VVaultInfo>, val data: Map<String, VData>) {
     fun toJson(): JsonObject = JsonObject(mapOf(
         "v" to JsonPrimitive(v),
@@ -498,6 +521,12 @@ data class VSnapshot(val v: Int, val vaults: List<VVaultInfo>, val data: Map<Str
     ))
 
     fun encode(): String = toJson().toString()
+
+    /** 比这一版认识的更新（快照 v > 3 或哪个库 fmt > 3）：只读、不推（295 §四条幅）。 */
+    val fromFuture: Boolean get() = v > 3 || data.values.any { it.fmt > 3 }
+
+    /** 推上去时 PUT 体带的 `fmt`：有一个库是树形就是 3（服务端只升不降）；全是 fmt 2 时不带（= 2）。 */
+    val pushFmt: Int? get() = data.values.maxOfOrNull { it.fmt }?.takeIf { it >= 3 }
 
     companion object {
         fun from(e: JsonElement): VSnapshot {
