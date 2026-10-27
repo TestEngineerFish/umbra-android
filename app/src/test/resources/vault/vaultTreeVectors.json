@@ -1,0 +1,1951 @@
+{
+  "_about": "保险箱树形（fmt 3）测试向量。说明见 doc/保险箱树形-测试向量.md。按 JSON 语义相等比对，键顺序不计；数组顺序要一致。",
+  "ord": [
+    {
+      "a": "",
+      "b": null,
+      "out": "V"
+    },
+    {
+      "a": "V",
+      "b": null,
+      "out": "l"
+    },
+    {
+      "a": "z",
+      "b": null,
+      "out": "zV"
+    },
+    {
+      "a": "",
+      "b": "V",
+      "out": "G"
+    },
+    {
+      "a": "",
+      "b": "1",
+      "out": "0V"
+    },
+    {
+      "a": "0V",
+      "b": "1",
+      "out": "0l"
+    },
+    {
+      "a": "a0z",
+      "b": "a1",
+      "out": "a0zV"
+    },
+    {
+      "a": "000V",
+      "b": "001V",
+      "out": "001"
+    },
+    {
+      "a": "abc",
+      "b": "abd",
+      "out": "abcV"
+    },
+    {
+      "a": "zz",
+      "b": null,
+      "out": "zzV"
+    }
+  ],
+  "migrate": {
+    "input": {
+      "types": [],
+      "items": [
+        {
+          "id": "iWork",
+          "title": "工作邮箱",
+          "icon": "mail",
+          "iconImg": false,
+          "favorite": true,
+          "tags": [
+            "工作"
+          ],
+          "order": 1,
+          "typeId": "",
+          "blocks": [],
+          "fmt": 2,
+          "createdAt": 1000,
+          "updatedAt": 5000,
+          "revision": 7,
+          "nodes": [
+            {
+              "id": "nNote",
+              "kind": "text",
+              "x": 400,
+              "y": 40,
+              "w": 280,
+              "h": 130,
+              "title": "备注",
+              "data": {
+                "body": "前台密码在抽屉"
+              },
+              "set": {
+                "masked": false,
+                "fmt": "text"
+              }
+            },
+            {
+              "id": "nMail",
+              "kind": "acct",
+              "x": 40,
+              "y": 40,
+              "w": 280,
+              "h": 240,
+              "title": "邮箱",
+              "data": {
+                "user": "sam@corp.example",
+                "pwd": "m@il",
+                "seed": "",
+                "url": "https://mail.corp.example",
+                "note": ""
+              },
+              "set": {}
+            },
+            {
+              "id": "nTbl",
+              "kind": "table",
+              "x": 40,
+              "y": 300,
+              "w": 400,
+              "h": 150,
+              "title": "服务器",
+              "data": {
+                "cols": [
+                  "主机",
+                  "IP",
+                  "密码"
+                ],
+                "rows": [
+                  [
+                    "api",
+                    "10.0.0.1",
+                    "x"
+                  ],
+                  [
+                    "db",
+                    "10.0.0.2",
+                    "y"
+                  ]
+                ]
+              },
+              "set": {
+                "head": true,
+                "mask": [
+                  2
+                ],
+                "masked": true,
+                "colW": [
+                  100,
+                  30,
+                  600
+                ],
+                "rowH": [
+                  20,
+                  null
+                ]
+              }
+            },
+            {
+              "id": "nPic",
+              "kind": "img",
+              "x": 400,
+              "y": 300,
+              "w": 300,
+              "h": 176,
+              "title": "工牌",
+              "data": {
+                "items": [
+                  {
+                    "attId": "aBadge",
+                    "name": "工牌.jpg"
+                  }
+                ]
+              },
+              "set": {}
+            },
+            {
+              "id": "nBad",
+              "kind": "sticker",
+              "x": 0,
+              "y": 0,
+              "title": "不认识的种类，丢掉"
+            }
+          ],
+          "edges": [
+            {
+              "id": "e1",
+              "a": "nMail",
+              "b": "nNote",
+              "label": "前台"
+            },
+            {
+              "id": "e2",
+              "a": "nNote",
+              "b": "nMail",
+              "label": "重复的一对，丢掉"
+            },
+            {
+              "id": "e3",
+              "a": "nMail",
+              "b": "nGhost",
+              "label": "悬空，丢掉"
+            },
+            {
+              "id": "e4",
+              "a": "nTbl",
+              "b": "nTbl",
+              "label": "自连，丢掉"
+            }
+          ],
+          "attachments": [
+            {
+              "id": "aBadge",
+              "name": "工牌.jpg",
+              "mime": "image/jpeg",
+              "size": 1200,
+              "addedAt": 900,
+              "fileId": "f-badge"
+            },
+            {
+              "id": "aLoose",
+              "name": "合同.pdf",
+              "mime": "application/pdf",
+              "size": 3400,
+              "addedAt": 950
+            }
+          ]
+        },
+        {
+          "id": "iSecret",
+          "title": "OpenAI key",
+          "icon": "key",
+          "tags": [
+            "workflow-secret"
+          ],
+          "order": 0,
+          "typeId": "",
+          "blocks": [],
+          "fmt": 2,
+          "createdAt": 2000,
+          "updatedAt": 2500,
+          "revision": 2,
+          "nodes": [
+            {
+              "id": "nKeyA",
+              "kind": "acct",
+              "x": 40,
+              "y": 400,
+              "w": 280,
+              "h": 240,
+              "title": "密钥",
+              "data": {
+                "user": "",
+                "pwd": "sk-AAA",
+                "seed": "",
+                "url": "",
+                "note": ""
+              },
+              "set": {}
+            },
+            {
+              "id": "nKeyB",
+              "kind": "acct",
+              "x": 40,
+              "y": 40,
+              "w": 280,
+              "h": 240,
+              "title": "备用",
+              "data": {
+                "user": "",
+                "pwd": "sk-BBB",
+                "seed": "",
+                "url": "",
+                "note": ""
+              },
+              "set": {}
+            }
+          ],
+          "edges": [],
+          "attachments": []
+        },
+        {
+          "id": "iLegacy",
+          "title": "家里路由器",
+          "icon": "wifi",
+          "typeId": "t-login",
+          "createdAt": 300,
+          "updatedAt": 9000,
+          "revision": 1,
+          "blocks": [
+            {
+              "id": "b1",
+              "type": "account",
+              "label": "后台",
+              "data": {
+                "username": "admin",
+                "password": "r0uter",
+                "url": "192.168.1.1",
+                "otp": true
+              }
+            },
+            {
+              "id": "bad id!",
+              "type": "secret",
+              "data": {
+                "value": "PIN 0000"
+              }
+            },
+            {
+              "id": "b3",
+              "type": "gadget",
+              "label": "怪东西",
+              "data": {
+                "foo": 1
+              }
+            }
+          ],
+          "attachments": []
+        },
+        {
+          "id": "iTrash",
+          "title": "旧公司 VPN",
+          "icon": "lock",
+          "typeId": "",
+          "blocks": [],
+          "fmt": 2,
+          "deleted": true,
+          "createdAt": 100,
+          "updatedAt": 8000,
+          "revision": 4,
+          "nodes": [
+            {
+              "id": "nVpn",
+              "kind": "acct",
+              "x": 0,
+              "y": 0,
+              "w": 280,
+              "h": 240,
+              "title": "VPN",
+              "data": {
+                "user": "old",
+                "pwd": "vpn",
+                "seed": "",
+                "url": "",
+                "note": ""
+              },
+              "set": {}
+            }
+          ],
+          "edges": [],
+          "attachments": []
+        },
+        {
+          "id": "iGone",
+          "title": "",
+          "typeId": "",
+          "blocks": [],
+          "fmt": 2,
+          "deleted": true,
+          "nodes": [],
+          "edges": [],
+          "attachments": [],
+          "createdAt": 50,
+          "updatedAt": 7000,
+          "revision": 9
+        },
+        {
+          "id": "fmt3-upgrade-notice",
+          "title": "x",
+          "typeId": "",
+          "blocks": [],
+          "fmt": 2,
+          "nodes": [],
+          "edges": [],
+          "attachments": [],
+          "createdAt": 0,
+          "updatedAt": 0,
+          "revision": 1
+        }
+      ]
+    },
+    "expected": {
+      "types": [],
+      "items": [
+        {
+          "id": "fmt3-upgrade-notice",
+          "title": "保险箱已升级，请更新长尾雀",
+          "icon": "info",
+          "typeId": "",
+          "blocks": [],
+          "attachments": [],
+          "createdAt": 0,
+          "updatedAt": 0,
+          "revision": 1,
+          "fmt": 2,
+          "tags": [],
+          "nodes": [
+            {
+              "id": "fmt3-upgrade-notice-n",
+              "kind": "text",
+              "x": 40,
+              "y": 40,
+              "w": 360,
+              "h": 180,
+              "title": "说明",
+              "data": {
+                "body": "保险箱已在别的设备上升级成新格式。这台要先升级长尾雀才能改。这里显示的是升级前的内容，改动同步不上去；更新到最新版以后会自动合并，本机的改动不会丢。"
+              },
+              "set": {
+                "masked": false,
+                "fmt": "text"
+              }
+            }
+          ],
+          "edges": []
+        }
+      ],
+      "attachments": {},
+      "fmt": 3,
+      "nodes": [
+        {
+          "id": "iSecret",
+          "kind": "cat",
+          "title": "OpenAI key",
+          "parent": null,
+          "ord": "000V",
+          "data": {
+            "icon": "key",
+            "iconImg": false,
+            "sub": "",
+            "tags": [
+              "workflow-secret"
+            ],
+            "secretAcct": "nKeyA"
+          },
+          "set": {},
+          "rev": 0,
+          "createdAt": 2000,
+          "updatedAt": 2500,
+          "mig": {
+            "src": 2
+          }
+        },
+        {
+          "id": "nKeyB",
+          "kind": "acct",
+          "title": "备用",
+          "parent": "iSecret",
+          "ord": "000V",
+          "data": {
+            "user": "",
+            "pwd": "sk-BBB",
+            "seed": "",
+            "url": "",
+            "note": ""
+          },
+          "set": {
+            "user": true,
+            "pwd": true,
+            "totp": true,
+            "url": true,
+            "note": false,
+            "pwdMasked": true,
+            "copy": true,
+            "strength": false
+          },
+          "rev": 0,
+          "createdAt": 2000,
+          "updatedAt": 2500,
+          "mig": {
+            "src": 2
+          }
+        },
+        {
+          "id": "nKeyA",
+          "kind": "acct",
+          "title": "密钥",
+          "parent": "iSecret",
+          "ord": "001V",
+          "data": {
+            "user": "",
+            "pwd": "sk-AAA",
+            "seed": "",
+            "url": "",
+            "note": ""
+          },
+          "set": {
+            "user": true,
+            "pwd": true,
+            "totp": true,
+            "url": true,
+            "note": false,
+            "pwdMasked": true,
+            "copy": true,
+            "strength": false
+          },
+          "rev": 0,
+          "createdAt": 2000,
+          "updatedAt": 2500,
+          "mig": {
+            "src": 2
+          }
+        },
+        {
+          "id": "iWork",
+          "kind": "cat",
+          "title": "工作邮箱",
+          "parent": null,
+          "ord": "001V",
+          "data": {
+            "icon": "mail",
+            "iconImg": false,
+            "sub": "",
+            "tags": [
+              "工作"
+            ],
+            "secretAcct": "nMail"
+          },
+          "set": {},
+          "rev": 0,
+          "createdAt": 1000,
+          "updatedAt": 5000,
+          "mig": {
+            "src": 7
+          }
+        },
+        {
+          "id": "nMail",
+          "kind": "acct",
+          "title": "邮箱",
+          "parent": "iWork",
+          "ord": "000V",
+          "data": {
+            "user": "sam@corp.example",
+            "pwd": "m@il",
+            "seed": "",
+            "url": "https://mail.corp.example",
+            "note": ""
+          },
+          "set": {
+            "user": true,
+            "pwd": true,
+            "totp": true,
+            "url": true,
+            "note": false,
+            "pwdMasked": true,
+            "copy": true,
+            "strength": false
+          },
+          "rev": 0,
+          "createdAt": 1000,
+          "updatedAt": 5000,
+          "mig": {
+            "src": 7
+          }
+        },
+        {
+          "id": "nNote",
+          "kind": "text",
+          "title": "备注",
+          "parent": "iWork",
+          "ord": "001V",
+          "data": {
+            "body": "前台密码在抽屉"
+          },
+          "set": {
+            "masked": false,
+            "fmt": "text"
+          },
+          "rev": 0,
+          "createdAt": 1000,
+          "updatedAt": 5000,
+          "mig": {
+            "src": 7
+          }
+        },
+        {
+          "id": "nTbl",
+          "kind": "table",
+          "title": "服务器",
+          "parent": "iWork",
+          "ord": "002V",
+          "data": {
+            "cols": [
+              "主机",
+              "IP",
+              "密码"
+            ],
+            "rows": [
+              [
+                "api",
+                "10.0.0.1",
+                "x"
+              ],
+              [
+                "db",
+                "10.0.0.2",
+                "y"
+              ]
+            ]
+          },
+          "set": {
+            "head": true,
+            "cellCopy": true,
+            "mask": [
+              2
+            ],
+            "masked": true,
+            "colW": [
+              100,
+              60,
+              480
+            ],
+            "rowH": [
+              30,
+              null
+            ]
+          },
+          "rev": 0,
+          "createdAt": 1000,
+          "updatedAt": 5000,
+          "mig": {
+            "src": 7
+          }
+        },
+        {
+          "id": "nPic",
+          "kind": "img",
+          "title": "工牌",
+          "parent": "iWork",
+          "ord": "003V",
+          "data": {
+            "items": [
+              {
+                "attId": "aBadge",
+                "name": "工牌.jpg"
+              }
+            ]
+          },
+          "set": {
+            "blur": false,
+            "names": true,
+            "layout": "grid"
+          },
+          "rev": 0,
+          "createdAt": 1000,
+          "updatedAt": 5000,
+          "mig": {
+            "src": 7
+          }
+        },
+        {
+          "id": "iWork-att",
+          "kind": "file",
+          "title": "未归类的附件",
+          "parent": "iWork",
+          "ord": "004V",
+          "data": {
+            "items": [
+              {
+                "attId": "aLoose"
+              }
+            ]
+          },
+          "set": {
+            "size": true,
+            "date": false,
+            "expBtn": false
+          },
+          "rev": 0,
+          "createdAt": 1000,
+          "updatedAt": 5000,
+          "mig": {
+            "src": 7
+          }
+        },
+        {
+          "id": "iLegacy",
+          "kind": "cat",
+          "title": "家里路由器",
+          "parent": null,
+          "ord": "002V",
+          "data": {
+            "icon": "wifi",
+            "iconImg": false,
+            "sub": "",
+            "tags": [],
+            "secretAcct": "nb1"
+          },
+          "set": {},
+          "rev": 0,
+          "createdAt": 300,
+          "updatedAt": 9000,
+          "mig": {
+            "src": 1
+          }
+        },
+        {
+          "id": "nb1",
+          "kind": "acct",
+          "title": "后台",
+          "parent": "iLegacy",
+          "ord": "000V",
+          "data": {
+            "user": "admin",
+            "pwd": "r0uter",
+            "seed": "",
+            "url": "192.168.1.1",
+            "note": ""
+          },
+          "set": {
+            "user": true,
+            "pwd": true,
+            "totp": true,
+            "url": true,
+            "note": false,
+            "pwdMasked": true,
+            "copy": true,
+            "strength": false
+          },
+          "rev": 0,
+          "createdAt": 300,
+          "updatedAt": 9000,
+          "mig": {
+            "src": 1
+          }
+        },
+        {
+          "id": "iLegacy-b0",
+          "kind": "text",
+          "title": "密文",
+          "parent": "iLegacy",
+          "ord": "001V",
+          "data": {
+            "body": "PIN 0000"
+          },
+          "set": {
+            "masked": true,
+            "fmt": "text"
+          },
+          "rev": 0,
+          "createdAt": 300,
+          "updatedAt": 9000,
+          "mig": {
+            "src": 1
+          }
+        },
+        {
+          "id": "nb3",
+          "kind": "text",
+          "title": "怪东西",
+          "parent": "iLegacy",
+          "ord": "002V",
+          "data": {
+            "body": "{\n  \"foo\": 1\n}"
+          },
+          "set": {
+            "masked": false,
+            "fmt": "text"
+          },
+          "rev": 0,
+          "createdAt": 300,
+          "updatedAt": 9000,
+          "mig": {
+            "src": 1
+          }
+        },
+        {
+          "id": "iTrash",
+          "kind": "cat",
+          "title": "旧公司 VPN",
+          "parent": null,
+          "ord": "003V",
+          "data": {
+            "icon": "lock",
+            "iconImg": false,
+            "sub": "",
+            "tags": [],
+            "secretAcct": "nVpn"
+          },
+          "set": {},
+          "rev": 0,
+          "createdAt": 100,
+          "updatedAt": 8000,
+          "mig": {
+            "src": 4
+          },
+          "del": {
+            "at": 8000,
+            "grp": "iTrash"
+          }
+        },
+        {
+          "id": "nVpn",
+          "kind": "acct",
+          "title": "VPN",
+          "parent": "iTrash",
+          "ord": "000V",
+          "data": {
+            "user": "old",
+            "pwd": "vpn",
+            "seed": "",
+            "url": "",
+            "note": ""
+          },
+          "set": {
+            "user": true,
+            "pwd": true,
+            "totp": true,
+            "url": true,
+            "note": false,
+            "pwdMasked": true,
+            "copy": true,
+            "strength": false
+          },
+          "rev": 0,
+          "createdAt": 100,
+          "updatedAt": 8000,
+          "mig": {
+            "src": 4
+          },
+          "del": {
+            "at": 8000,
+            "grp": "iTrash"
+          }
+        },
+        {
+          "id": "iGone",
+          "kind": "cat",
+          "title": "",
+          "parent": null,
+          "ord": "004V",
+          "data": {},
+          "set": {},
+          "rev": 0,
+          "createdAt": 50,
+          "updatedAt": 7000,
+          "mig": {
+            "src": 9
+          },
+          "gone": true
+        }
+      ],
+      "links": [
+        {
+          "id": "e1",
+          "a": "nMail",
+          "b": "nNote",
+          "label": "前台",
+          "rev": 0,
+          "updatedAt": 5000
+        }
+      ],
+      "atts": [
+        {
+          "id": "aBadge",
+          "name": "工牌.jpg",
+          "mime": "image/jpeg",
+          "size": 1200,
+          "addedAt": 900,
+          "fileId": "f-badge",
+          "rev": 0
+        },
+        {
+          "id": "aLoose",
+          "name": "合同.pdf",
+          "mime": "application/pdf",
+          "size": 3400,
+          "addedAt": 950,
+          "rev": 0
+        }
+      ]
+    }
+  },
+  "merge": [
+    {
+      "name": "两边各改一个节点：都留",
+      "local": {
+        "nodes": [
+          {
+            "id": "c",
+            "kind": "cat",
+            "title": "工作",
+            "parent": null,
+            "ord": "0V",
+            "data": {},
+            "set": {},
+            "rev": 1,
+            "createdAt": 1,
+            "updatedAt": 1
+          },
+          {
+            "id": "a",
+            "kind": "text",
+            "title": "本机改过",
+            "parent": "c",
+            "ord": "0V",
+            "data": {
+              "body": "L"
+            },
+            "set": {},
+            "rev": 2,
+            "createdAt": 1,
+            "updatedAt": 20
+          },
+          {
+            "id": "b",
+            "kind": "text",
+            "title": "B",
+            "parent": "c",
+            "ord": "1V",
+            "data": {
+              "body": ""
+            },
+            "set": {},
+            "rev": 1,
+            "createdAt": 1,
+            "updatedAt": 1
+          }
+        ],
+        "links": [],
+        "atts": []
+      },
+      "remote": {
+        "nodes": [
+          {
+            "id": "c",
+            "kind": "cat",
+            "title": "工作",
+            "parent": null,
+            "ord": "0V",
+            "data": {},
+            "set": {},
+            "rev": 1,
+            "createdAt": 1,
+            "updatedAt": 1
+          },
+          {
+            "id": "a",
+            "kind": "text",
+            "title": "A",
+            "parent": "c",
+            "ord": "0V",
+            "data": {
+              "body": ""
+            },
+            "set": {},
+            "rev": 1,
+            "createdAt": 1,
+            "updatedAt": 1
+          },
+          {
+            "id": "b",
+            "kind": "text",
+            "title": "云端改过",
+            "parent": "c",
+            "ord": "1V",
+            "data": {
+              "body": "R"
+            },
+            "set": {},
+            "rev": 2,
+            "createdAt": 1,
+            "updatedAt": 30
+          }
+        ],
+        "links": [],
+        "atts": []
+      },
+      "expected": {
+        "nodes": [
+          {
+            "id": "a",
+            "kind": "text",
+            "title": "本机改过",
+            "parent": "c",
+            "ord": "0V",
+            "data": {
+              "body": "L"
+            },
+            "set": {},
+            "rev": 2,
+            "createdAt": 1,
+            "updatedAt": 20
+          },
+          {
+            "id": "b",
+            "kind": "text",
+            "title": "云端改过",
+            "parent": "c",
+            "ord": "1V",
+            "data": {
+              "body": "R"
+            },
+            "set": {},
+            "rev": 2,
+            "createdAt": 1,
+            "updatedAt": 30
+          },
+          {
+            "id": "c",
+            "kind": "cat",
+            "title": "工作",
+            "parent": null,
+            "ord": "0V",
+            "data": {},
+            "set": {},
+            "rev": 1,
+            "createdAt": 1,
+            "updatedAt": 1
+          }
+        ],
+        "links": [],
+        "atts": []
+      }
+    },
+    {
+      "name": "移动和改标题撞在同一个节点：rev 大的赢",
+      "local": {
+        "nodes": [
+          {
+            "id": "x",
+            "kind": "cat",
+            "title": "X",
+            "parent": null,
+            "ord": "0V",
+            "data": {},
+            "set": {},
+            "rev": 1,
+            "createdAt": 1,
+            "updatedAt": 1
+          },
+          {
+            "id": "y",
+            "kind": "cat",
+            "title": "Y",
+            "parent": null,
+            "ord": "1V",
+            "data": {},
+            "set": {},
+            "rev": 1,
+            "createdAt": 1,
+            "updatedAt": 1
+          },
+          {
+            "id": "k",
+            "kind": "acct",
+            "title": "挪到 Y 下",
+            "parent": "y",
+            "ord": "0V",
+            "data": {
+              "user": "u",
+              "pwd": "p",
+              "seed": "",
+              "url": "",
+              "note": ""
+            },
+            "set": {},
+            "rev": 3,
+            "createdAt": 1,
+            "updatedAt": 10
+          }
+        ],
+        "links": [],
+        "atts": []
+      },
+      "remote": {
+        "nodes": [
+          {
+            "id": "x",
+            "kind": "cat",
+            "title": "X",
+            "parent": null,
+            "ord": "0V",
+            "data": {},
+            "set": {},
+            "rev": 1,
+            "createdAt": 1,
+            "updatedAt": 1
+          },
+          {
+            "id": "y",
+            "kind": "cat",
+            "title": "Y",
+            "parent": null,
+            "ord": "1V",
+            "data": {},
+            "set": {},
+            "rev": 1,
+            "createdAt": 1,
+            "updatedAt": 1
+          },
+          {
+            "id": "k",
+            "kind": "acct",
+            "title": "只改了标题",
+            "parent": "x",
+            "ord": "0V",
+            "data": {
+              "user": "u",
+              "pwd": "p",
+              "seed": "",
+              "url": "",
+              "note": ""
+            },
+            "set": {},
+            "rev": 2,
+            "createdAt": 1,
+            "updatedAt": 99
+          }
+        ],
+        "links": [],
+        "atts": []
+      },
+      "expected": {
+        "nodes": [
+          {
+            "id": "k",
+            "kind": "acct",
+            "title": "挪到 Y 下",
+            "parent": "y",
+            "ord": "0V",
+            "data": {
+              "user": "u",
+              "pwd": "p",
+              "seed": "",
+              "url": "",
+              "note": ""
+            },
+            "set": {},
+            "rev": 3,
+            "createdAt": 1,
+            "updatedAt": 10
+          },
+          {
+            "id": "x",
+            "kind": "cat",
+            "title": "X",
+            "parent": null,
+            "ord": "0V",
+            "data": {},
+            "set": {},
+            "rev": 1,
+            "createdAt": 1,
+            "updatedAt": 1
+          },
+          {
+            "id": "y",
+            "kind": "cat",
+            "title": "Y",
+            "parent": null,
+            "ord": "1V",
+            "data": {},
+            "set": {},
+            "rev": 1,
+            "createdAt": 1,
+            "updatedAt": 1
+          }
+        ],
+        "links": [],
+        "atts": []
+      }
+    },
+    {
+      "name": "多账号两边各改一条：条目逐条合并",
+      "local": {
+        "nodes": [
+          {
+            "id": "mm",
+            "kind": "multi",
+            "title": "云",
+            "parent": null,
+            "ord": "0V",
+            "data": {
+              "entries": [
+                {
+                  "id": "e1",
+                  "name": "本机改",
+                  "url": "",
+                  "user": "u1",
+                  "pwd": "pw-e1",
+                  "note": "",
+                  "rev": 2,
+                  "updatedAt": 5
+                },
+                {
+                  "id": "e2",
+                  "name": "B",
+                  "url": "",
+                  "user": "u2",
+                  "pwd": "pw-e2",
+                  "note": "",
+                  "rev": 1,
+                  "updatedAt": 1
+                },
+                {
+                  "id": "e3",
+                  "name": "本机新增",
+                  "url": "",
+                  "user": "u3",
+                  "pwd": "pw-e3",
+                  "note": "",
+                  "rev": 1,
+                  "updatedAt": 1
+                }
+              ]
+            },
+            "set": {
+              "autofill": true
+            },
+            "rev": 3,
+            "createdAt": 1,
+            "updatedAt": 5
+          }
+        ],
+        "links": [],
+        "atts": []
+      },
+      "remote": {
+        "nodes": [
+          {
+            "id": "mm",
+            "kind": "multi",
+            "title": "云",
+            "parent": null,
+            "ord": "0V",
+            "data": {
+              "entries": [
+                {
+                  "id": "e1",
+                  "name": "A",
+                  "url": "",
+                  "user": "u1",
+                  "pwd": "pw-e1",
+                  "note": "",
+                  "rev": 1,
+                  "updatedAt": 1
+                },
+                {
+                  "id": "e2",
+                  "name": "云端改",
+                  "url": "",
+                  "user": "u2",
+                  "pwd": "pw-e2",
+                  "note": "",
+                  "rev": 2,
+                  "updatedAt": 6
+                },
+                {
+                  "id": "e4",
+                  "name": "云端新增",
+                  "url": "",
+                  "user": "u4",
+                  "pwd": "pw-e4",
+                  "note": "",
+                  "rev": 1,
+                  "updatedAt": 1
+                }
+              ]
+            },
+            "set": {
+              "autofill": true
+            },
+            "rev": 2,
+            "createdAt": 1,
+            "updatedAt": 6
+          }
+        ],
+        "links": [],
+        "atts": []
+      },
+      "expected": {
+        "nodes": [
+          {
+            "id": "mm",
+            "kind": "multi",
+            "title": "云",
+            "parent": null,
+            "ord": "0V",
+            "data": {
+              "entries": [
+                {
+                  "id": "e1",
+                  "name": "本机改",
+                  "url": "",
+                  "user": "u1",
+                  "pwd": "pw-e1",
+                  "note": "",
+                  "rev": 2,
+                  "updatedAt": 5
+                },
+                {
+                  "id": "e2",
+                  "name": "云端改",
+                  "url": "",
+                  "user": "u2",
+                  "pwd": "pw-e2",
+                  "note": "",
+                  "rev": 2,
+                  "updatedAt": 6
+                },
+                {
+                  "id": "e3",
+                  "name": "本机新增",
+                  "url": "",
+                  "user": "u3",
+                  "pwd": "pw-e3",
+                  "note": "",
+                  "rev": 1,
+                  "updatedAt": 1
+                },
+                {
+                  "id": "e4",
+                  "name": "云端新增",
+                  "url": "",
+                  "user": "u4",
+                  "pwd": "pw-e4",
+                  "note": "",
+                  "rev": 1,
+                  "updatedAt": 1
+                }
+              ]
+            },
+            "set": {
+              "autofill": true
+            },
+            "rev": 3,
+            "createdAt": 1,
+            "updatedAt": 5
+          }
+        ],
+        "links": [],
+        "atts": []
+      }
+    },
+    {
+      "name": "删除和编辑 rev、时间都一样：删除赢",
+      "local": {
+        "nodes": [
+          {
+            "id": "d",
+            "kind": "text",
+            "title": "T",
+            "parent": null,
+            "ord": "0V",
+            "data": {
+              "body": ""
+            },
+            "set": {},
+            "rev": 2,
+            "createdAt": 1,
+            "updatedAt": 7,
+            "del": {
+              "at": 7,
+              "grp": "d"
+            }
+          }
+        ],
+        "links": [],
+        "atts": []
+      },
+      "remote": {
+        "nodes": [
+          {
+            "id": "d",
+            "kind": "text",
+            "title": "T 改了",
+            "parent": null,
+            "ord": "0V",
+            "data": {
+              "body": "x"
+            },
+            "set": {},
+            "rev": 2,
+            "createdAt": 1,
+            "updatedAt": 7
+          }
+        ],
+        "links": [],
+        "atts": []
+      },
+      "expected": {
+        "nodes": [
+          {
+            "id": "d",
+            "kind": "text",
+            "title": "T",
+            "parent": null,
+            "ord": "0V",
+            "data": {
+              "body": ""
+            },
+            "set": {},
+            "rev": 2,
+            "createdAt": 1,
+            "updatedAt": 7,
+            "del": {
+              "at": 7,
+              "grp": "d"
+            }
+          }
+        ],
+        "links": [],
+        "atts": []
+      }
+    },
+    {
+      "name": "首合：本机是迁移来的 rev 0、迁移前更新过；云端迁移后又改过 → 两份都留",
+      "local": {
+        "nodes": [
+          {
+            "id": "c",
+            "kind": "cat",
+            "title": "工作",
+            "parent": null,
+            "ord": "0V",
+            "data": {},
+            "set": {},
+            "rev": 0,
+            "createdAt": 1,
+            "updatedAt": 1,
+            "mig": {
+              "src": 9
+            }
+          },
+          {
+            "id": "w",
+            "kind": "acct",
+            "title": "邮箱",
+            "parent": "c",
+            "ord": "0V",
+            "data": {
+              "user": "u",
+              "pwd": "本机离线改的",
+              "seed": "",
+              "url": "",
+              "note": ""
+            },
+            "set": {},
+            "rev": 0,
+            "createdAt": 1,
+            "updatedAt": 1,
+            "mig": {
+              "src": 9
+            }
+          }
+        ],
+        "links": [],
+        "atts": []
+      },
+      "remote": {
+        "nodes": [
+          {
+            "id": "c",
+            "kind": "cat",
+            "title": "工作",
+            "parent": null,
+            "ord": "0V",
+            "data": {},
+            "set": {},
+            "rev": 0,
+            "createdAt": 1,
+            "updatedAt": 1,
+            "mig": {
+              "src": 7
+            }
+          },
+          {
+            "id": "w",
+            "kind": "acct",
+            "title": "邮箱",
+            "parent": "c",
+            "ord": "0V",
+            "data": {
+              "user": "u",
+              "pwd": "云端改的",
+              "seed": "",
+              "url": "",
+              "note": ""
+            },
+            "set": {},
+            "rev": 1,
+            "createdAt": 1,
+            "updatedAt": 50,
+            "mig": {
+              "src": 7
+            }
+          }
+        ],
+        "links": [],
+        "atts": []
+      },
+      "expected": {
+        "nodes": [
+          {
+            "id": "c",
+            "kind": "cat",
+            "title": "工作",
+            "parent": null,
+            "ord": "0V",
+            "data": {},
+            "set": {},
+            "rev": 0,
+            "createdAt": 1,
+            "updatedAt": 1,
+            "mig": {
+              "src": 9
+            }
+          },
+          {
+            "id": "w",
+            "kind": "acct",
+            "title": "邮箱",
+            "parent": "c",
+            "ord": "0V",
+            "data": {
+              "user": "u",
+              "pwd": "云端改的",
+              "seed": "",
+              "url": "",
+              "note": ""
+            },
+            "set": {},
+            "rev": 1,
+            "createdAt": 1,
+            "updatedAt": 50,
+            "mig": {
+              "src": 7
+            }
+          },
+          {
+            "id": "w~9",
+            "kind": "acct",
+            "title": "邮箱（另一台设备上没同步的改动）",
+            "parent": "c",
+            "ord": "0VV",
+            "data": {
+              "user": "u",
+              "pwd": "本机离线改的",
+              "seed": "",
+              "url": "",
+              "note": ""
+            },
+            "set": {},
+            "rev": 1,
+            "createdAt": 1,
+            "updatedAt": 1
+          }
+        ],
+        "links": [],
+        "atts": []
+      }
+    },
+    {
+      "name": "两边都是迁移来的 rev 0：迁移前那条记录更新的赢",
+      "local": {
+        "nodes": [
+          {
+            "id": "t",
+            "kind": "text",
+            "title": "旧",
+            "parent": null,
+            "ord": "0V",
+            "data": {
+              "body": "src 3"
+            },
+            "set": {},
+            "rev": 0,
+            "createdAt": 1,
+            "updatedAt": 1,
+            "mig": {
+              "src": 3
+            }
+          }
+        ],
+        "links": [],
+        "atts": []
+      },
+      "remote": {
+        "nodes": [
+          {
+            "id": "t",
+            "kind": "text",
+            "title": "新",
+            "parent": null,
+            "ord": "0V",
+            "data": {
+              "body": "src 5"
+            },
+            "set": {},
+            "rev": 0,
+            "createdAt": 1,
+            "updatedAt": 1,
+            "mig": {
+              "src": 5
+            }
+          }
+        ],
+        "links": [],
+        "atts": []
+      },
+      "expected": {
+        "nodes": [
+          {
+            "id": "t",
+            "kind": "text",
+            "title": "新",
+            "parent": null,
+            "ord": "0V",
+            "data": {
+              "body": "src 5"
+            },
+            "set": {},
+            "rev": 0,
+            "createdAt": 1,
+            "updatedAt": 1,
+            "mig": {
+              "src": 5
+            }
+          }
+        ],
+        "links": [],
+        "atts": []
+      }
+    }
+  ],
+  "autofill": {
+    "input": {
+      "nodes": [
+        {
+          "id": "router",
+          "kind": "acct",
+          "title": "路由器后台",
+          "parent": null,
+          "ord": "1V",
+          "data": {
+            "user": "admin",
+            "pwd": "r0uter",
+            "seed": "",
+            "url": "http://192.168.1.1:8080/login",
+            "note": ""
+          },
+          "set": {},
+          "rev": 1,
+          "createdAt": 1,
+          "updatedAt": 1
+        },
+        {
+          "id": "me",
+          "kind": "cat",
+          "title": "个人",
+          "parent": null,
+          "ord": "0V",
+          "data": {},
+          "set": {},
+          "rev": 1,
+          "createdAt": 1,
+          "updatedAt": 1
+        },
+        {
+          "id": "work",
+          "kind": "cat",
+          "title": "工作",
+          "parent": "me",
+          "ord": "0V",
+          "data": {},
+          "set": {},
+          "rev": 1,
+          "createdAt": 1,
+          "updatedAt": 1
+        },
+        {
+          "id": "gh",
+          "kind": "acct",
+          "title": "GitHub",
+          "parent": "work",
+          "ord": "1V",
+          "data": {
+            "user": "sam",
+            "pwd": "gh-pw",
+            "seed": "",
+            "url": "https://www.github.com",
+            "note": ""
+          },
+          "set": {},
+          "rev": 1,
+          "createdAt": 1,
+          "updatedAt": 1
+        },
+        {
+          "id": "cloud",
+          "kind": "multi",
+          "title": "云服务",
+          "parent": "work",
+          "ord": "0V",
+          "data": {
+            "entries": [
+              {
+                "id": "ali",
+                "name": "阿里云",
+                "url": "https://aliyun.com",
+                "user": "sam@ali",
+                "pwd": "pw-ali",
+                "note": "",
+                "rev": 1,
+                "updatedAt": 1
+              },
+              {
+                "id": "glab",
+                "name": "GitLab",
+                "url": "",
+                "user": "sam-gl",
+                "pwd": "pw-glab",
+                "note": "",
+                "rev": 1,
+                "updatedAt": 1
+              },
+              {
+                "id": "old",
+                "name": "旧云",
+                "url": "https://old.example",
+                "user": "x",
+                "pwd": "pw-old",
+                "note": "",
+                "rev": 1,
+                "updatedAt": 1,
+                "del": {
+                  "at": 5,
+                  "grp": "cloud:old"
+                }
+              },
+              {
+                "id": "blank",
+                "name": "空账户",
+                "url": "https://blank.example",
+                "user": "",
+                "pwd": "pw-blank",
+                "note": "",
+                "rev": 1,
+                "updatedAt": 1
+              }
+            ]
+          },
+          "set": {
+            "autofill": true
+          },
+          "rev": 1,
+          "createdAt": 1,
+          "updatedAt": 1
+        },
+        {
+          "id": "proj",
+          "kind": "cat",
+          "title": "项目",
+          "parent": "work",
+          "ord": "2V",
+          "data": {},
+          "set": {},
+          "rev": 1,
+          "createdAt": 1,
+          "updatedAt": 1
+        },
+        {
+          "id": "deep",
+          "kind": "acct",
+          "title": "Jira",
+          "parent": "proj",
+          "ord": "0V",
+          "data": {
+            "user": "sam.j",
+            "pwd": "jira",
+            "seed": "",
+            "url": "https://jira.example",
+            "note": ""
+          },
+          "set": {},
+          "rev": 1,
+          "createdAt": 1,
+          "updatedAt": 1
+        },
+        {
+          "id": "quiet",
+          "kind": "multi",
+          "title": "不填的",
+          "parent": "me",
+          "ord": "1V",
+          "data": {
+            "entries": [
+              {
+                "id": "q1",
+                "name": "某站",
+                "url": "https://q.example",
+                "user": "q",
+                "pwd": "pw-q1",
+                "note": "",
+                "rev": 1,
+                "updatedAt": 1
+              }
+            ]
+          },
+          "set": {
+            "autofill": false
+          },
+          "rev": 1,
+          "createdAt": 1,
+          "updatedAt": 1
+        },
+        {
+          "id": "binned",
+          "kind": "acct",
+          "title": "删掉的",
+          "parent": "me",
+          "ord": "2V",
+          "data": {
+            "user": "gone",
+            "pwd": "gone",
+            "seed": "",
+            "url": "",
+            "note": ""
+          },
+          "set": {},
+          "rev": 1,
+          "createdAt": 1,
+          "updatedAt": 1,
+          "del": {
+            "at": 9,
+            "grp": "binned"
+          }
+        },
+        {
+          "id": "rootMulti",
+          "kind": "multi",
+          "title": "游戏",
+          "parent": null,
+          "ord": "2V",
+          "data": {
+            "entries": [
+              {
+                "id": "st",
+                "name": "Steam",
+                "url": "https://store.steampowered.com",
+                "user": "gamer",
+                "pwd": "pw-st",
+                "note": "",
+                "rev": 1,
+                "updatedAt": 1
+              }
+            ]
+          },
+          "set": {},
+          "rev": 1,
+          "createdAt": 1,
+          "updatedAt": 1
+        }
+      ],
+      "links": [],
+      "atts": []
+    },
+    "candidates": [
+      {
+        "line1": "sam@ali",
+        "line2": "阿里云 · 个人 › 工作 › 云服务",
+        "recordIdentifier": "cloud:ali",
+        "service": "aliyun.com",
+        "user": "sam@ali",
+        "url": "https://aliyun.com",
+        "name": "阿里云"
+      },
+      {
+        "line1": "sam-gl",
+        "line2": "GitLab · 个人 › 工作 › 云服务",
+        "recordIdentifier": "cloud:glab",
+        "service": "GitLab",
+        "user": "sam-gl",
+        "url": "",
+        "name": "GitLab"
+      },
+      {
+        "line1": "（没有账号）",
+        "line2": "空账户 · 个人 › 工作 › 云服务",
+        "recordIdentifier": "cloud:blank",
+        "service": "blank.example",
+        "user": "",
+        "url": "https://blank.example",
+        "name": "空账户"
+      },
+      {
+        "line1": "sam",
+        "line2": "GitHub · 个人 › 工作",
+        "recordIdentifier": "gh",
+        "service": "github.com",
+        "user": "sam",
+        "url": "https://www.github.com",
+        "name": "GitHub"
+      },
+      {
+        "line1": "sam.j",
+        "line2": "Jira · … › 工作 › 项目",
+        "recordIdentifier": "deep",
+        "service": "jira.example",
+        "user": "sam.j",
+        "url": "https://jira.example",
+        "name": "Jira"
+      },
+      {
+        "line1": "admin",
+        "line2": "路由器后台",
+        "recordIdentifier": "router",
+        "service": "192.168.1.1",
+        "user": "admin",
+        "url": "http://192.168.1.1:8080/login",
+        "name": "路由器后台"
+      },
+      {
+        "line1": "gamer",
+        "line2": "Steam · 游戏",
+        "recordIdentifier": "rootMulti:st",
+        "service": "store.steampowered.com",
+        "user": "gamer",
+        "url": "https://store.steampowered.com",
+        "name": "Steam"
+      }
+    ],
+    "nameMatches": [
+      {
+        "name": "GitLab",
+        "target": "gitlab.com",
+        "out": true
+      },
+      {
+        "name": "GitLab",
+        "target": "com.gitlab.app",
+        "out": true
+      },
+      {
+        "name": "Git Lab",
+        "target": "gitlab.com",
+        "out": true
+      },
+      {
+        "name": "GitLab",
+        "target": "gitlabx.com",
+        "out": false
+      },
+      {
+        "name": "Git",
+        "target": "git.example",
+        "out": true
+      },
+      {
+        "name": "阿里云",
+        "target": "aliyun.com",
+        "out": false
+      }
+    ]
+  }
+}
