@@ -139,7 +139,19 @@ class UmbraHttp(
         timeoutMs: Long? = null,
         authed: Boolean = true,
     ): HttpResult = when (val x = exchange(method, url(path, query), path, body, headers, timeoutMs, authed, followHttpsAway = false, ours = true)) {
-        is Exchange.Got -> x.resp.use { handle(it, x.token) }
+        // 读正文也是网络 IO：exchange 只把「拿到响应头」放在了 IO 线程，正文还在 socket 里。调用方在主线程时
+        // （点按钮直接 launch 的那些）读正文会抛 NetworkOnMainThreadException 整个崩 —— 线上大多数回包小、和响应头
+        // 同一段到达，碰巧没读 socket；本机明文 HTTP 联调权限确认卡时稳定复现。bytes() 那条一直是在 IO 里读的。
+        is Exchange.Got -> withContext(Dispatchers.IO) {
+            x.resp.use {
+                try {
+                    handle(it, x.token)
+                } catch (e: IOException) {
+                    if (!prefs.signedOut) _offline.value = true
+                    HttpResult.Offline(e.message ?: e.javaClass.simpleName)
+                }
+            }
+        }
         is Exchange.Gave -> x.result
     }
 
