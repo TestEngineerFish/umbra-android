@@ -135,3 +135,46 @@ object VaultFindRules {
         return out
     }
 }
+
+/**
+ * 表格的密文格（三端契约《保险箱-格级密文-三端契约》，PC d779752）：一格算密文，**当且仅当**它所在的列在 `set.mask` 里，
+ * 或者 `[行, 列]` 在 `set.maskCells` 里（行号 = `data.rows` 的下标，列号 = `data.cols` 的下标）。没有反向例外。
+ * 旧端不认 `maskCells` 会把这几格明文显示、收进搜索 —— 所以显示、搜索、详情查找三处都只走这一个判据。
+ * Android 这一轮只读不写：没有「设为 / 取消密文」的入口，存回去时 `set` 整个原样带回（`maskCells` 不碰）。
+ */
+class VaultTableMask(val cols: Set<Int>, val cells: Set<Pair<Int, Int>>) {
+    fun secret(row: Int, col: Int): Boolean = col in cols || (row to col) in cells
+    /** 卡头要不要给那只眼睛：有任何一种密文。 */
+    val any: Boolean get() = cols.isNotEmpty() || cells.isNotEmpty()
+
+    companion object {
+        /** 只认整数值（1.0 算 1，1.5 不算），其余丢掉。 */
+        private fun intOf(e: kotlinx.serialization.json.JsonElement?): Int? {
+            val x = e.vNumber ?: return null
+            return if (x == Math.rint(x)) VNum.int(x) else null
+        }
+
+        /**
+         * `set.maskCells` 按契约第二节整形：只留整数、只留落在表里的、去重、先行后列升序。坏数据（不是数组、不是二元组）丢掉。
+         * 回 null = 没有这个键（或不是数组）。
+         */
+        fun sanitizeCells(raw: kotlinx.serialization.json.JsonElement?, rowCount: Int, colCount: Int): List<Pair<Int, Int>>? {
+            val arr = raw.vArray ?: return null
+            return arr.mapNotNull { p ->
+                val a = p.vArray ?: return@mapNotNull null
+                if (a.size != 2) return@mapNotNull null
+                val r = intOf(a[0]) ?: return@mapNotNull null
+                val c = intOf(a[1]) ?: return@mapNotNull null
+                if (r in 0 until rowCount && c in 0 until colCount) r to c else null
+            }.distinct().sortedWith(compareBy({ it.first }, { it.second }))
+        }
+
+        fun of(n: VNode): VaultTableMask {
+            val cols = (n.set["mask"].vArray ?: emptyList()).mapNotNull { intOf(it) }.toSet()
+            val rowCount = n.data["rows"].vArray?.size ?: 0
+            // 列数按表头算；表头比某一行短的旧数据，按最长那一行兜底（越界的格子照样能被标）。
+            val colCount = maxOf(n.data["cols"].vStrings.size, (n.data["rows"].vArray ?: emptyList()).maxOfOrNull { it.vArray?.size ?: 0 } ?: 0)
+            return VaultTableMask(cols, sanitizeCells(n.set["maskCells"], rowCount, colCount)?.toSet() ?: emptySet())
+        }
+    }
+}

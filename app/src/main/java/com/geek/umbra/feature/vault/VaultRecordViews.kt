@@ -386,12 +386,15 @@ internal fun VaultNodeCard(node: VNode, item: VItem, items: List<VItem>, mark: V
     // 树形库传自己的解析（按节点 id 在整棵树里查）；fmt 2 照旧按记录查。
     val resolve = resolver ?: mentionResolver(item, items)
     fun plain(s: String) = VaultMentionRules.plainText(s, resolve)
-    val maskedCols = (node.set["mask"].vArray ?: emptyList()).mapNotNull { it.vNumber }.mapNotNull { VNum.int(it) }.toSet()
+    val mask = remember(node) { VaultTableMask.of(node) }
     var tableMasked by rememberSaveable(node.id) { mutableStateOf(node.flag("masked", true)) }
+    var revealTick by remember { mutableIntStateOf(0) }
+    // 点眼睛显出来的密文（列 + 格）8 秒后自动重新遮盖，同其它敏感值。set.masked 本来就关着的表不管。
+    LaunchedEffect(revealTick) { if (revealTick > 0 && !tableMasked && node.flag("masked", true)) { delay(8_000); tableMasked = true } }
     NodeShell(node, mark, trailing = {
-        if (node.kind == "table" && maskedCols.isNotEmpty()) {
-            Box(Modifier.size(UmbraDimens.tapMin).clickable(role = Role.Button) { tableMasked = !tableMasked }, contentAlignment = Alignment.Center) {
-                UmbraIcon(if (tableMasked) UmbraIconPaths.eye else UmbraIconPaths.eyeOff, c.muted, size = 18.dp, contentDescription = if (tableMasked) "显示密文列" else "隐藏密文列")
+        if (node.kind == "table" && mask.any) {
+            Box(Modifier.size(UmbraDimens.tapMin).clickable(role = Role.Button) { tableMasked = !tableMasked; revealTick++ }, contentAlignment = Alignment.Center) {
+                UmbraIcon(if (tableMasked) UmbraIconPaths.eye else UmbraIconPaths.eyeOff, c.muted, size = 18.dp, contentDescription = if (tableMasked) "显示密文" else "隐藏密文")
             }
         }
     }) {
@@ -420,7 +423,7 @@ internal fun VaultNodeCard(node: VNode, item: VItem, items: List<VItem>, mark: V
                 }
                 Rows(rows.ifEmpty { listOf<@Composable () -> Unit>({ VaultFieldRow("账号", "") }) })
             }
-            "table" -> TableBody(node, maskedCols, tableMasked, mark, resolve)
+            "table" -> TableBody(node, mask, tableMasked, mark, resolve)
             "img" -> ImgBody(node, item, mark)
             "file" -> {
                 val list = node.data["items"].vArray ?: emptyList()
@@ -449,7 +452,7 @@ internal fun VaultNodeCard(node: VNode, item: VItem, items: List<VItem>, mark: V
 
 /** 表格：横向可滚的格子；点一格复制（cellCopy 开时）；密文列按眼睛遮。 */
 @Composable
-private fun TableBody(node: VNode, maskedCols: Set<Int>, tableMasked: Boolean, mark: VaultFindMark?, resolve: MentionResolve) {
+private fun TableBody(node: VNode, mask: VaultTableMask, tableMasked: Boolean, mark: VaultFindMark?, resolve: MentionResolve) {
     val c = UmbraTheme.colors
     val cols = node.data["cols"].vStrings
     val rows = (node.data["rows"].vArray ?: emptyList()).map { it.vStrings }
@@ -468,13 +471,13 @@ private fun TableBody(node: VNode, maskedCols: Set<Int>, tableMasked: Boolean, m
             if (ri > 0) Box(Modifier.height(1.dp).widthIn(min = 110.dp * maxOf(1, row.size)).background(c.borderSoft))
             Row {
                 row.forEachIndexed { ci, raw ->
-                    val masked = ci in maskedCols
+                    val masked = mask.secret(ri, ci)
                     val value = VaultMentionRules.plainText(raw, resolve)
                     val hidden = masked && tableMasked && value.isNotEmpty()
                     val text: AnnotatedString = when {
                         hidden -> AnnotatedString("•".repeat(VaultAudit.graphemeCount(value).coerceIn(4, 12)))
                         value.isEmpty() -> AnnotatedString("—")
-                        // ⚠️ 密文列哪怕点了眼睛显出来也不标：高亮会说出「这个词就在密文里」。
+                        // ⚠️ 密文列 / 密文格哪怕点了眼睛显出来也不标：高亮会说出「这个词就在密文里」。
                         mark != null && !masked && VaultFindRules.ranges(value, mark.query).isNotEmpty() -> markedText(value, mark)
                         else -> mentionText(raw, resolve)
                     }

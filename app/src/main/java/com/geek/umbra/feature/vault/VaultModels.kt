@@ -411,10 +411,11 @@ data class VNode(
             "text" -> if (!flag("masked", false)) out += plain(data["body"].vString)
             "acct" -> { out += data["user"].vString; out += data["url"].vString; out += plain(data["note"].vString) }
             "table" -> {
-                val masked = (set["mask"].vArray ?: emptyList()).mapNotNull { it.vNumber }.mapNotNull { VNum.int(it) }.toSet()
+                // 密文列和密文格（maskCells）都不进：不管 set.masked 开没开（开关管「现在给不给看」，标记管「这是秘密」）。
+                val mask = VaultTableMask.of(this)
                 out += data["cols"].vStrings
-                for (row in data["rows"].vArray ?: emptyList()) {
-                    (row.vArray ?: emptyList()).forEachIndexed { ci, cell -> if (ci !in masked) out += plain(cell.vString) }
+                (data["rows"].vArray ?: emptyList()).forEachIndexed { ri, row ->
+                    (row.vArray ?: emptyList()).forEachIndexed { ci, cell -> if (!mask.secret(ri, ci)) out += plain(cell.vString) }
                 }
             }
             "img", "file" -> for (it in data["items"].vArray ?: emptyList()) out += it.vObject?.get("name").vString
