@@ -51,6 +51,21 @@ object TaskUnfinishedRules {
     /** 列表副行「没做成：原因」；没原因只写「没做成」。 */
     fun listSub(summary: String?): String = reason(summary)?.let { "$LABEL：$it" } ?: LABEL
 
+    /** ［在聊天里说这句］的那句话（服务端 #178 `next_action.say`，只在拿得准时带）：没有就不出钮，只显示文字。 */
+    fun say(raw: String?): String? = raw?.trim()?.ifEmpty { null }
+
+    /**
+     * 聊天里那条「❌「目标」没做成：…」是不是某张任务卡的复述（#178 `meta.task_id`）：带 task_id、不带 action 才算 ——
+     * 「要接着跑吗？」那条也带 task_id，但它带 `action: resume_task`，是要画出来的问话。
+     */
+    fun echoTaskId(action: String?, taskId: String?): String? = if (action.isNullOrEmpty() && !taskId.isNullOrEmpty()) taskId else null
+
+    /** 从那条复述里认出任务名（服务端 _fail_unfinished 的固定开头 `❌ 「目标」没做成：`）；认不出回 null。 */
+    fun echoName(text: String): String? = Regex("""^❌\s*「(.+?)」没做成""").find(text.trim())?.groupValues?.get(1)?.trim()?.ifEmpty { null }
+
+    /** 会话列表预览（320 §4）：「没做成：任务名」，前面一枚灰禁行圈由界面画。 */
+    fun previewText(name: String): String = "$LABEL：$name"
+
     /** 系统通知标题（320 §5）：「没做成：任务名」。 */
     fun notifyTitle(taskName: String): String = "$LABEL：$taskName"
 }

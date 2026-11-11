@@ -190,6 +190,8 @@ sealed interface ChatBlock {
         val citations: List<KbCitation> = emptyList(),
         /** 执勤消息的 meta.duty 原样（交给执勤模块的 DutyChatApi 解析）。 */
         val duty: JsonObject? = null,
+        /** 这条是某张任务卡「没做成」的复述（`meta.task_id`，#178）：卡在会话里时不画（[ChatEchoRules]）。 */
+        val echoOfTask: String? = null,
     ) : ChatBlock
 
     /** 设备会话里设备说的一条。 */
@@ -214,6 +216,8 @@ sealed interface ChatBlock {
         /** 没做成（设计侧 320）时的原因 / 下一步：task_update 不带，收尾拉详情时从失败那一步的 error 补上（fillExecutor）。 */
         val unfinishedReason: String? = null,
         val nextStep: String? = null,
+        /** ［在聊天里说这句］那句（task_update(failed) 顶层 `next_action.say`，#178）。 */
+        val nextSay: String? = null,
         val operate: Boolean = false,
         val retrying: Boolean = false,
         val retryOutcome: TaskRetryOutcome? = null,
@@ -267,7 +271,20 @@ sealed interface ChatBlock {
 }
 
 /** 会话列表预览。 */
-data class ConvPreview(val text: String = "", val at: String? = null)
+/** [unfinished]：这条预览是「没做成：任务名」（设计侧 320 §4），前面画一枚灰禁行圈。 */
+data class ConvPreview(val text: String = "", val at: String? = null, val unfinished: Boolean = false)
+
+/**
+ * 「没做成」那条聊天复述的去重（设计侧 320 §4）：同一任务的卡已在这个会话里，就不画那条气泡（卡上状态、原因、下一步是全的）。
+ * 只在交给界面那一刻滤：块表本身不动，下标类状态（taskMap / assistantIdx）不受影响；卡不在了（重进会话）它照常画出来。
+ */
+object ChatEchoRules {
+    fun visible(blocks: List<ChatBlock>): List<ChatBlock> {
+        val cards = blocks.mapNotNullTo(HashSet()) { (it as? ChatBlock.Task)?.taskId }
+        if (cards.isEmpty()) return blocks
+        return blocks.filter { !(it is ChatBlock.Assistant && it.echoOfTask != null && it.echoOfTask in cards) }
+    }
+}
 
 /** 翻页那一行的四档 + 空态判断要的几样（当前会话）。 */
 data class HistoryRowState(val show: Boolean = false, val loading: Boolean = false, val failed: Boolean = false, val exhausted: Boolean = false)

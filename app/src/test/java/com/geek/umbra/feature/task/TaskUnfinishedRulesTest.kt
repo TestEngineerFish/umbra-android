@@ -58,4 +58,33 @@ class TaskUnfinishedRulesTest {
         assertEquals("先登录", e.next_step)
         assertNull(UmbraJson.decodeFromString(StepError.serializer(), """{"kind":"x"}""").next_step)
     }
+
+    @Test fun sayAndEcho() {
+        assertEquals("帮我建一个 pw 工作流", TaskUnfinishedRules.say(" 帮我建一个 pw 工作流 "))
+        assertNull(TaskUnfinishedRules.say(""))
+        // 只带 task_id 的是复述；「要接着跑吗？」那条带 action，不算
+        assertEquals("t1", TaskUnfinishedRules.echoTaskId(null, "t1"))
+        assertNull(TaskUnfinishedRules.echoTaskId("resume_task", "t1"))
+        assertNull(TaskUnfinishedRules.echoTaskId(null, ""))
+        assertEquals("新建 pw 随机密码工作流", TaskUnfinishedRules.echoName("❌ 「新建 pw 随机密码工作流」没做成：调不到\n下一步：…"))
+        assertEquals("x", TaskUnfinishedRules.echoName("❌「x」没做成：y"))
+        assertNull(TaskUnfinishedRules.echoName("好的，「x」没做成也没关系"))
+        assertEquals("没做成：x", TaskUnfinishedRules.previewText("x"))
+    }
+
+    @Test fun echoHiddenOnlyWhenCardInConversation() {
+        val card = com.geek.umbra.feature.chat.ChatBlock.Task(taskId = "t1", goal = "g", pct = 50, status = "failed", message = "")
+        val echo = com.geek.umbra.feature.chat.ChatBlock.Assistant(text = "❌ 「g」没做成：r", echoOfTask = "t1")
+        val other = com.geek.umbra.feature.chat.ChatBlock.Assistant(text = "❌ 「h」没做成：r", echoOfTask = "t2")
+        val plain = com.geek.umbra.feature.chat.ChatBlock.Assistant(text = "hi")
+        assertEquals(listOf(card, other, plain), com.geek.umbra.feature.chat.ChatEchoRules.visible(listOf(card, echo, other, plain)))
+        // 卡不在（重进会话、历史里没有卡）：照常画
+        assertEquals(listOf(echo, plain), com.geek.umbra.feature.chat.ChatEchoRules.visible(listOf(echo, plain)))
+    }
+
+    @Test fun decodesNextAction() {
+        val e = UmbraJson.decodeFromString(StepError.serializer(),
+            """{"kind":"unfinished","reason_kind":"unfinished","next_step":"s","next_action":{"say":"帮我建一个 pw 工作流"}}""")
+        assertEquals("帮我建一个 pw 工作流", e.next_action?.say)
+    }
 }

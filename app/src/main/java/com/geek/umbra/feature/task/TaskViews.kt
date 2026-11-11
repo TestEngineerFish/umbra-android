@@ -701,8 +701,8 @@ private fun FailBlock(d: TaskDetail, summary: String) {
 
 /**
  * 「没做成」块（设计侧 320 稿 D / `cannotComplete.block`）：chip 头「没做成」+ 右侧灰字停在哪一步；正文只写原因；
- * 有 next_step 才出浅底「下一步」块（不编兜底）；不给［重试任务］［去看能力］，重试在右上 ⋯。
- * ［在聊天里说这句］要等服务端的结构化字段（320 §3），字段没上之前只显示文字。
+ * 有 next_step 才出浅底「下一步」块（不编兜底）；有 next_action.say（#178）才出主钮［在聊天里说这句］；
+ * 不给［重试任务］［去看能力］，重试在右上 ⋯。
  */
 @Composable
 private fun UnfinishedBlock(d: TaskDetail, summary: String) {
@@ -711,6 +711,7 @@ private fun UnfinishedBlock(d: TaskDetail, summary: String) {
     val err = step?.error
     val reason = TaskUnfinishedRules.reasonOf(err?.message, err?.detail, summary)
     val next = TaskUnfinishedRules.nextStep(err?.next_step)
+    val say = TaskUnfinishedRules.say(err?.next_action?.say)
     val meta = TaskUnfinishedRules.stoppedAt(step?.seq, step?.title)
     val shape = RoundedCornerShape(UmbraDimens.radiusCard)
     var showRaw by remember { mutableStateOf(false) }
@@ -730,6 +731,8 @@ private fun UnfinishedBlock(d: TaskDetail, summary: String) {
                     SelectionContainer { Text(next, color = c.text, style = TextStyle(fontSize = 13.5.sp, lineHeight = 21.sp)) }
                 }
             }
+            // 主钮［在聊天里说这句］（稿 D：整宽 40 高）：有 next_action.say 才给；打开秘书聊天、填进输入框，不替他发。
+            if (say != null) UmbraButton("在聊天里说这句", { com.geek.umbra.feature.chat.ChatApi.startDraft(say) }, Modifier.fillMaxWidth(), height = 40.dp)
             if (summary.isNotEmpty()) {
                 UmbraStripAction(if (showRaw) "收起原始返回" else "查看原始返回", c.faint, { showRaw = !showRaw })
                 if (showRaw) Text(

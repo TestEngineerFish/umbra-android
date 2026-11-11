@@ -161,6 +161,11 @@ private fun ContactRow(conv: String, dev: com.geek.umbra.model.KnownDevice?, pre
                     // 预览单行：换行压成空格
                     val pv = preview?.text?.takeIf { it.isNotEmpty() }?.replace("\n", " ")
                         ?: if (isSecretary) "你的 AI 秘书" else "还没有对话"
+                    // 「没做成：任务名」前面一枚灰禁行圈（设计侧 320 §4：13 muted，不用红 ❌）。
+                    if (preview?.unfinished == true) {
+                        UmbraIcon(UmbraIconPaths.ban, c.muted, size = 13.dp, strokeWidth = 2f)
+                        Spacer(Modifier.width(4.dp))
+                    }
                     Text(pv, color = c.muted, style = UmbraType.rowSub, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                     Spacer(Modifier.width(8.dp))
                     if (unread) {

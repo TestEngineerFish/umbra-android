@@ -65,7 +65,13 @@ data class StepError(
     val window: String? = null,
     /** 没做成时用户下一步可以怎么办（服务端 #175，可能没有）：详情「下一步」块、任务卡那一行（设计侧 320 §3）。 */
     val next_step: String? = null,
+    /** 可点的下一步（服务端 #178）：`{say: 用户原话}`，有它才出［在聊天里说这句］。 */
+    val next_action: NextAction? = null,
 )
+
+/** 「没做成」时可照做的下一步。目前只有 say：把这句填进秘书聊天的输入框（不替用户发）。 */
+@Serializable
+data class NextAction(val say: String? = null)
 
 @Serializable
 data class TaskStep(

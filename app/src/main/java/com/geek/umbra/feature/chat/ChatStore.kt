@@ -241,8 +241,18 @@ object ChatStore {
     /** 联系人顺序：秘书恒在首位 → 在线设备 → 离线设备（服务端已排好）。 */
     fun contacts(devs: List<KnownDevice>): List<String> = listOf(MAIN_CONV) + devs.map { it.conversation }
 
+    /** 「没做成：任务名」那条预览（灰禁行圈）。 */
+    private fun setUnfinishedPreview(conv: String, name: String, at: String?) {
+        if (name.isEmpty()) return
+        _previews.value = _previews.value + (conv to ConvPreview(com.geek.umbra.feature.task.TaskUnfinishedRules.previewText(name), at, unfinished = true))
+    }
+
     private fun setPreview(conv: String, text: String, at: String?) {
         if (text.isEmpty()) return
+        // 「没做成」那条复述：预览换成「没做成：任务名」+ 灰禁行圈（设计侧 320 §4）。/conversations 的 last_content 不带 meta，
+        // 按服务端那句的固定开头认（_fail_unfinished：`❌ 「目标」没做成：…`）；认不出就照原文。
+        val name = com.geek.umbra.feature.task.TaskUnfinishedRules.echoName(text)
+        if (name != null) return setUnfinishedPreview(conv, name, at)
         _previews.value = _previews.value + (conv to ConvPreview(text, at))
     }
 
@@ -251,7 +261,7 @@ object ChatStore {
     /** 只把变更反映到当前会话，**不标未读**（删除、找回、卡片作答这类「不是新消息」的变更）。 */
     private fun refresh(conv: String) {
         if (conv == _activeConv.value) {
-            _blocks.value = store(conv).blocks.toList()
+            _blocks.value = ChatEchoRules.visible(store(conv).blocks.toList())
             publishHistoryRow()
         }
     }
@@ -259,7 +269,7 @@ object ChatStore {
     /** 当前会话 → 更新 blocks；否则标未读。 */
     private fun reflect(conv: String) {
         if (conv == _activeConv.value) {
-            _blocks.value = store(conv).blocks.toList()
+            _blocks.value = ChatEchoRules.visible(store(conv).blocks.toList())
             publishHistoryRow()
         } else {
             _unread.value = _unread.value + conv
@@ -399,7 +409,7 @@ object ChatStore {
                 ChatBlock.Assistant(
                     text = content, ts = ts, serverId = id, interrupted = meta?.bool("interrupted") ?: false,
                     toolsRun = tools(meta), resumeTaskId = resumeId, citations = KbCitations.parse(meta?.get("citations")),
-                    duty = meta?.obj("duty"),
+                    duty = meta?.obj("duty"), echoOfTask = com.geek.umbra.feature.task.TaskUnfinishedRules.echoTaskId(meta?.str("action"), meta?.str("task_id")),
                 )
             }
         }
@@ -452,7 +462,7 @@ object ChatStore {
         // 引用是单例状态：带着它发到别的会话，就是一条指向别处的引用，点了永远跳不过去
         quote.value = null
         val s = store(conv)
-        _blocks.value = s.blocks.toList()
+        _blocks.value = ChatEchoRules.visible(s.blocks.toList())
         publishHistoryRow()
         if (!s.loaded) {
             if (conv == MAIN_CONV) loadHistory() else loadConvHistory(conv)
@@ -1469,6 +1479,7 @@ object ChatStore {
                 s.blocks += ChatBlock.Assistant(
                     text = text, ts = ts, serverId = mid, interrupted = meta?.bool("interrupted") ?: false, toolsRun = tools(meta),
                     resumeTaskId = resumeId, citations = KbCitations.parse(meta?.get("citations")), duty = meta?.obj("duty"),
+                    echoOfTask = com.geek.umbra.feature.task.TaskUnfinishedRules.echoTaskId(meta?.str("action"), meta?.str("task_id")),
                 )
             }
         }
@@ -1559,6 +1570,9 @@ object ChatStore {
                     failTopupKey = ReasonRules.topupButtonKey(ReasonRules.resolve(msg.str("reason_kind"), null)),
                     failReasonKind = msg.str("reason_kind"),
                     quotaWindow = com.geek.umbra.feature.account.ResetCardRules.quotaWindowOf(msg.str("window")),
+                    // 没做成：task_update(failed) 顶层自带下一步与可点那句（#178），卡上不靠补拉详情。
+                    nextStep = com.geek.umbra.feature.task.TaskUnfinishedRules.nextStep(msg.str("next_step")) ?: j.nextStep,
+                    nextSay = com.geek.umbra.feature.task.TaskUnfinishedRules.say(msg.obj("next_action")?.str("say")) ?: j.nextSay,
                 )
             }
             if (status != null) {
@@ -1583,6 +1597,8 @@ object ChatStore {
                 failTopupKey = ReasonRules.topupButtonKey(ReasonRules.resolve(msg.str("reason_kind"), null)),
                 failReasonKind = if (status == "failed") msg.str("reason_kind") else null,
                 quotaWindow = if (status == "failed") com.geek.umbra.feature.account.ResetCardRules.quotaWindowOf(msg.str("window")) else null,
+                nextStep = if (status == "failed") com.geek.umbra.feature.task.TaskUnfinishedRules.nextStep(msg.str("next_step")) else null,
+                nextSay = if (status == "failed") com.geek.umbra.feature.task.TaskUnfinishedRules.say(msg.obj("next_action")?.str("say")) else null,
             )
             if (status == "suspended") j = j.copy(suspend = TaskSuspendInfo.fromJson(msg))
             s.taskMap[id] = s.blocks.size
@@ -1599,7 +1615,9 @@ object ChatStore {
             if (status != "suspended") a = a.copy(resuming = false, outcome = null, failText = null)
             _resumeAsks.value = _resumeAsks.value + (id to a)
         }
-        setPreview(conv, msg.str("message") ?: msg.str("goal") ?: "", ChatTimeRules.nowIso())
+        // 没做成：预览直接写「没做成：任务名」（同那条复述，设计侧 320 §4）—— 推送先后不定，不能指望复述一定最后到。
+        if (com.geek.umbra.feature.task.TaskUnfinishedRules.isUnfinished(status, msg.str("reason_kind"))) setUnfinishedPreview(conv, msg.str("goal") ?: "", ChatTimeRules.nowIso())
+        else setPreview(conv, msg.str("message") ?: msg.str("goal") ?: "", ChatTimeRules.nowIso())
         reflect(conv)
     }
 
@@ -1627,14 +1645,16 @@ object ChatStore {
     private fun fillExecutor(taskId: String) {
         AppGraph.scope.launch {
             val d = withContext(BackgroundWork) { fetchTaskDetail(taskId) } ?: return@launch
-            // 没做成：原因 / 下一步只在失败那一步的 error 上（task_update 不带），一起补上。
+            // 没做成：原因只在失败那一步的 error 上（task_update 的 message 是「❌ 没做成：步骤 —— 原因」整句），一起补上。
             val err = d.steps.firstOrNull { it.status == "failed" }?.error
             val unfinished = com.geek.umbra.feature.task.TaskUnfinishedRules.isUnfinished(d.task.status, err?.reason_kind)
             updateTaskCard(taskId) {
                 it.copy(
                     operate = TaskRetryRules.isOperate(d.task.executor),
                     unfinishedReason = if (unfinished) com.geek.umbra.feature.task.TaskUnfinishedRules.reasonOf(err?.message, err?.detail, d.task.result_summary) else null,
-                    nextStep = if (unfinished) com.geek.umbra.feature.task.TaskUnfinishedRules.nextStep(err?.next_step) else null,
+                    // 推送带了就用推送的；老服务端（#178 之前）只在详情里有，从这里补。
+                    nextStep = if (unfinished) it.nextStep ?: com.geek.umbra.feature.task.TaskUnfinishedRules.nextStep(err?.next_step) else null,
+                    nextSay = if (unfinished) it.nextSay ?: com.geek.umbra.feature.task.TaskUnfinishedRules.say(err?.next_action?.say) else null,
                 )
             }
         }
