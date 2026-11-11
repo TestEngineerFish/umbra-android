@@ -183,4 +183,18 @@ class TaskSuspendRulesTest {
         assertEquals("中文名按位置对 id，null 那格记成空串不丢项", listOf("", "设计"),
             TaskSuspendInfo.fromJson(obj("""{"missing_capability_labels":[null,"设计"]}""")).labels)
     }
+
+    // interrupted：单独一档，不说「等设备上线」；就绪时照常出「接着跑」（临时字面，geek-7f 11-11）
+    @Test fun interruptedHasOwnCopy() {
+        val info = TaskSuspendInfo(reason = "interrupted", step = 2, resumeReady = true)
+        val d = TaskSuspendRules.display("suspended", info)!!
+        assertEquals("这个任务被服务重启打断了", d.title)
+        assertEquals("没跑完，可以从第 2 步接着跑。", d.body)
+        assertEquals("已挂起 · 被重启打断", d.listMeta)
+        assertEquals("这个任务被服务重启打断了，没跑完，可以从第 2 步接着跑。", d.cardText)
+        assertTrue(TaskSuspendRules.showsResume("suspended", info))
+        val waiting = TaskSuspendRules.display("suspended", TaskSuspendInfo(reason = "interrupted"))!!
+        assertFalse(waiting.title.contains("上线"))
+        assertEquals("没跑完，可以从这一步接着跑。", waiting.body)
+    }
 }

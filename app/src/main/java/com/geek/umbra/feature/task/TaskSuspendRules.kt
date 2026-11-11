@@ -41,6 +41,13 @@ object TaskSuspendCopy {
     // 两档共用
     const val listPrefix = "已挂起 · "
     const val stepNumbered = "第 {{n}} 步"
+    /**
+     * 挂起原因 interrupted（服务重启打断了任务，没跑完，可以接着跑）的临时字面（geek-7f 11-11 定，等设计侧出正式的）。
+     * 不能落进设备档：那档会说「在等「能做这一步的设备」上线」，和这件事不对题。
+     */
+    const val interruptedTitle = "这个任务被服务重启打断了"
+    const val interruptedBody = "没跑完，可以从{{step}}接着跑。"
+    const val interruptedListMeta = "已挂起 · 被重启打断"
     const val stepUnknown = "这一步"
     const val stop = "停止"
     const val copyDetail = "复制详情"
@@ -181,6 +188,9 @@ sealed interface TaskResumeOutcome {
 }
 
 object TaskSuspendRules {
+    /** 挂起原因：服务重启打断了任务（服务端看门狗，2026-11-11）。 */
+    const val INTERRUPTED = "interrupted"
+
     /** 发「接着跑」的路径（按一个路径段编码 id）。 */
     fun resumePath(id: String): String = "/tasks/${UmbraUrl.segment(id)}/resume"
 
@@ -237,6 +247,14 @@ object TaskSuspendRules {
     /** 一个挂起任务在各处写什么。不是挂起 → null。 */
     fun display(status: String, info: TaskSuspendInfo): TaskSuspendDisplay? {
         if (status != "suspended") return null
+        // 被重启打断：单独一档，「接着跑」照现有条件（resume_ready）出；服务端会给它置 resume_ready=true。
+        if (info.reason == INTERRUPTED) {
+            val body = TaskSuspendCopy.fill(TaskSuspendCopy.interruptedBody, mapOf("step" to stepPhrase(info.step)))
+            return TaskSuspendDisplay(
+                title = TaskSuspendCopy.interruptedTitle, body = body, iosHint = null, ready = info.resumeReady,
+                listMeta = TaskSuspendCopy.interruptedListMeta, cardText = TaskSuspendCopy.interruptedTitle + "，" + body,
+            )
+        }
         val kind = kind(info)
         val dev = { t: String -> fillDevice(t, info.waitingDevices) }
         val step = stepPhrase(info.step)
