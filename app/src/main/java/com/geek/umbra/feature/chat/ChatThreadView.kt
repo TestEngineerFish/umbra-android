@@ -453,6 +453,8 @@ fun ChatThreadPage(conv: String) {
             is ChatBlock.Image -> "${ctx.getString(R.string.chat_quoteMe)}：${ctx.getString(R.string.chat_quoteImage, b.count)}"
             is ChatBlock.Device -> "$title：${b.text}"
             is ChatBlock.Note -> b.text
+            is ChatBlock.Cap -> "秘书：" + CapCardRules.subject(b.card)
+            is ChatBlock.CapNotice -> "秘书：${b.notice.title}。${b.notice.body}"
             else -> null
         }
     }.joinToString("\n\n")
@@ -755,6 +757,10 @@ private fun BlockRow(
             b.dutyNotice?.let { DutyNoticeAction(it) }
         }
         is ChatBlock.Error -> ErrorCard(b)
+        // 权限确认卡（手机满宽，306 §7）：长按复制标题那一句，同别的卡
+        is ChatBlock.Cap -> ChatMenuBox(cardMenu(listOf(b.card.name, b.card.title).filter { it.isNotBlank() }.joinToString(" · "))) { CapCardBlock(b) }
+        is ChatBlock.CapNotice -> ChatMenuBox(cardMenu(b.notice.title + "。" + b.notice.body)) { CapNoticeCard(b.notice) }
+        is ChatBlock.CapReads -> CapReadsRow(b)
     }
 }
 

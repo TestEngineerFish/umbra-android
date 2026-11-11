@@ -62,13 +62,14 @@ class TaskUnfinishedRulesTest {
     @Test fun sayAndEcho() {
         assertEquals("帮我建一个 pw 工作流", TaskUnfinishedRules.say(" 帮我建一个 pw 工作流 "))
         assertNull(TaskUnfinishedRules.say(""))
-        // 只带 task_id 的是复述；「要接着跑吗？」那条带 action，不算
-        assertEquals("t1", TaskUnfinishedRules.echoTaskId(null, "t1"))
-        assertNull(TaskUnfinishedRules.echoTaskId("resume_task", "t1"))
-        assertNull(TaskUnfinishedRules.echoTaskId(null, ""))
-        assertEquals("新建 pw 随机密码工作流", TaskUnfinishedRules.echoName("❌ 「新建 pw 随机密码工作流」没做成：调不到\n下一步：…"))
-        assertEquals("x", TaskUnfinishedRules.echoName("❌「x」没做成：y"))
-        assertNull(TaskUnfinishedRules.echoName("好的，「x」没做成也没关系"))
+        // 去重收紧：kind=task_unfinished 才算复述；老消息（没 kind 也没 action）照旧算
+        assertEquals("t1", TaskUnfinishedRules.echoTaskId("task_unfinished", null, "t1"))
+        assertEquals("t1", TaskUnfinishedRules.echoTaskId(null, null, "t1"))
+        // 看门狗提醒、「要接着跑吗？」、别的 kind 照常画
+        assertNull(TaskUnfinishedRules.echoTaskId("task_watchdog", "resume_task", "t1"))
+        assertNull(TaskUnfinishedRules.echoTaskId("task_watchdog", null, "t1"))
+        assertNull(TaskUnfinishedRules.echoTaskId(null, "resume_task", "t1"))
+        assertNull(TaskUnfinishedRules.echoTaskId("task_unfinished", null, ""))
         assertEquals("没做成：x", TaskUnfinishedRules.previewText("x", false))
     }
 

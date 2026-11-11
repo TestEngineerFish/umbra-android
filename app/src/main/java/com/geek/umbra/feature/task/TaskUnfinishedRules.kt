@@ -77,13 +77,21 @@ object TaskUnfinishedRules {
     fun say(raw: String?): String? = raw?.trim()?.ifEmpty { null }
 
     /**
-     * 聊天里那条「❌「目标」没做成：…」是不是某张任务卡的复述（#178 `meta.task_id`）：带 task_id、不带 action 才算 ——
-     * 「要接着跑吗？」那条也带 task_id，但它带 `action: resume_task`，是要画出来的问话。
+     * 聊天里那条「❌「目标」没做成：…」是不是某张任务卡的复述（#178 `meta.task_id`）。收紧（geek-7f 11-11 深夜）：
+     * `meta.kind == "task_unfinished"` 才算；老消息（没有 kind 也没有 action）照旧算。看门狗提醒（`task_watchdog`，
+     * 带 action）、「要接着跑吗？」（action: resume_task）、别的 kind 一律照常画 —— 不然提醒会被当成复述吞掉。
      */
-    fun echoTaskId(action: String?, taskId: String?): String? = if (action.isNullOrEmpty() && !taskId.isNullOrEmpty()) taskId else null
+    fun echoTaskId(kind: String?, action: String?, taskId: String?): String? {
+        if (taskId.isNullOrEmpty()) return null
+        return when {
+            kind == ECHO_KIND -> taskId
+            kind.isNullOrEmpty() && action.isNullOrEmpty() -> taskId
+            else -> null
+        }
+    }
 
-    /** 从那条复述里认出任务名（服务端 _fail_unfinished 的固定开头 `❌ 「目标」没做成：`）；认不出回 null。 */
-    fun echoName(text: String): String? = Regex("""^❌\s*「(.+?)」没做成""").find(text.trim())?.groupValues?.get(1)?.trim()?.ifEmpty { null }
+    /** 服务端给「没做成」复述标的 meta.kind。 */
+    const val ECHO_KIND = "task_unfinished"
 
     /** 会话列表预览（320 §4）：「没做成：任务名」，前面一枚灰禁行圈由界面画。 */
     fun previewText(name: String, english: Boolean): String = TaskUnfinishedCopy.listPrefix(english) + name.trim()

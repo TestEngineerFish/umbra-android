@@ -268,6 +268,81 @@ sealed interface ChatBlock {
     /** 一轮没能完成的错误卡。kind 决定卡上的钮；topup 是已过 topupLink 的充值地址。 */
     /** `window`：额度用完时是哪条窗口（`5h` / `week`，服务端 1980e92），「用重置卡」挑对应窗口的卡。 */
     data class Error(override val id: String = newBlockId(), val text: String, val kind: ReasonKind? = null, val topup: String? = null, val window: String? = null) : ChatBlock
+
+    /**
+     * 秘书能力的权限确认卡（§8.2 `meta.cap`，设计侧《权限确认卡》E / F）。定了就在原位收成回执行（稿 C）。
+     * 界面状态（选的范围档、在不在发、被别的端抢先、回执展开）存在块里，滚出屏再回来不丢。
+     * [turnOpen]：只在交给界面时由 [CapBlockRules] 填 —— 这一轮还在等的卡数，填在这一轮第一张未定的卡上。
+     */
+    data class Cap(
+        override val id: String = newBlockId(),
+        val card: CapCard,
+        override val serverId: Long? = null,
+        val ts: String? = null,
+        val scopeIndex: Int = 0,
+        val deciding: Boolean = false,
+        val supersededBy: String? = null,
+        val expanded: Boolean = false,
+        val turnOpen: Int = 0,
+    ) : ChatBlock
+
+    /** 带保险箱密钥的工作流说明卡（§13.4 `meta.cap_notice`）。 */
+    data class CapNotice(override val id: String = newBlockId(), val notice: com.geek.umbra.feature.chat.CapNotice, override val serverId: Long? = null) : ChatBlock
+
+    /** 一轮里连着的只读调用收成的那一行「看了 N 样东西」（314 a / 稿 L）。只由 [CapBlockRules.group] 生成，不进块表。 */
+    data class CapReads(override val id: String, val items: List<CapCard>) : ChatBlock
+}
+
+/**
+ * 交给界面前对确认卡块做的三件事（块表本身不动，下标类状态不受影响）：
+ * - 本端到期（过了 expires_at_ms 再 60 秒）显示成已过期（geek-7f 答复第 6 问：只是显示，服务端推来的以它为准）；
+ * - 只读回执（verb=read）连着的收成一行 [ChatBlock.CapReads]：同一个 turn_id 且相邻；有一张没带 turn_id 时按相邻算；
+ * - 同一轮还在等的卡 ≥ 3 张时，第一张填上 [ChatBlock.Cap.turnOpen]（306 D「这一轮有 N 件事等你同意」）。
+ */
+object CapBlockRules {
+    /** 端上到期的宽限：服务端清扫推来之前，过了截止再等这么久才收按钮。 */
+    const val EXPIRY_GRACE_MS = 60_000L
+
+    /** 端上看来已经过期的卡，换成「已过期」回执的样子。 */
+    fun effective(c: CapCard, nowMs: Long): CapCard {
+        val exp = c.expiresAtMs ?: return c
+        if (!CapCardRules.isCard(c) || nowMs <= exp + EXPIRY_GRACE_MS) return c
+        return c.copy(phase = "result", outcome = "expired", buttons = emptyList())
+    }
+
+    fun group(blocks: List<ChatBlock>, nowMs: Long): List<ChatBlock> {
+        val out = ArrayList<ChatBlock>(blocks.size)
+        val openByTurn = HashMap<String, Int>()
+        val firstOpen = HashMap<String, String>()
+        for (b in blocks) {
+            if (b !is ChatBlock.Cap) continue
+            val c = effective(b.card, nowMs)
+            val t = c.turnId ?: continue
+            if (CapCardRules.isOpen(c)) {
+                openByTurn[t] = (openByTurn[t] ?: 0) + 1
+                firstOpen.putIfAbsent(t, b.id)
+            }
+        }
+        for (b in blocks) {
+            if (b !is ChatBlock.Cap) { out += b; continue }
+            val c = effective(b.card, nowMs)
+            if (CapCardRules.isReadReceipt(c)) {
+                val last = out.lastOrNull()
+                if (last is ChatBlock.CapReads) {
+                    val prevTurn = last.items.last().turnId
+                    if (prevTurn == null || c.turnId == null || prevTurn == c.turnId) {
+                        out[out.size - 1] = last.copy(items = last.items + c)
+                        continue
+                    }
+                }
+                out += ChatBlock.CapReads(id = "reads:" + c.callId, items = listOf(c))
+                continue
+            }
+            val n = c.turnId?.takeIf { firstOpen[it] == b.id }?.let { openByTurn[it] } ?: 0
+            out += if (c !== b.card || n != b.turnOpen) b.copy(card = c, turnOpen = n) else b
+        }
+        return out
+    }
 }
 
 /** 会话列表预览。 */

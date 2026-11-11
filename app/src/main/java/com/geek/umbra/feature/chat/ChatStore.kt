@@ -23,6 +23,8 @@ import com.geek.umbra.navigation.TabBadges
 import com.geek.umbra.net.ApiResult
 import com.geek.umbra.net.BackgroundWork
 import com.geek.umbra.net.HttpResult
+import com.geek.umbra.net.UmbraHttp
+import okhttp3.RequestBody.Companion.toRequestBody
 import com.geek.umbra.net.ImagePurpose
 import com.geek.umbra.net.ImageQuality
 import com.geek.umbra.net.ImageTier
@@ -249,19 +251,124 @@ object ChatStore {
 
     private fun setPreview(conv: String, text: String, at: String?) {
         if (text.isEmpty()) return
-        // 「没做成」那条复述：预览换成「没做成：任务名」+ 灰禁行圈（设计侧 320 §4）。/conversations 的 last_content 不带 meta，
+        // 「没做成」的预览不再按文字开头认（设计侧 320 / geek-7f）：复述消息按 meta.kind、会话列表按 last_meta_task_id，见调用处。
         // 按服务端那句的固定开头认（_fail_unfinished：`❌ 「目标」没做成：…`）；认不出就照原文。
-        val name = com.geek.umbra.feature.task.TaskUnfinishedRules.echoName(text)
-        if (name != null) return setUnfinishedPreview(conv, name, at)
         _previews.value = _previews.value + (conv to ConvPreview(text, at))
+    }
+
+    // MARK: - 权限确认卡（秘书能力协议 §8.2 / §8.3；手机是「别的端」，只交决定 + 第几档）
+
+    /** 新卡追加；同一个 call_id 已经在了就换卡（界面状态留着；卡不再等人点时「在发」那一档跟着落下）。 */
+    private fun upsertCap(s: ConvStore, card: CapCard, mid: Long?, ts: String?) {
+        val i = s.blocks.indexOfFirst { it is ChatBlock.Cap && it.card.callId == card.callId }
+        if (i < 0) { s.blocks += ChatBlock.Cap(card = card, serverId = mid, ts = ts); return }
+        val b = s.blocks[i] as ChatBlock.Cap
+        s.blocks[i] = b.copy(card = card, serverId = b.serverId ?: mid, deciding = b.deciding && CapCardRules.isOpen(card))
+    }
+
+    /** 在所有会话里找这张卡、改它，改到了就刷那个会话。回改没改到。 */
+    private fun updateCap(callId: String, f: (ChatBlock.Cap) -> ChatBlock.Cap): Boolean {
+        for ((conv, s) in stores) {
+            val i = s.blocks.indexOfFirst { it is ChatBlock.Cap && it.card.callId == callId }
+            if (i < 0) continue
+            s.blocks[i] = f(s.blocks[i] as ChatBlock.Cap)
+            refresh(conv)
+            return true
+        }
+        return false
+    }
+
+    /** `cap_updated {call_id, message_id, meta:{cap}}`：卡的状态变了（别的端点了、执行完、过期）。不在流里的不插（位置对不上）。 */
+    private fun handleCapUpdated(msg: JsonObject) {
+        val card = CapCard.parse(msg.obj("meta")?.obj("cap")) ?: return
+        updateCap(card.callId) { it.copy(card = card, deciding = it.deciding && CapCardRules.isOpen(card)) }
+    }
+
+    /** 范围单选（点「总是允许」时记哪一档），默认 0 = 最窄。 */
+    fun setCapScope(callId: String, index: Int) { updateCap(callId) { it.copy(scopeIndex = index) } }
+
+    /** 回执行展开 / 收起当时的预览（只读，稿 C）。 */
+    fun toggleCapExpanded(callId: String) { updateCap(callId) { it.copy(expanded = !it.expanded) } }
+
+    /** 本端报给服务端的端名（`X-Umbra-Client`，§8.3）：回执灰字「在 Android 手机 上…」和审计用。 */
+    private val capHeaders = mapOf("X-Umbra-Client" to CapCardRules.CLIENT)
+
+    /**
+     * 点卡：只发「决定 + 第几档」（§8.3），参数和范围都在执行端。回包的卡直接换上；409 = 别的端先点了（或已过期），
+     * 收成「已处理 · 已经在「X」上处理过了」；501 = 服务端能力的卡还没接（第 3 步）。
+     */
+    fun decideCap(callId: String, decision: String) {
+        val b = stores.values.firstNotNullOfOrNull { s -> s.blocks.firstOrNull { it is ChatBlock.Cap && it.card.callId == callId } as? ChatBlock.Cap } ?: return
+        if (b.deciding) return
+        updateCap(callId) { it.copy(deciding = true) }
+        AppGraph.scope.launch {
+            val body = CapCardRules.decideBody(decision, b.scopeIndex).toRequestBody(UmbraHttp.JSON)
+            val r = AppGraph.http.raw("POST", "/cap/calls/${UmbraUrl.segment(callId)}/decide", body = body, headers = capHeaders)
+            when (r) {
+                is HttpResult.Ok -> {
+                    val card = runCatching { UmbraJson.parseToJsonElement(r.body) as JsonObject }.getOrNull()?.obj("meta")?.obj("cap")?.let { CapCard.parse(it) }
+                    updateCap(callId) { it.copy(card = card ?: it.card, deciding = false) }
+                }
+                is HttpResult.Fail -> {
+                    val o = runCatching { UmbraJson.parseToJsonElement(r.body) as JsonObject }.getOrNull()
+                    when (r.status) {
+                        409 -> {
+                            val who = CapCardRules.conflictName(o)
+                            updateCap(callId) { cur ->
+                                if (who != null) cur.copy(deciding = false, supersededBy = who)
+                                else cur.copy(deciding = false, card = cur.card.copy(phase = "result", outcome = "expired", buttons = emptyList()))
+                            }
+                        }
+                        501 -> { updateCap(callId) { it.copy(deciding = false) }; AppGraph.router.showToast("这类卡还不能在手机上点") }
+                        else -> { updateCap(callId) { it.copy(deciding = false) }; AppGraph.router.showToast(r.detail?.takeIf { it.isNotBlank() } ?: "没发出去，稍后再点一次。") }
+                    }
+                }
+                else -> { updateCap(callId) { it.copy(deciding = false) }; AppGraph.router.showToast("没发出去，稍后再点一次。") }
+            }
+        }
+    }
+
+    /** 「以后信任它」（§5.9）：只把网站加进信任列表，不改这张卡的按钮（308 §3）。 */
+    fun trustSite(domain: String, callId: String) {
+        AppGraph.scope.launch {
+            val body = buildJsonObject { put("domain", JsonPrimitive(domain)); put("call_id", JsonPrimitive(callId)) }.toString().toRequestBody(UmbraHttp.JSON)
+            when (val r = AppGraph.http.raw("POST", "/cap/trust", body = body, headers = capHeaders)) {
+                is HttpResult.Ok -> AppGraph.router.showToast("以后读到 $domain 不算外来内容了。这张卡还是只能允许一次。")
+                is HttpResult.Fail -> AppGraph.router.showToast(r.detail?.takeIf { it.isNotBlank() } ?: "没能加进信任列表，稍后再试。")
+                else -> AppGraph.router.showToast("没能加进信任列表，稍后再试。")
+            }
+        }
+    }
+
+    /**
+     * 进主会话（历史铺好）后拉一次 `GET /cap/calls`，按 call_id 刷新已在流里的卡（geek-7f 答复第 5 问）：
+     * 握手不补发能力卡，离线期间别的端点了 / 过期了，靠这一下对齐。不在流里的不插新块。
+     */
+    private fun refreshCapCalls() {
+        AppGraph.scope.launch {
+            val o = withContext(BackgroundWork) { AppGraph.http.get<JsonObject>("/cap/calls", mapOf("limit" to 50)) } ?: return@launch
+            val have = stores.values.flatMap { s -> s.blocks.mapNotNull { (it as? ChatBlock.Cap)?.card?.callId } }.toSet()
+            if (have.isEmpty()) return@launch
+            for (row in (o["calls"] as? JsonArray) ?: return@launch) {
+                val r = row as? JsonObject ?: continue
+                val id = r.str("id") ?: continue
+                if (id !in have) continue
+                val card = CapCard.parse(r.obj("card")) ?: continue
+                updateCap(id) { it.copy(card = card, deciding = false) }
+            }
+        }
     }
 
     // MARK: - 反映到界面
 
     /** 只把变更反映到当前会话，**不标未读**（删除、找回、卡片作答这类「不是新消息」的变更）。 */
+    /** 交给界面的块：滤掉卡在场时的「没做成」复述，确认卡按轮归组、只读回执收成一行（块表本身不动）。 */
+    private fun publishable(blocks: List<ChatBlock>): List<ChatBlock> =
+        CapBlockRules.group(ChatEchoRules.visible(blocks.toList()), System.currentTimeMillis())
+
     private fun refresh(conv: String) {
         if (conv == _activeConv.value) {
-            _blocks.value = ChatEchoRules.visible(store(conv).blocks.toList())
+            _blocks.value = publishable(store(conv).blocks)
             publishHistoryRow()
         }
     }
@@ -269,7 +376,7 @@ object ChatStore {
     /** 当前会话 → 更新 blocks；否则标未读。 */
     private fun reflect(conv: String) {
         if (conv == _activeConv.value) {
-            _blocks.value = ChatEchoRules.visible(store(conv).blocks.toList())
+            _blocks.value = publishable(store(conv).blocks)
             publishHistoryRow()
         } else {
             _unread.value = _unread.value + conv
@@ -314,6 +421,7 @@ object ChatStore {
             val merges = !wasLoaded || s.blocks.isEmpty()
             if (messages != null && merges) mergeHistory(messages, s)
             if (messages != null) s.loaded = true
+            if (messages != null) refreshCapCalls()
             s.paging = ChatHistoryPaging.afterFirst(messages?.map { msgId(it) }, merges, s.paging)
             reflect(MAIN_CONV)
         }
@@ -381,7 +489,11 @@ object ChatStore {
             for (r in rows) {
                 val conv = r.str("conversation") ?: continue
                 store(conv)
-                setPreview(conv, r.str("last_content") ?: "", r.str("last_at"))
+                // 最后一条是任务汇报（last_meta_task_id，服务端 #179）且这台知道那个任务落在「没做成」：预览写「没做成：任务名」；
+                // 别的任务汇报（看门狗提醒、要接着跑吗）照原文。拿不到任务状态时也照原文，不猜。
+                val tid = r.str("last_meta_task_id")
+                val name = tid?.let { unfinishedTaskName(it) }
+                if (name != null) setUnfinishedPreview(conv, name, r.str("last_at")) else setPreview(conv, r.str("last_content") ?: "", r.str("last_at"))
             }
         }
     }
@@ -394,6 +506,10 @@ object ChatStore {
         val ts = m.str("created_at")
         val meta = m.obj("meta")
         val atts = m.arr("atts").mapNotNull { (it as? JsonPrimitive)?.takeIf { p -> p.isString }?.content }.filter { it.isNotEmpty() }
+        // 权限确认卡 / 说明卡：服务端按 system 角色落（cap_gateway._post_card），所以在分角色之前认。
+        // 位置和最新状态都以这条消息的 meta 为准（服务端改卡时合并进消息，geek-7f 答复第 5 问）。
+        CapCard.parse(meta?.obj("cap"))?.let { return ChatBlock.Cap(card = it, serverId = id, ts = ts) }
+        CapNotice.parse(meta?.obj("cap_notice"))?.let { return ChatBlock.CapNotice(notice = it, serverId = id) }
         return when (m.str("role")) {
             "user" -> {
                 if ((m.str("kind") ?: "text") == "image") {
@@ -409,7 +525,7 @@ object ChatStore {
                 ChatBlock.Assistant(
                     text = content, ts = ts, serverId = id, interrupted = meta?.bool("interrupted") ?: false,
                     toolsRun = tools(meta), resumeTaskId = resumeId, citations = KbCitations.parse(meta?.get("citations")),
-                    duty = meta?.obj("duty"), echoOfTask = com.geek.umbra.feature.task.TaskUnfinishedRules.echoTaskId(meta?.str("action"), meta?.str("task_id")),
+                    duty = meta?.obj("duty"), echoOfTask = com.geek.umbra.feature.task.TaskUnfinishedRules.echoTaskId(meta?.str("kind"), meta?.str("action"), meta?.str("task_id")),
                 )
             }
         }
@@ -462,7 +578,7 @@ object ChatStore {
         // 引用是单例状态：带着它发到别的会话，就是一条指向别处的引用，点了永远跳不过去
         quote.value = null
         val s = store(conv)
-        _blocks.value = ChatEchoRules.visible(s.blocks.toList())
+        _blocks.value = publishable(s.blocks)
         publishHistoryRow()
         if (!s.loaded) {
             if (conv == MAIN_CONV) loadHistory() else loadConvHistory(conv)
@@ -1424,6 +1540,7 @@ object ChatStore {
             "confirm_resolved" -> resolveConfirm(msg.str("confirm_id") ?: "", msg.bool("approved") ?: false)
 
             "chat_message" -> handleChatMessage(msg)
+            "cap_updated" -> handleCapUpdated(msg)
 
             "error" -> {
                 stopReplyTimeout()
@@ -1462,6 +1579,16 @@ object ChatStore {
             reflect(conv)
             return
         }
+        // 权限确认卡 / 说明卡（服务端按 system 角色推）：分角色之前认，同一个 call_id 只留一张。
+        val cap = CapCard.parse(meta?.obj("cap"))
+        val notice = if (cap == null) CapNotice.parse(meta?.obj("cap_notice")) else null
+        if (cap != null || notice != null) {
+            if (cap != null) upsertCap(s, cap, mid, ts)
+            else if (mid == null || s.blocks.none { it is ChatBlock.CapNotice && it.serverId == mid }) s.blocks += ChatBlock.CapNotice(notice = notice!!, serverId = mid)
+            setPreview(conv, text, ts)
+            reflect(conv)
+            return
+        }
         when {
             role == "system" || msg.str("kind") == "system" -> {
                 if (mid != null && s.blocks.any { it is ChatBlock.Note && it.serverId == mid }) return
@@ -1479,13 +1606,21 @@ object ChatStore {
                 s.blocks += ChatBlock.Assistant(
                     text = text, ts = ts, serverId = mid, interrupted = meta?.bool("interrupted") ?: false, toolsRun = tools(meta),
                     resumeTaskId = resumeId, citations = KbCitations.parse(meta?.get("citations")), duty = meta?.obj("duty"),
-                    echoOfTask = com.geek.umbra.feature.task.TaskUnfinishedRules.echoTaskId(meta?.str("action"), meta?.str("task_id")),
+                    echoOfTask = com.geek.umbra.feature.task.TaskUnfinishedRules.echoTaskId(meta?.str("kind"), meta?.str("action"), meta?.str("task_id")),
                 )
             }
         }
-        setPreview(conv, text, ts)
+        // 「没做成」复述：预览写「没做成：任务名」（名字取同一任务的卡 / 任务列表，拿不到照原文）。
+        val echo = if (role == "assistant") com.geek.umbra.feature.task.TaskUnfinishedRules.echoTaskId(meta?.str("kind"), meta?.str("action"), meta?.str("task_id")) else null
+        val echoName = echo?.let { id -> (s.blocks.firstOrNull { it is ChatBlock.Task && it.taskId == id } as? ChatBlock.Task)?.goal ?: unfinishedTaskName(id) }
+        if (echoName != null) setUnfinishedPreview(conv, echoName, ts) else setPreview(conv, text, ts)
         reflect(conv)
     }
+
+    /** 这台知道这个任务落在「没做成」时回它的名字（任务列表里那一行）；不知道回 null（预览照原文，不猜）。 */
+    private fun unfinishedTaskName(taskId: String): String? =
+        com.geek.umbra.feature.task.TasksStore.items.value.firstOrNull { it.id == taskId }
+            ?.takeIf { com.geek.umbra.feature.task.TaskUnfinishedRules.isUnfinished(it.status, it.reason_kind) }?.title
 
     /** 按服务端消息 id 移除（扫所有会话：广播不保证带会话，id 全局唯一）。 */
     private fun removeBlock(serverId: Long) {
