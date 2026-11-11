@@ -132,6 +132,8 @@ object TaskNotifyRules {
      * blocked 恒为 false：通知这里没有「上一次重试已被说死」的记忆（那是详情页内的状态）。
      */
     fun failActions(status: String, reasonKind: String?, topupUrl: String?, executor: String?): List<TaskNotifyFailAction> {
+        // 没做成：「重试」「去看能力」两颗都不给，点通知开任务详情（设计侧 320 §5，cannotComplete.notify.android）。
+        if (com.geek.umbra.feature.task.TaskUnfinishedRules.isUnfinished(status, reasonKind)) return emptyList()
         val fail = ReasonRules.taskFailAction(reasonKind, topupUrl)
         val out = mutableListOf<TaskNotifyFailAction>()
         when (TaskRetryRules.button(status, fail, blocked = false, operate = TaskRetryRules.isOperate(executor))) {

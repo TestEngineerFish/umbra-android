@@ -51,6 +51,8 @@ data class TaskItem(
     val suspended_step: Int? = null,
     val resume_ready: Boolean? = null,
     val ready_reason: String? = null,
+    /** 失败那一步的类别（列表行与 task_update(failed) 同形，服务端 tasks_store.fail_fields）：`unfinished` = 没做成，列表画灰。 */
+    val reason_kind: String? = null,
 ) {
     val title: String get() = name?.trim()?.takeIf { it.isNotEmpty() } ?: goal
 }
@@ -61,6 +63,8 @@ data class StepError(
     val reason_kind: String? = null, val topup_url: String? = null,
     /** 额度用完时是哪条窗口（`5h` / `week`，服务端 1980e92）：「用重置卡」挑对应窗口的卡；每日上限那档不带。 */
     val window: String? = null,
+    /** 没做成时用户下一步可以怎么办（服务端 #175，可能没有）：详情「下一步」块、任务卡那一行（设计侧 320 §3）。 */
+    val next_step: String? = null,
 )
 
 @Serializable

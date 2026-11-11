@@ -211,6 +211,9 @@ sealed interface ChatBlock {
         val failReasonKind: String? = null,
         /** 额度用完时是哪条窗口（服务端 1980e92）。 */
         val quotaWindow: String? = null,
+        /** 没做成（设计侧 320）时的原因 / 下一步：task_update 不带，收尾拉详情时从失败那一步的 error 补上（fillExecutor）。 */
+        val unfinishedReason: String? = null,
+        val nextStep: String? = null,
         val operate: Boolean = false,
         val retrying: Boolean = false,
         val retryOutcome: TaskRetryOutcome? = null,

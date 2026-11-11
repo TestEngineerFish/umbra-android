@@ -406,6 +406,12 @@ object TaskProgressNotifier {
                 TaskNotifyFailAction.Caps -> Pair("去看能力", TaskNotifyIntents.activity(ctx, TaskNotifyIntents.CAPS, task.id))
             }
         }
+        // 没做成：标题「没做成：任务名」、正文只写原因（320 §5）；点了照旧开任务详情（postResult 的默认 contentIntent）。
+        if (com.geek.umbra.feature.task.TaskUnfinishedRules.isUnfinished(status, err?.reason_kind)) {
+            val reason = com.geek.umbra.feature.task.TaskUnfinishedRules.reasonOf(err?.message, err?.detail, d?.task?.result_summary ?: task.result_summary)
+            postResult(ctx, task.id, com.geek.umbra.feature.task.TaskUnfinishedRules.notifyTitle(title), reason ?: "", actions)
+            return
+        }
         postResult(ctx, task.id, TaskNotifyRules.failTitle(step), TaskNotifyRules.failBody(title, why), actions)
     }
 

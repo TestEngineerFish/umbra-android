@@ -303,14 +303,16 @@ enum class UmbraStatus(val label: String, val icon: String) {
     Failed("失败", UmbraIconPaths.xCircle),
     Pending("待执行", UmbraIconPaths.clock),
     Cancelled("已取消", UmbraIconPaths.stopCircle),
-    Suspended("已挂起", UmbraIconPaths.pauseCircle);
+    Suspended("已挂起", UmbraIconPaths.pauseCircle),
+    /** 任务没做成（设计侧 320，`cannotComplete.status`）：灰底禁行圈，不用红色 —— 和「失败」分开，一眼能分。 */
+    Unfinished("没做成", UmbraIconPaths.ban);
 
     /** 文字色走 *Text 那支。 */
     @Composable fun fg(): Color = UmbraTheme.colors.let {
         when (this) {
             Running -> it.orangeText; Done -> it.success
             AwaitingReview, Suspended -> it.warningText; Failed -> it.dangerText
-            Pending, Cancelled -> it.muted
+            Pending, Cancelled, Unfinished -> it.muted
         }
     }
 
@@ -318,7 +320,7 @@ enum class UmbraStatus(val label: String, val icon: String) {
         when (this) {
             Running -> it.orangeSoft; Done -> it.successSoft
             AwaitingReview, Suspended -> it.warningSoft; Failed -> it.dangerSoft
-            Pending, Cancelled -> it.chip
+            Pending, Cancelled, Unfinished -> it.chip
         }
     }
 
@@ -327,6 +329,8 @@ enum class UmbraStatus(val label: String, val icon: String) {
             Running -> it.orange; Done -> it.success
             AwaitingReview, Suspended -> it.warning; Failed -> it.danger
             Pending, Cancelled -> it.muted
+            // 进度条停在原处换 faint（cannotComplete.status.progress）。
+            Unfinished -> it.faint
         }
     }
 }

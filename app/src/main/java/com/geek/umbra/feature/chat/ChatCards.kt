@@ -120,13 +120,15 @@ fun TraceCard(a: ChatBlock.Assistant) {
 @Composable
 fun TaskCard(j: ChatBlock.Task, conv: String) {
     val c = UmbraTheme.colors
-    val st = taskStatus(j.status)
+    // 没做成（设计侧 320 稿 C）：灰胶囊禁行圈、灰进度条、原因一行、「下一步：…」一行；不给重试类钮，点卡开详情（重试在详情 ⋯）。
+    val unfinished = com.geek.umbra.feature.task.TaskUnfinishedRules.isUnfinished(j.status, j.failReasonKind)
+    val st = if (unfinished) UmbraStatus.Unfinished else taskStatus(j.status)
     // 「收尾了」只认三种终态（按映射后的枚举认，不按「不是 running / pending」排除）
     val finished = st == UmbraStatus.Done || st == UmbraStatus.Failed || st == UmbraStatus.Cancelled
     val suspended = j.status == "suspended"
     val cardText = TaskSuspendRules.display(j.status, j.suspend)?.cardText
     Column(
-        cardModifier().clickable(enabled = suspended && !j.gone) { AppGraph.router.go(Route.TaskDetail(j.taskId)) }
+        cardModifier().clickable(enabled = (suspended || unfinished) && !j.gone) { AppGraph.router.go(Route.TaskDetail(j.taskId)) }
             .padding(horizontal = 13.dp, vertical = UmbraDimens.sp4),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
@@ -142,12 +144,15 @@ fun TaskCard(j: ChatBlock.Task, conv: String) {
         UmbraProgressBar(j.pct / 100f, st.bar())
         Row(verticalAlignment = Alignment.Bottom) {
             // 服务端的步骤结论可能长达几百字 —— 聊天卡是概览，限 8 行兜底，全文看任务详情
-            Text(cardText ?: j.message, color = c.muted, style = TextStyle(fontSize = 13.sp, lineHeight = 19.5.sp), maxLines = 8, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+            Text(cardText ?: (if (unfinished) j.unfinishedReason else null) ?: j.message, color = if (unfinished && j.unfinishedReason != null) c.text else c.muted, style = TextStyle(fontSize = 13.sp, lineHeight = 19.5.sp), maxLines = 8, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
             Spacer(Modifier.width(8.dp))
             Text("${j.pct}%", color = c.faint, style = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 12.sp))
         }
+        if (unfinished) j.nextStep?.let {
+            Text(com.geek.umbra.feature.task.TaskUnfinishedRules.nextLine(it), color = c.muted, style = TextStyle(fontSize = 12.sp, lineHeight = 18.sp))
+        }
         j.confirmId?.let { ConfirmActions(it) }
-        if (suspended) SuspendedCardAction(j) else if (finished) TaskCardAction(j, conv)
+        if (suspended) SuspendedCardAction(j) else if (finished) TaskCardAction(j, conv) else if (unfinished && j.gone) GoneNote(TaskRetryCopy.missing)
     }
 }
 

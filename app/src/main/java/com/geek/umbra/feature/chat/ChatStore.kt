@@ -1627,7 +1627,16 @@ object ChatStore {
     private fun fillExecutor(taskId: String) {
         AppGraph.scope.launch {
             val d = withContext(BackgroundWork) { fetchTaskDetail(taskId) } ?: return@launch
-            updateTaskCard(taskId) { it.copy(operate = TaskRetryRules.isOperate(d.task.executor)) }
+            // 没做成：原因 / 下一步只在失败那一步的 error 上（task_update 不带），一起补上。
+            val err = d.steps.firstOrNull { it.status == "failed" }?.error
+            val unfinished = com.geek.umbra.feature.task.TaskUnfinishedRules.isUnfinished(d.task.status, err?.reason_kind)
+            updateTaskCard(taskId) {
+                it.copy(
+                    operate = TaskRetryRules.isOperate(d.task.executor),
+                    unfinishedReason = if (unfinished) com.geek.umbra.feature.task.TaskUnfinishedRules.reasonOf(err?.message, err?.detail, d.task.result_summary) else null,
+                    nextStep = if (unfinished) com.geek.umbra.feature.task.TaskUnfinishedRules.nextStep(err?.next_step) else null,
+                )
+            }
         }
     }
 

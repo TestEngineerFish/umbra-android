@@ -74,6 +74,9 @@ import com.geek.umbra.designsystem.UmbraSkeleton
 import com.geek.umbra.designsystem.UmbraSpinningIcon
 import com.geek.umbra.designsystem.UmbraStatus
 import com.geek.umbra.designsystem.UmbraStatusBadge
+import com.geek.umbra.designsystem.UmbraMenuItem
+import com.geek.umbra.designsystem.UmbraMoreMenu
+import com.geek.umbra.designsystem.UmbraStripAction
 import com.geek.umbra.designsystem.UmbraTagPill
 import com.geek.umbra.designsystem.UmbraTheme
 import com.geek.umbra.designsystem.UmbraType
@@ -251,13 +254,18 @@ private fun TaskRow(task: TaskItem) {
         if (!task.name.isNullOrEmpty()) {
             Text(task.goal, color = c.muted, style = TextStyle(fontSize = 13.5.sp, lineHeight = 19.sp), maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
+        // 没做成：副行「没做成：原因」（320 §1 列表副行），不写「第 N 步中断」。
+        val unfinished = TaskUnfinishedRules.isUnfinished(task.status, task.reason_kind)
+        if (unfinished) {
+            Text(TaskUnfinishedRules.listSub(task.result_summary), color = c.muted, style = TextStyle(fontSize = 13.5.sp, lineHeight = 19.sp), maxLines = 2, overflow = TextOverflow.Ellipsis)
+        }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
             // 挂起：胶囊换成「已挂起 · 原因」那一行字。等待档灰、「可以接着跑了」琥珀（设计侧 225，判据说了算）。
             val sus = TaskSuspendRules.display(task.status, task.suspendInfo)
             if (sus != null) {
                 Text(sus.listMeta, color = if (sus.listMetaWarn) c.warningText else c.muted, style = TextStyle(fontSize = 13.sp),
                     maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
-            } else UmbraStatusBadge(st.ui())
+            } else UmbraStatusBadge(if (unfinished) UmbraStatus.Unfinished else st.ui())
             TaskDetailRules.channelLabel(task.channel)?.let {
                 Text(stringResource(R.string.tasks_fromChannel, it), color = c.faint, style = TextStyle(fontSize = 13.sp), maxLines = 1,
                     overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
@@ -367,9 +375,18 @@ fun TaskDetailView(id: String) {
 
     // 顶栏标题：优先任务短标题，拿不到详情时退回短 ID（完整 ID 在下面的详情表里有一行）。
     val navTitle = detail?.task?.title?.takeIf { it.isNotEmpty() } ?: id.take(8)
+    // 没做成：重试不做主钮，收进右上 ⋯（320 §2）—— 用户改过东西以后仍可能想重来，入口要留着。
+    val moreItems = if (phase == TaskDetailPhase.Content && detail != null && unfinishedOf(detail)) {
+        when (retryButtonOf(detail, ui)) {
+            TaskRetryButton.Retry -> listOf(UmbraMenuItem(if (ui.retrying.value) TaskRetryCopy.retrying else TaskRetryCopy.retry) { retryTask(detail, ui) })
+            TaskRetryButton.Relaunch -> listOf(UmbraMenuItem(TaskRetryCopy.relaunch) { relaunch(detail) })
+            null -> emptyList()
+        }
+    } else emptyList()
     UmbraScreen(
         title = navTitle,
         onBack = { router.back() },
+        actions = { UmbraMoreMenu(moreItems) },
         contentPadding = PaddingValues(bottom = 24.dp),
         spacing = 0.dp,
         bottomBar = if (phase == TaskDetailPhase.Content && detail != null) ({ DetailBottomBar(detail, ui) }) else null,
@@ -413,6 +430,9 @@ private fun progressOf(d: TaskDetail): Float {
     return progressOfDetail(d)?.fraction ?: 0f
 }
 
+/** 这条任务是不是「没做成」（失败那一步的类别 unfinished）。 */
+private fun unfinishedOf(d: TaskDetail): Boolean = TaskUnfinishedRules.isUnfinished(d.task.status, failedStepError(d)?.reason_kind)
+
 /** 第一个失败步骤的结构化错误（失败卡画不画、画什么都看它）。 */
 private fun failedStepError(d: TaskDetail): StepError? = d.steps.firstOrNull { taskStatusOf(it.status) == TaskStatusKind.Failed }?.error
 
@@ -424,6 +444,8 @@ private fun suspendInfoOf(d: TaskDetail, ui: DetailUiState): TaskSuspendInfo {
 
 private fun androidx.compose.foundation.lazy.LazyListScope.detailContent(d: TaskDetail, ui: DetailUiState) {
     val st = taskStatusOf(d.task.status)
+    val unfinished = unfinishedOf(d)
+    val stUi = if (unfinished) UmbraStatus.Unfinished else st.ui()
     // 目标 + 状态
     item("head") {
         val c = UmbraTheme.colors
@@ -434,7 +456,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.detailContent(d: Task
                     SelectionContainer { Text(d.task.goal, color = c.muted, style = TextStyle(fontSize = 15.sp, lineHeight = 22.sp)) }
                 }
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    UmbraStatusBadge(st.ui(), compact = false)
+                    UmbraStatusBadge(stUi, compact = false)
                     TaskDetailRules.channelLabel(d.task.channel)?.let {
                         Text(stringResource(R.string.tasks_fromChannel, it), color = c.faint, style = TextStyle(fontSize = 13.sp))
                     }
@@ -453,7 +475,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.detailContent(d: Task
                     val prog = progressOfDetail(d)
                     Text(prog?.stepLine ?: "0 / 0", color = c.text, style = TextStyle(fontSize = 13.sp, fontWeight = UmbraType.weight560))
                 }
-                UmbraProgressBar(progressOf(d), st.ui().bar(), height = 8.dp)
+                UmbraProgressBar(progressOf(d), stUi.bar(), height = 8.dp)
                 // 正在做的那一步另起一行，不和完成数挤在一起（批次 290 §六）。
                 if (st == TaskStatusKind.Running) progressOfDetail(d)?.currentStep?.let {
                     Text(TaskProgress.currentLine(it, null), color = c.muted, style = TextStyle(fontSize = 13.sp))
@@ -514,7 +536,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.detailContent(d: Task
     // 结果摘要 / 错误三段式。失败态「摘要 / 失败步骤的 error」两样有一样就画（没写摘要时也要出「去充值」）。
     val summary = d.task.result_summary ?: ""
     if (st == TaskStatusKind.Failed && (summary.isNotEmpty() || !failedStepError(d)?.message.isNullOrEmpty())) {
-        item("error") { Box(Modifier.padding(16.dp)) { FailBlock(d, summary) } }
+        item("error") { Box(Modifier.padding(16.dp)) { if (unfinished) UnfinishedBlock(d, summary) else FailBlock(d, summary) } }
     } else if (summary.isNotEmpty()) {
         item("summary") {
             val c = UmbraTheme.colors
@@ -532,7 +554,9 @@ private fun androidx.compose.foundation.lazy.LazyListScope.detailContent(d: Task
 @Composable
 private fun StepRow(s: TaskStep) {
     val c = UmbraTheme.colors
-    val st = taskStatusOf(s.status).ui()
+    // 没做成的那一步同样用禁行圈、原因 muted（320 §1 步骤行）。
+    val unfinished = taskStatusOf(s.status) == TaskStatusKind.Failed && s.error?.reason_kind == TaskUnfinishedRules.KIND
+    val st = if (unfinished) UmbraStatus.Unfinished else taskStatusOf(s.status).ui()
     Column(Modifier.fillMaxWidth()) {
         Box(Modifier.fillMaxWidth().height(1.dp).background(c.borderSoft))
         Row(Modifier.fillMaxWidth().padding(vertical = 9.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -550,7 +574,9 @@ private fun StepRow(s: TaskStep) {
                 val err = s.error?.message
                 if (!err.isNullOrEmpty()) {
                     Text(
-                        listOfNotNull(err, s.error?.detail).filter { it.isNotEmpty() }.joinToString("\n"),
+                        // 没做成时 message 与 detail 是同一句（detail 是全文），只画一句。
+                        if (unfinished) TaskUnfinishedRules.reasonOf(err, s.error?.detail) ?: err
+                        else listOfNotNull(err, s.error?.detail).filter { it.isNotEmpty() }.joinToString("\n"),
                         color = c.muted, style = TextStyle(fontSize = 13.sp, lineHeight = 20.sp),
                         modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(c.chip).padding(horizontal = 10.dp, vertical = 8.dp),
                     )
@@ -674,6 +700,48 @@ private fun FailBlock(d: TaskDetail, summary: String) {
 }
 
 /**
+ * 「没做成」块（设计侧 320 稿 D / `cannotComplete.block`）：chip 头「没做成」+ 右侧灰字停在哪一步；正文只写原因；
+ * 有 next_step 才出浅底「下一步」块（不编兜底）；不给［重试任务］［去看能力］，重试在右上 ⋯。
+ * ［在聊天里说这句］要等服务端的结构化字段（320 §3），字段没上之前只显示文字。
+ */
+@Composable
+private fun UnfinishedBlock(d: TaskDetail, summary: String) {
+    val c = UmbraTheme.colors
+    val step = d.steps.firstOrNull { taskStatusOf(it.status) == TaskStatusKind.Failed }
+    val err = step?.error
+    val reason = TaskUnfinishedRules.reasonOf(err?.message, err?.detail, summary)
+    val next = TaskUnfinishedRules.nextStep(err?.next_step)
+    val meta = TaskUnfinishedRules.stoppedAt(step?.seq, step?.title)
+    val shape = RoundedCornerShape(UmbraDimens.radiusCard)
+    var showRaw by remember { mutableStateOf(false) }
+    Column(Modifier.fillMaxWidth().clip(shape).background(c.card).border(1.dp, c.border, shape)) {
+        Row(Modifier.fillMaxWidth().background(c.chip).padding(horizontal = 14.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
+            UmbraIcon(UmbraIconPaths.ban, c.text, size = 16.dp, strokeWidth = 2f)
+            Spacer(Modifier.width(8.dp))
+            Text(TaskUnfinishedRules.LABEL, color = c.text, style = TextStyle(fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold))
+            Spacer(Modifier.width(8.dp).weight(1f))
+            if (meta != null) Text(meta, color = c.faint, style = TextStyle(fontSize = 12.sp), maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            if (reason != null) SelectionContainer { Text(reason, color = c.text, style = TextStyle(fontSize = 13.5.sp, lineHeight = 21.sp)) }
+            if (next != null) {
+                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(c.bg).padding(horizontal = 12.dp, vertical = 9.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("下一步", color = c.faint, style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.SemiBold))
+                    SelectionContainer { Text(next, color = c.text, style = TextStyle(fontSize = 13.5.sp, lineHeight = 21.sp)) }
+                }
+            }
+            if (summary.isNotEmpty()) {
+                UmbraStripAction(if (showRaw) "收起原始返回" else "查看原始返回", c.faint, { showRaw = !showRaw })
+                if (showRaw) Text(
+                    summary, color = c.muted, style = TextStyle(fontSize = 12.sp, fontFamily = FontFamily.Monospace),
+                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(c.track).padding(8.dp),
+                )
+            }
+        }
+    }
+}
+
+/**
  * 底部动作条（设计侧批次 222 §二 2a / 2b / 2c / 2f，224 §二 1）：
  * - 挂起且就绪：接着跑（主）· 停止 · 复制详情；
  * - 还在跑：停止（确认）+ 电脑操作在跑时「看实时画面」+ 复制详情；
@@ -687,9 +755,8 @@ private fun DetailBottomBar(d: TaskDetail, ui: DetailUiState) {
     val retryOutcome = ui.retryOutcome.value
     val blocked = retryOutcome?.let { !it.keepsRetry && it != TaskRetryOutcome.Operate } ?: false
     val operate = TaskRetryRules.isOperate(d.task.executor) || retryOutcome == TaskRetryOutcome.Operate
-    val fe = failedStepError(d)
-    val fail = ReasonRules.taskFailAction(fe?.reason_kind, fe?.topup_url)
-    val button = TaskRetryRules.button(st, fail, blocked, operate, fixable = TaskRetryRules.retryAfterFix(fe?.reason_kind))
+    // 没做成：底栏不给重试 / 重新发起，也不出「从失败的那一步继续…」那行灰字（320 §2）；重试在右上 ⋯。
+    val button = if (unfinishedOf(d)) null else retryButtonOf(d, ui)
     val failLine = retryOutcome?.message ?: ui.resumeFailText.value
     val hint = TaskRetryRules.hint(st, button)
     val resume = TaskSuspendRules.showsResume(st, suspendInfoOf(d, ui)) && (ui.resumeOutcome.value?.keepsResume ?: true)
@@ -730,6 +797,16 @@ private fun DetailBottomBar(d: TaskDetail, ui: DetailUiState) {
             else if (hint != null) Text(hint, color = c.faint, style = TextStyle(fontSize = 11.5.sp), textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
         }
     }
+}
+
+/** 失败 / 已取消时该给哪颗重试类的钮（底栏与没做成的 ⋯ 菜单共用一份判据）。 */
+private fun retryButtonOf(d: TaskDetail, ui: DetailUiState): TaskRetryButton? {
+    val retryOutcome = ui.retryOutcome.value
+    val blocked = retryOutcome?.let { !it.keepsRetry && it != TaskRetryOutcome.Operate } ?: false
+    val operate = TaskRetryRules.isOperate(d.task.executor) || retryOutcome == TaskRetryOutcome.Operate
+    val fe = failedStepError(d)
+    val fail = ReasonRules.taskFailAction(fe?.reason_kind, fe?.topup_url)
+    return TaskRetryRules.button(d.task.status, fail, blocked, operate, fixable = TaskRetryRules.retryAfterFix(fe?.reason_kind))
 }
 
 /**
