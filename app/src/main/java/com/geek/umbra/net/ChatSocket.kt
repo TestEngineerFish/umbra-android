@@ -94,12 +94,14 @@ class ChatSocket(
         if (token.isEmpty() || auth.revoked.value) { halted = true; _state.value = SocketState.Offline; return }
         val my = ++epoch
         _state.value = SocketState.Connecting
-        val url = UmbraUrl.chatSocket(prefs.serverUrl, token)
+        val url = UmbraUrl.chatSocket(prefs.serverUrl)
         val serverKey = prefs.serverUrl.lowercase()
         val req = Request.Builder().url(url).build()
         ws = client.newWebSocket(req, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
                 if (my != epoch) return
+                // 凭证走第一帧（令牌不进网址）：赶在任何别的帧之前发。别的帧要等 ws_ready 才放行（[send] 只在 Online 时发），所以它一定是第一帧。
+                webSocket.send(ChatSocketRules.authFrame(token))
                 // 101 只算连接中。老服务端兜底：2 秒内没被关就认。
                 if (serverKey !in serversSpeakingReady) {
                     graceJob?.cancel()

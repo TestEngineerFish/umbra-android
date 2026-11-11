@@ -69,15 +69,18 @@ object UmbraUrl {
         return sa == "http" && sb == "https" && pa == 80 && pb == 443
     }
 
-    /** `https://x` → `wss://x/ws/chat?src=android&session=…`；未登录不带 session。 */
-    fun chatSocket(server: String, session: String): String {
+    /**
+     * `https://x` → `wss://x/ws/chat?src=android&auth=frame`。令牌**不进网址**（服务端 docs/ws-chat-token-out-of-url.md §2）：
+     * 网址会被反代写进 access / error 日志，线上清过两回；凭证改在连上后第一帧发（[ChatSocketRules.authFrame]）。
+     * `auth=frame` 是开关，带了服务端就等第一帧、不看网址里的 token / session。
+     */
+    fun chatSocket(server: String): String {
         val base = when {
             server.startsWith("https://", true) -> "wss://" + server.substring(8)
             server.startsWith("http://", true) -> "ws://" + server.substring(7)
             else -> server
         }.trimEnd('/')
-        val q = if (session.isEmpty()) "" else "&session=" + value(session)
-        return "$base/ws/chat?src=$CLIENT_SRC$q"
+        return "$base/ws/chat?src=$CLIENT_SRC&auth=frame"
     }
 
     /**
@@ -258,6 +261,8 @@ object ChatSocketRules {
 
     fun verdict(code: Int, reason: String?): Verdict = when {
         SessionRevokeRules.wsClose(code, reason) -> Verdict.SessionInvalid
+        // 第一帧没到 / 不像样（10 秒超时、不是 auth 帧）：服务端 4001 auth_required。按普通连接被拒退避重连，不清登录（同上文档 §2）。
+        code == SessionRevokeRules.CLOSE_CODE && reason == AUTH_REQUIRED -> Verdict.OfflineRetry
         code == SessionRevokeRules.CLOSE_CODE -> Verdict.GateRejected
         else -> Verdict.OfflineRetry
     }
@@ -266,6 +271,13 @@ object ChatSocketRules {
     fun backoffSeconds(attempt: Int): Long = minOf(30L, 1L shl attempt.coerceIn(0, 5))
 
     const val READY = "ws_ready"
+    const val AUTH_REQUIRED = "auth_required"
+
+    /** 连上后必须先发的那一帧 `{"type":"auth","token":"…"}`；每次重连都重发（一条新连接就是一次新握手）。⚠️ 令牌在里面，这一帧不许进日志。 */
+    fun authFrame(token: String): String = kotlinx.serialization.json.buildJsonObject {
+        put("type", kotlinx.serialization.json.JsonPrimitive("auth"))
+        put("token", kotlinx.serialization.json.JsonPrimitive(token))
+    }.toString()
     /** 老服务端不发 ws_ready：连上后这么久没被关就算认了。 */
     const val LEGACY_GRACE_MS = 2_000L
 }

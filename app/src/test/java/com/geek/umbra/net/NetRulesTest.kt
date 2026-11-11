@@ -44,8 +44,9 @@ class NetRulesTest {
     }
 
     @Test fun socketUrl() {
-        assertEquals("wss://h.x/ws/chat?src=android&session=a%2Bb", UmbraUrl.chatSocket("https://h.x/", "a+b"))
-        assertEquals("ws://h.x/ws/chat?src=android", UmbraUrl.chatSocket("http://h.x", ""))
+        // 令牌不进网址：没有 token= / session=，有 auth=frame。
+        assertEquals("wss://h.x/ws/chat?src=android&auth=frame", UmbraUrl.chatSocket("https://h.x/"))
+        assertEquals("ws://h.x/ws/chat?src=android&auth=frame", UmbraUrl.chatSocket("http://h.x"))
     }
 
     @Test fun revoke() {
@@ -93,6 +94,8 @@ class NetRulesTest {
         assertEquals(ChatSocketRules.Verdict.SessionInvalid, ChatSocketRules.verdict(4001, "session_invalid"))
         assertEquals(ChatSocketRules.Verdict.GateRejected, ChatSocketRules.verdict(4001, ""))
         assertEquals(ChatSocketRules.Verdict.OfflineRetry, ChatSocketRules.verdict(1006, null))
+        // 第一帧没到：退避重连，不登出、不停
+        assertEquals(ChatSocketRules.Verdict.OfflineRetry, ChatSocketRules.verdict(4001, "auth_required"))
         assertEquals(listOf(1L, 2, 4, 8, 16, 30, 30), (0..6).map { ChatSocketRules.backoffSeconds(it) })
     }
 
@@ -139,5 +142,12 @@ class NetRulesTest {
         }
         val tasks = src("feature/task/TasksStore.kt").substringAfter("suspend fun loadTasks()").substringBefore("_items.value = fetched")
         assertTrue("拉任务列表的回包没核会话代数", "SessionGuardRules.stillCurrent(" in tasks)
+    }
+
+    @Test fun authFrameIsJsonWithToken() {
+        val o = kotlinx.serialization.json.Json.parseToJsonElement(ChatSocketRules.authFrame("a+b/=\"x")) as kotlinx.serialization.json.JsonObject
+        assertEquals(setOf("type", "token"), o.keys)
+        assertEquals("auth", (o["type"] as kotlinx.serialization.json.JsonPrimitive).content)
+        assertEquals("a+b/=\"x", (o["token"] as kotlinx.serialization.json.JsonPrimitive).content)
     }
 }
