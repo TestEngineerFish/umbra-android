@@ -456,7 +456,8 @@ private fun androidx.compose.foundation.lazy.LazyListScope.detailContent(d: Task
                     SelectionContainer { Text(d.task.goal, color = c.muted, style = TextStyle(fontSize = 15.sp, lineHeight = 22.sp)) }
                 }
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    UmbraStatusBadge(stUi, compact = false)
+                    // 详情页标题下这颗落在页面底色上（322 §5：灰胶囊用 track）
+                    UmbraStatusBadge(stUi, compact = false, onBg = true)
                     TaskDetailRules.channelLabel(d.task.channel)?.let {
                         Text(stringResource(R.string.tasks_fromChannel, it), color = c.faint, style = TextStyle(fontSize = 13.sp))
                     }
@@ -493,7 +494,10 @@ private fun androidx.compose.foundation.lazy.LazyListScope.detailContent(d: Task
             add("更新" to TaskTime.absolute(d.task.updated_at))
             progressOfDetail(d)?.let { add("步骤" to it.stepLine) }
             val failed = d.steps.count { taskStatusOf(it.status) == TaskStatusKind.Failed }
-            if (failed > 0) add("失败步骤" to "$failed")
+            // 没做成：写停在哪一步，不写「失败步骤 1」（那个 1 看着像第 1 步，设计侧 322 §2）；普通失败照旧。
+            val stopped = if (unfinished) d.steps.firstOrNull { taskStatusOf(it.status) == TaskStatusKind.Failed }?.seq?.takeIf { it > 0 } else null
+            if (stopped != null) add("停在" to "第 $stopped 步")
+            else if (failed > 0) add("失败步骤" to "$failed")
         }
         DetailSection(Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {

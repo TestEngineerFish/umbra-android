@@ -1265,6 +1265,7 @@
     <string name="tab_tasks">任务</string>
     <string name="tasks_awaitingReview">等你授权</string>
     <string name="tasks_cancelled">已取消</string>
+    <string name="tasks_cannotComplete">没做成</string>
     <string name="tasks_done">已完成</string>
     <string name="tasks_events">事件时间线</string>
     <string name="tasks_failed">失败</string>
@@ -1359,6 +1360,13 @@
     <string name="vault_find_placeholder">在这条记录里查找</string>
     <string name="vault_find_prev">上一个</string>
     <string name="vault_goAccount">去账号</string>
+    <string name="vault_migrate_failBody">升级前的自检没通过，数据一点没改，照常能用。下次解锁会再试一次。</string>
+    <string name="vault_migrate_failTitle">保险箱没能升级成新格式</string>
+    <string name="vault_migrate_retry">再试一次</string>
+    <string name="vault_upgrade_action">去升级</string>
+    <string name="vault_upgrade_body">这台要先升级长尾雀才能改。现在只能看，不能改。</string>
+    <string name="vault_upgrade_title">保险箱已在别的设备上升级成新格式</string>
+    <string name="vault_upgrade_toast">这台的长尾雀版本太旧，改不了保险箱 · 先升级</string>
     <string name="viewer_hint">双指放大 · 放大后单指拖动 · 点空白关闭</string>
     <string name="viewer_loadFailed">图片加载失败</string>
     <string name="viewer_preparing">正在准备</string>

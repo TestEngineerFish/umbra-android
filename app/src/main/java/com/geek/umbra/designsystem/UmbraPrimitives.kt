@@ -333,20 +333,39 @@ enum class UmbraStatus(val label: String, val icon: String) {
             Unfinished -> it.faint
         }
     }
+
+    /**
+     * 徽章上的字，走 iOS 同一组 `tasks.*` 键（iOS UmbraPrimitives.swift `UmbraStatus.label`）：英文界面才有英文（设计侧 322 §4
+     * 「Couldn't be done」）。[label] 留着给拿不到 Composable 的地方（通知、长按菜单）。
+     */
+    @Composable fun text(): String = androidx.compose.ui.res.stringResource(
+        when (this) {
+            Running -> com.geek.umbra.R.string.tasks_running
+            Done -> com.geek.umbra.R.string.tasks_done
+            AwaitingReview -> com.geek.umbra.R.string.tasks_awaitingReview
+            Failed -> com.geek.umbra.R.string.tasks_failed
+            Pending -> com.geek.umbra.R.string.tasks_pending
+            Cancelled -> com.geek.umbra.R.string.tasks_cancelled
+            Suspended -> com.geek.umbra.R.string.tasks_suspended
+            Unfinished -> com.geek.umbra.R.string.tasks_cannotComplete
+        },
+    )
 }
 
 @Composable
-fun UmbraStatusBadge(status: UmbraStatus, modifier: Modifier = Modifier, compact: Boolean = true) {
+fun UmbraStatusBadge(status: UmbraStatus, modifier: Modifier = Modifier, compact: Boolean = true, onBg: Boolean = false) {
     val fg = status.fg()
+    // 灰胶囊落在 --bg 上用 --track、落在 --card 上用 --chip（设计侧 322 §5，三端通用）：chip 叠在页面底色上看不出轮廓。
+    val soft = status.soft().let { if (onBg && it == UmbraTheme.colors.chip) UmbraTheme.colors.track else it }
     Row(
-        modifier.clip(Pill).background(status.soft())
+        modifier.clip(Pill).background(soft)
             .padding(horizontal = if (compact) 8.dp else 9.dp, vertical = if (compact) 2.dp else 3.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         val sz = if (compact) 11.dp else 12.dp
         if (status == UmbraStatus.Running) UmbraSpinningIcon(status.icon, fg, sz) else UmbraIcon(status.icon, fg, size = sz, strokeWidth = 2.1f)
         Spacer(Modifier.width(4.dp))
-        Text(status.label, color = fg, style = TextStyle(fontSize = if (compact) 11.5.sp else 12.5.sp, fontWeight = FontWeight.SemiBold))
+        Text(status.text(), color = fg, style = TextStyle(fontSize = if (compact) 11.5.sp else 12.5.sp, fontWeight = FontWeight.SemiBold))
     }
 }
 

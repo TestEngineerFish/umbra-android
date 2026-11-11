@@ -1223,6 +1223,7 @@
     <string name="tab_tasks">Tasks</string>
     <string name="tasks_awaitingReview">Awaiting your approval</string>
     <string name="tasks_cancelled">Cancelled</string>
+    <string name="tasks_cannotComplete">Couldn\'t finish</string>
     <string name="tasks_done">Done</string>
     <string name="tasks_events">Event Timeline</string>
     <string name="tasks_failed">Failed</string>
@@ -1317,6 +1318,13 @@
     <string name="vault_find_placeholder">Find in this record</string>
     <string name="vault_find_prev">Previous match</string>
     <string name="vault_goAccount">Go to Account</string>
+    <string name="vault_migrate_failBody">The pre-upgrade check didn\'t pass, so nothing was changed and your vault works as before. It\'ll try again next time you unlock.</string>
+    <string name="vault_migrate_failTitle">Couldn\'t upgrade your vault to the new format</string>
+    <string name="vault_migrate_retry">Try again</string>
+    <string name="vault_upgrade_action">Update</string>
+    <string name="vault_upgrade_body">Update Quetail on this device to make changes. Until then, you can view but not edit.</string>
+    <string name="vault_upgrade_title">Your vault was upgraded to a new format on another device</string>
+    <string name="vault_upgrade_toast">This version of Quetail can\'t edit your vault. Update first.</string>
     <string name="viewer_hint">Pinch to zoom · Drag to pan when zoomed · Tap outside to close</string>
     <string name="viewer_loadFailed">Couldn\'t load image</string>
     <string name="viewer_preparing">Preparing</string>
