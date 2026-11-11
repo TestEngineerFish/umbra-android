@@ -369,17 +369,26 @@ private fun TableEditor(node: VNode, onChange: (VNode) -> Unit) {
     val cols = node.data["cols"].vStrings
     if (cols.isEmpty()) { Text("空表格。行列要在电脑上加。", color = c.muted, style = TextStyle(fontSize = 13.sp)); return }
     val rows = (node.data["rows"].vArray ?: emptyList()).map { r -> r.vStrings.let { if (it.size < cols.size) it + List(cols.size - it.size) { "" } else it } }
-    // 编辑态的密文格（列 / maskCells）：照常显示内容，格底 chip、右上角一枚 9 的锁（契约第四节）。这里只改格子的字，set 原样带回。
+    // 编辑态的密文格（列 / maskCells）：照常显示内容，格底换 track、锁 12 muted 垂直居中靠右（设计侧 306 Q6 `mobileCellMask.edit`；
+    // 原来 chip 底 + 右上 9 的锁太弱，chip 叠在输入框上看不出来）。锁放在输入框的 trailing 槽里，文字自然让出锁的位置。这里只改格子的字，set 原样带回。
     val mask = VaultTableMask.of(node)
+    val lock: @Composable () -> Unit = {
+        UmbraIcon(com.geek.umbra.designsystem.UmbraIconPaths.lock, c.muted, size = 12.dp, strokeWidth = 2f,
+            modifier = Modifier.padding(start = 6.dp), contentDescription = "密文格")
+    }
     Column(Modifier.horizontalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { for (col in cols) UmbraFieldLabel(col, Modifier.width(140.dp)) }
         rows.forEachIndexed { ri, row ->
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 row.forEachIndexed { ci, v ->
-                    Box(Modifier.width(140.dp).then(if (mask.secret(ri, ci)) Modifier.clip(RoundedCornerShape(UmbraDimens.radiusControl)).background(c.chip) else Modifier)) {
+                    val secret = mask.secret(ri, ci)
+                    Box(Modifier.width(140.dp)) {
                         if (VaultMentionRules.hasMention(v)) {
-                            Text(VaultMentionRules.plainTextOffline(v), color = c.muted, style = TextStyle(fontSize = 14.sp), maxLines = 1,
-                                modifier = Modifier.fillMaxWidth().height(40.dp).clip(RoundedCornerShape(UmbraDimens.radiusControl)).background(c.bg).padding(10.dp))
+                            Row(Modifier.fillMaxWidth().height(40.dp).clip(RoundedCornerShape(UmbraDimens.radiusControl)).background(if (secret) c.track else c.bg).padding(10.dp),
+                                verticalAlignment = Alignment.CenterVertically) {
+                                Text(VaultMentionRules.plainTextOffline(v), color = c.muted, style = TextStyle(fontSize = 14.sp), maxLines = 1, modifier = Modifier.weight(1f))
+                                if (secret) lock()
+                            }
                         } else {
                             VaultInput(v, { nv ->
                                 val rs = rows.map { it.toMutableList() }.toMutableList()
@@ -387,10 +396,8 @@ private fun TableEditor(node: VNode, onChange: (VNode) -> Unit) {
                                     rs[ri][ci] = nv
                                     onChange(node.copy(data = node.data + ("rows" to ja(rs.map { r -> ja(r.map { s -> js(s) }) }))))
                                 }
-                            }, onCard = false, height = 40.dp, fontSize = 14f)
+                            }, onCard = false, height = 40.dp, fontSize = 14f, background = if (secret) c.track else null, trailing = if (secret) lock else null)
                         }
-                        if (mask.secret(ri, ci)) UmbraIcon(com.geek.umbra.designsystem.UmbraIconPaths.lock, c.faint, size = 9.dp, strokeWidth = 2f,
-                            modifier = Modifier.align(Alignment.TopEnd).padding(top = 3.dp, end = 4.dp), contentDescription = "密文格")
                     }
                 }
             }

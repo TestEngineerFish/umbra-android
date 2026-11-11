@@ -246,6 +246,8 @@ fun VaultInput(
     error: Boolean = false,
     borderColor: Color? = null,
     onCard: Boolean = true,
+    // 盖掉 onCard 选的底色：表格编辑态的密文格要用 track 底（设计侧 306 Q6），chip 叠在输入框上看不出来。
+    background: Color? = null,
     singleLine: Boolean = true,
     allCaps: Boolean = false,
     imeDone: (() -> Unit)? = null,
@@ -269,7 +271,7 @@ fun VaultInput(
         modifier = modifier.fillMaxWidth(),
         decorationBox = { inner ->
             Row(
-                Modifier.fillMaxWidth().heightIn(min = height).clip(shape).background(if (onCard) c.card else c.bg)
+                Modifier.fillMaxWidth().heightIn(min = height).clip(shape).background(background ?: if (onCard) c.card else c.bg)
                     .border(UmbraDimens.borderW, borderColor ?: if (error) c.danger else c.border, shape).padding(horizontal = 12.dp, vertical = 8.dp),
                 verticalAlignment = if (singleLine) Alignment.CenterVertically else Alignment.Top,
             ) {
