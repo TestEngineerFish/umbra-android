@@ -257,7 +257,9 @@ private fun TaskRow(task: TaskItem) {
         // 没做成：副行「没做成：原因」（320 §1 列表副行），不写「第 N 步中断」。
         val unfinished = TaskUnfinishedRules.isUnfinished(task.status, task.reason_kind)
         if (unfinished) {
-            Text(TaskUnfinishedRules.listSub(task.result_summary), color = c.muted, style = TextStyle(fontSize = 13.5.sp, lineHeight = 19.sp), maxLines = 2, overflow = TextOverflow.Ellipsis)
+            TaskUnfinishedRules.listSub(task.result_summary, uiEnglish())?.let {
+                Text(it, color = c.muted, style = TextStyle(fontSize = 13.5.sp, lineHeight = 19.sp), maxLines = 2, overflow = TextOverflow.Ellipsis)
+            }
         }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
             // 挂起：胶囊换成「已挂起 · 原因」那一行字。等待档灰、「可以接着跑了」琥珀（设计侧 225，判据说了算）。
@@ -430,6 +432,10 @@ private fun progressOf(d: TaskDetail): Float {
     return progressOfDetail(d)?.fraction ?: 0f
 }
 
+/** 界面此刻是不是英文（跟着系统 / 「我」里选的语言走，和 strings 资源选到的是同一份）：没做成那几句的 english 参数（322 §4）。 */
+@Composable
+internal fun uiEnglish(): Boolean = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]?.language == "en"
+
 /** 这条任务是不是「没做成」（失败那一步的类别 unfinished）。 */
 private fun unfinishedOf(d: TaskDetail): Boolean = TaskUnfinishedRules.isUnfinished(d.task.status, failedStepError(d)?.reason_kind)
 
@@ -496,7 +502,9 @@ private fun androidx.compose.foundation.lazy.LazyListScope.detailContent(d: Task
             val failed = d.steps.count { taskStatusOf(it.status) == TaskStatusKind.Failed }
             // 没做成：写停在哪一步，不写「失败步骤 1」（那个 1 看着像第 1 步，设计侧 322 §2）；普通失败照旧。
             val stopped = if (unfinished) d.steps.firstOrNull { taskStatusOf(it.status) == TaskStatusKind.Failed }?.seq?.takeIf { it > 0 } else null
-            if (stopped != null) add("停在" to "第 $stopped 步")
+            val en = uiEnglish()
+            val cell = TaskUnfinishedRules.stoppedCell(stopped, en)
+            if (cell != null) add(TaskUnfinishedCopy.stoppedLabel(en) to cell)
             else if (failed > 0) add("失败步骤" to "$failed")
         }
         DetailSection(Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
@@ -716,14 +724,15 @@ private fun UnfinishedBlock(d: TaskDetail, summary: String) {
     val reason = TaskUnfinishedRules.reasonOf(err?.message, err?.detail, summary)
     val next = TaskUnfinishedRules.nextStep(err?.next_step)
     val say = TaskUnfinishedRules.say(err?.next_action?.say)
-    val meta = TaskUnfinishedRules.stoppedAt(step?.seq, step?.title)
+    val en = uiEnglish()
+    val meta = TaskUnfinishedRules.stoppedAt(step?.seq, step?.title, en)
     val shape = RoundedCornerShape(UmbraDimens.radiusCard)
     var showRaw by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth().clip(shape).background(c.card).border(1.dp, c.border, shape)) {
         Row(Modifier.fillMaxWidth().background(c.chip).padding(horizontal = 14.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
             UmbraIcon(UmbraIconPaths.ban, c.text, size = 16.dp, strokeWidth = 2f)
             Spacer(Modifier.width(8.dp))
-            Text(TaskUnfinishedRules.LABEL, color = c.text, style = TextStyle(fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold))
+            Text(TaskUnfinishedCopy.title(en), color = c.text, style = TextStyle(fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold))
             Spacer(Modifier.width(8.dp).weight(1f))
             if (meta != null) Text(meta, color = c.faint, style = TextStyle(fontSize = 12.sp), maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
@@ -731,12 +740,12 @@ private fun UnfinishedBlock(d: TaskDetail, summary: String) {
             if (reason != null) SelectionContainer { Text(reason, color = c.text, style = TextStyle(fontSize = 13.5.sp, lineHeight = 21.sp)) }
             if (next != null) {
                 Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(c.bg).padding(horizontal = 12.dp, vertical = 9.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("下一步", color = c.faint, style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.SemiBold))
+                    Text(TaskUnfinishedCopy.nextTitle(en), color = c.faint, style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.SemiBold))
                     SelectionContainer { Text(next, color = c.text, style = TextStyle(fontSize = 13.5.sp, lineHeight = 21.sp)) }
                 }
             }
             // 主钮［在聊天里说这句］（稿 D：整宽 40 高）：有 next_action.say 才给；打开秘书聊天、填进输入框，不替他发。
-            if (say != null) UmbraButton("在聊天里说这句", { com.geek.umbra.feature.chat.ChatApi.startDraft(say) }, Modifier.fillMaxWidth(), height = 40.dp)
+            if (say != null) UmbraButton(TaskUnfinishedCopy.sayInChat(en), { com.geek.umbra.feature.chat.ChatApi.startDraft(say) }, Modifier.fillMaxWidth(), height = 40.dp)
             if (summary.isNotEmpty()) {
                 UmbraStripAction(if (showRaw) "收起原始返回" else "查看原始返回", c.faint, { showRaw = !showRaw })
                 if (showRaw) Text(

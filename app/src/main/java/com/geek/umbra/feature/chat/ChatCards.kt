@@ -149,11 +149,11 @@ fun TaskCard(j: ChatBlock.Task, conv: String) {
             Text("${j.pct}%", color = c.faint, style = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 12.sp))
         }
         if (unfinished) j.nextStep?.let {
-            Text(com.geek.umbra.feature.task.TaskUnfinishedRules.nextLine(it), color = c.muted, style = TextStyle(fontSize = 12.sp, lineHeight = 18.sp))
+            Text(com.geek.umbra.feature.task.TaskUnfinishedRules.nextLine(it, com.geek.umbra.feature.task.uiEnglish()), color = c.muted, style = TextStyle(fontSize = 12.sp, lineHeight = 18.sp))
         }
         // ［在聊天里说这句］：只在服务端带了 next_action.say 时给（320 §2）；填进秘书聊天的输入框，不替用户发。
         if (unfinished && !j.gone) j.nextSay?.let { say ->
-            UmbraButton("在聊天里说这句", { ChatApi.startDraft(say) }, Modifier.fillMaxWidth(), kind = UmbraButtonKind.Secondary, height = 44.dp)
+            UmbraButton(com.geek.umbra.feature.task.TaskUnfinishedCopy.sayInChat(com.geek.umbra.feature.task.uiEnglish()), { ChatApi.startDraft(say) }, Modifier.fillMaxWidth(), kind = UmbraButtonKind.Secondary, height = 44.dp)
         }
         j.confirmId?.let { ConfirmActions(it) }
         if (suspended) SuspendedCardAction(j) else if (finished) TaskCardAction(j, conv) else if (unfinished && j.gone) GoneNote(TaskRetryCopy.missing)

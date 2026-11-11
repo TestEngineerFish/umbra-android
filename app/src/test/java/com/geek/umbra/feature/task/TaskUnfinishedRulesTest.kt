@@ -35,14 +35,14 @@ class TaskUnfinishedRulesTest {
     }
 
     @Test fun metaNextListNotify() {
-        assertEquals("停在第 2 步「建工作流」", TaskUnfinishedRules.stoppedAt(2, "建工作流"))
-        assertEquals("停在第 2 步", TaskUnfinishedRules.stoppedAt(2, " "))
-        assertNull(TaskUnfinishedRules.stoppedAt(0, "x"))
+        assertEquals("停在第 2 步「建工作流」", TaskUnfinishedRules.stoppedAt(2, "建工作流", false))
+        assertEquals("停在第 2 步", TaskUnfinishedRules.stoppedAt(2, " ", false))
+        assertNull(TaskUnfinishedRules.stoppedAt(0, "x", false))
         assertNull(TaskUnfinishedRules.nextStep("  "))
-        assertEquals("下一步：先登录", TaskUnfinishedRules.nextLine(TaskUnfinishedRules.nextStep(" 先登录 ")!!))
-        assertEquals("没做成：表格里没有这一列", TaskUnfinishedRules.listSub("没做成：表格里没有这一列"))
-        assertEquals("没做成", TaskUnfinishedRules.listSub(null))
-        assertEquals("没做成：新建 pw 随机密码工作流", TaskUnfinishedRules.notifyTitle("新建 pw 随机密码工作流"))
+        assertEquals("下一步：先登录", TaskUnfinishedRules.nextLine(TaskUnfinishedRules.nextStep(" 先登录 ")!!, false))
+        assertEquals("没做成：表格里没有这一列", TaskUnfinishedRules.listSub("没做成：表格里没有这一列", false))
+        assertNull(TaskUnfinishedRules.listSub(null, false))
+        assertEquals("没做成：新建 pw 随机密码工作流", TaskUnfinishedRules.notifyTitle("新建 pw 随机密码工作流", false))
     }
 
     @Test fun notifyHasNoButtons() {
@@ -69,7 +69,7 @@ class TaskUnfinishedRulesTest {
         assertEquals("新建 pw 随机密码工作流", TaskUnfinishedRules.echoName("❌ 「新建 pw 随机密码工作流」没做成：调不到\n下一步：…"))
         assertEquals("x", TaskUnfinishedRules.echoName("❌「x」没做成：y"))
         assertNull(TaskUnfinishedRules.echoName("好的，「x」没做成也没关系"))
-        assertEquals("没做成：x", TaskUnfinishedRules.previewText("x"))
+        assertEquals("没做成：x", TaskUnfinishedRules.previewText("x", false))
     }
 
     @Test fun echoHiddenOnlyWhenCardInConversation() {
@@ -86,5 +86,31 @@ class TaskUnfinishedRulesTest {
         val e = UmbraJson.decodeFromString(StepError.serializer(),
             """{"kind":"unfinished","reason_kind":"unfinished","next_step":"s","next_action":{"say":"帮我建一个 pw 工作流"}}""")
         assertEquals("帮我建一个 pw 工作流", e.next_action?.say)
+    }
+
+    // 英文整套与 iOS TaskUnfinishedRulesTests（3824824）同一组输入输出（设计侧 322 §4）。
+    @Test fun englishMatchesIos() {
+        val R = TaskUnfinishedRules
+        assertEquals("Stopped at step 2 \u201C建工作流\u201D", R.stoppedAt(2, "建工作流", true))
+        assertEquals("Stopped at step 2", R.stoppedAt(2, "", true))
+        assertEquals("Couldn't be done: 缺一项", R.listSub("没做成：缺一项", true))
+        assertEquals("Couldn't be done: pw", R.previewText("pw", true))
+        assertEquals("Couldn't be done: pw", R.notifyTitle("pw", true))
+        assertEquals("Couldn't be done", TaskUnfinishedCopy.title(true))
+        assertEquals("Next step", TaskUnfinishedCopy.nextTitle(true))
+        assertEquals("第 2 步", R.stoppedCell(2, false))
+        assertEquals("Step 2", R.stoppedCell(2, true))
+        assertNull(R.stoppedCell(null, false))
+        assertEquals("停在", TaskUnfinishedCopy.stoppedLabel(false))
+        assertEquals("Stopped at", TaskUnfinishedCopy.stoppedLabel(true))
+        assertEquals("下一步：", TaskUnfinishedCopy.nextPrefix(false))
+        assertEquals("Next step: ", TaskUnfinishedCopy.nextPrefix(true))
+        assertEquals("在聊天里说这句", TaskUnfinishedCopy.sayInChat(false))
+        assertEquals("Say this in chat", TaskUnfinishedCopy.sayInChat(true))
+        assertEquals("没做成：新建 pw 随机密码工作流", R.previewText(" 新建 pw 随机密码工作流 ", false))
+        // 叠着的前缀剥干净、列表副行只留一层
+        assertEquals("缺一项", R.reason("没做成：服务器说：缺一项"))
+        assertEquals("没做成：缺一项", R.listSub("没做成：没做成：缺一项", false))
+        assertTrue(R.isUnfinished("error", "unfinished"))
     }
 }

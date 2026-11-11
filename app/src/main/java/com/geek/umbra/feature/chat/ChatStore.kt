@@ -244,7 +244,7 @@ object ChatStore {
     /** 「没做成：任务名」那条预览（灰禁行圈）。 */
     private fun setUnfinishedPreview(conv: String, name: String, at: String?) {
         if (name.isEmpty()) return
-        _previews.value = _previews.value + (conv to ConvPreview(com.geek.umbra.feature.task.TaskUnfinishedRules.previewText(name), at, unfinished = true))
+        _previews.value = _previews.value + (conv to ConvPreview(com.geek.umbra.feature.task.TaskUnfinishedRules.previewText(name, AppGraph.context.resources.configuration.locales[0]?.language == "en"), at, unfinished = true))
     }
 
     private fun setPreview(conv: String, text: String, at: String?) {

@@ -3,15 +3,31 @@
 // 所以灰色、禁行圈、不给［重试任务］做主钮、不给［去看能力］。纯 Kotlin，TaskUnfinishedRulesTest 有用例。
 package com.geek.umbra.feature.task
 
+/**
+ * 没做成那一档的字面，中英两份（设计侧 322 §4，英文「Couldn't be done」）。照 iOS `TaskUnfinishedCopy`（3824824）逐字：
+ * 一律写成带 english 的函数而不是常量 —— 调用点必须说清是哪种语言，漏传一处就编不过，不会悄悄只剩中文。
+ * 任务页其余字面（重试任务等）两端都还只有中文。
+ */
+object TaskUnfinishedCopy {
+    /** 状态胶囊、块标题。 */
+    fun title(english: Boolean) = if (english) "Couldn't be done" else "没做成"
+    /** 详情「下一步」块的小标题。 */
+    fun nextTitle(english: Boolean) = if (english) "Next step" else "下一步"
+    /** 任务卡那一行的前缀。 */
+    fun nextPrefix(english: Boolean) = if (english) "Next step: " else "下一步："
+    /** 列表副行、会话预览、通知标题的前缀。 */
+    fun listPrefix(english: Boolean) = if (english) "Couldn't be done: " else "没做成："
+    fun sayInChat(english: Boolean) = if (english) "Say this in chat" else "在聊天里说这句"
+    /** 详情信息格的标签（322 §2）。 */
+    fun stoppedLabel(english: Boolean) = if (english) "Stopped at" else "停在"
+}
+
 object TaskUnfinishedRules {
     /** 服务端的类别名（tasks_engine.REASON_UNFINISHED）。设计稿里暂记 cannot_complete，以服务端为准。 */
     const val KIND = "unfinished"
 
-    /** 状态胶囊 / 块标题 / 通知前缀的同一个词。 */
-    const val LABEL = "没做成"
-
     /** 这一条是不是「没做成」：只认失败态 + 类别 unfinished；别的失败照旧红色「失败」。 */
-    fun isUnfinished(status: String?, reasonKind: String?): Boolean = status == "failed" && reasonKind == KIND
+    fun isUnfinished(status: String?, reasonKind: String?): Boolean = (status == "failed" || status == "error") && reasonKind == KIND
 
     /**
      * 原因一句（320 §1「正文只写原因」）：去掉开头的「服务器说：」和重复的「没做成：」（result_summary 是「没做成：原因」）。
@@ -19,11 +35,10 @@ object TaskUnfinishedRules {
      */
     fun reason(text: String?): String? {
         var s = text?.trim().orEmpty()
-        for (prefix in listOf("服务器说", LABEL)) {
-            if (s.startsWith(prefix)) {
-                val rest = s.removePrefix(prefix)
-                if (rest.startsWith("：") || rest.startsWith(":")) s = rest.substring(1).trim()
-            }
+        // 两层叠着（「没做成：服务器说：…」「没做成：没做成：…」）也剥干净，同 iOS reason(_:)。
+        while (true) {
+            val prefix = listOf("服务器说", "没做成").firstOrNull { p -> s.startsWith(p) && s.removePrefix(p).let { it.startsWith("：") || it.startsWith(":") } } ?: break
+            s = s.removePrefix(prefix).substring(1).trim()
         }
         return s.ifEmpty { null }
     }
@@ -36,20 +51,27 @@ object TaskUnfinishedRules {
         reason(detail) ?: reason(message) ?: reason(summary)
 
     /** 块头右侧那行灰字：「停在第 N 步「步骤名」」；找不到失败的那一步就不写。 */
-    fun stoppedAt(seq: Int?, title: String?): String? {
+    fun stoppedAt(seq: Int?, title: String?, english: Boolean): String? {
         if (seq == null || seq <= 0) return null
         val t = title?.trim().orEmpty()
+        if (english) return if (t.isEmpty()) "Stopped at step $seq" else "Stopped at step $seq \u201C$t\u201D"
         return if (t.isEmpty()) "停在第 $seq 步" else "停在第 $seq 步「$t」"
+    }
+
+    /** 详情信息格「停在　第 N 步」的值（322 §2；不写「失败步骤 1」）。 */
+    fun stoppedCell(seq: Int?, english: Boolean): String? {
+        if (seq == null || seq <= 0) return null
+        return if (english) "Step $seq" else "第 $seq 步"
     }
 
     /** 「下一步」那句：服务端给了就显示，没有回 null（整块 / 整行不出，不编）。 */
     fun nextStep(raw: String?): String? = raw?.trim()?.ifEmpty { null }
 
     /** 任务卡上那一行。 */
-    fun nextLine(next: String): String = "下一步：$next"
+    fun nextLine(next: String, english: Boolean): String = TaskUnfinishedCopy.nextPrefix(english) + next
 
-    /** 列表副行「没做成：原因」；没原因只写「没做成」。 */
-    fun listSub(summary: String?): String = reason(summary)?.let { "$LABEL：$it" } ?: LABEL
+    /** 列表副行「没做成：原因」；没有原因回 null（副行不出，同 iOS listLine）。原因是服务端原话，英文界面也照原样。 */
+    fun listSub(summary: String?, english: Boolean): String? = reason(summary)?.let { TaskUnfinishedCopy.listPrefix(english) + it }
 
     /** ［在聊天里说这句］的那句话（服务端 #178 `next_action.say`，只在拿得准时带）：没有就不出钮，只显示文字。 */
     fun say(raw: String?): String? = raw?.trim()?.ifEmpty { null }
@@ -64,8 +86,8 @@ object TaskUnfinishedRules {
     fun echoName(text: String): String? = Regex("""^❌\s*「(.+?)」没做成""").find(text.trim())?.groupValues?.get(1)?.trim()?.ifEmpty { null }
 
     /** 会话列表预览（320 §4）：「没做成：任务名」，前面一枚灰禁行圈由界面画。 */
-    fun previewText(name: String): String = "$LABEL：$name"
+    fun previewText(name: String, english: Boolean): String = TaskUnfinishedCopy.listPrefix(english) + name.trim()
 
-    /** 系统通知标题（320 §5）：「没做成：任务名」。 */
-    fun notifyTitle(taskName: String): String = "$LABEL：$taskName"
+    /** 系统通知标题（320 §5 / 322 §4）：同会话预览。 */
+    fun notifyTitle(taskName: String, english: Boolean): String = previewText(taskName, english)
 }

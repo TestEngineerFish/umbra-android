@@ -1223,7 +1223,7 @@
     <string name="tab_tasks">Tasks</string>
     <string name="tasks_awaitingReview">Awaiting your approval</string>
     <string name="tasks_cancelled">Cancelled</string>
-    <string name="tasks_cannotComplete">Couldn\'t finish</string>
+    <string name="tasks_cannotComplete">Couldn\'t be done</string>
     <string name="tasks_done">Done</string>
     <string name="tasks_events">Event Timeline</string>
     <string name="tasks_failed">Failed</string>
