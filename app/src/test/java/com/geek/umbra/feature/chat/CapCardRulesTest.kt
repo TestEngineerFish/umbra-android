@@ -274,6 +274,36 @@ class CapCardRulesTest {
         assertEquals("共 3 字", CapCardRules.fieldCount("a😀b"))
     }
 
+    // 设计侧 344 三.2，形状 B（同 PC e21f57c tests/capCard.test.ts「344 三.2」）
+    @Test fun fieldDiff() {
+        fun fields(diff: String) = (CapCard.parse(UmbraJson.parseToJsonElement("""{"call_id":"c","phase":"ask","buttons":["once"],"title":"t","preview":[{"kind":"fields",
+            "rows":[["标题","记账壁纸"],["原文（原）","a\nb"],["原文（新）","a\nc"]],"diff":$diff}]}""") as JsonObject)!!.preview[0] as CapPreview.Fields)
+        val ok = fields("""[{"field":"原文","rows":[1,2],"changes":1,"first_line":2,"hunks":[{"op":"eq","text":"a\n"},{"op":"del","text":"b"},{"op":"ins","text":"c"}]}]""")
+        val cells = FieldDiffRules.cells(ok.rows, ok.diffs)
+        assertEquals(2, cells.size)
+        assertTrue("原 / 新合成一格，画在较小下标的位置", cells[1] is FieldDiffRules.Cell.Diff)
+        val d = cells[1] as FieldDiffRules.Cell.Diff
+        assertEquals("原文 · 改了 1 处 · 第一处在第 2 行", FieldDiffRules.head(d.label, d.diff))
+        assertEquals("看原文用原文全文", "a\nb", d.original)
+        assertEquals("没给 changes / first_line 就不写", "原文", FieldDiffRules.head("原文", d.diff.copy(changes = null, firstLine = null)))
+        assertEquals("field 为空用那一行的行名", "原文（原）", FieldDiffRules.cells(ok.rows, listOf(d.diff.copy(field = ""))).filterIsInstance<FieldDiffRules.Cell.Diff>()[0].label)
+        // 认不得的照 rows 画
+        assertTrue(fields("""{"x":1}""").diffs.isEmpty())
+        assertTrue("下标越界", fields("""[{"rows":[1,9],"hunks":[]}]""").diffs.isEmpty())
+        assertTrue("两个下标相同", fields("""[{"rows":[1,1],"hunks":[]}]""").diffs.isEmpty())
+        // 切行 + 收起没改的
+        val lines = FieldDiffRules.lines(listOf(DiffHunk("eq", "1\n2\n3\n4\n5\n"), DiffHunk("del", "六"), DiffHunk("ins", "6"), DiffHunk("eq", "\n7\n8")))
+        assertEquals(8, lines.size)
+        val v = FieldDiffRules.views(lines)
+        assertEquals(listOf<FieldDiffRules.View>(FieldDiffRules.View.Gap(0, 4), FieldDiffRules.View.Line(4), FieldDiffRules.View.Line(5),
+            FieldDiffRules.View.Line(6), FieldDiffRules.View.Line(7)), v)
+        assertEquals("点开那一段就整段画", 8, FieldDiffRules.views(lines, setOf(0)).size)
+        assertEquals("没改的 4 行 · 展开", FieldDiffRules.gapText(4))
+        // 只有 1 行没改的照画
+        val one = FieldDiffRules.lines(listOf(DiffHunk("ins", "x\n"), DiffHunk("eq", "a\nb\n"), DiffHunk("del", "y")))
+        assertTrue(FieldDiffRules.views(one).all { it is FieldDiffRules.View.Line })
+    }
+
     @Test fun receiptNameNeverEmptied() {
         assertEquals(80, CapCardRules.receiptNameWidth(avail = 200, full = 80, min = 40, tail = 100))
         assertEquals(60, CapCardRules.receiptNameWidth(avail = 160, full = 80, min = 40, tail = 100))

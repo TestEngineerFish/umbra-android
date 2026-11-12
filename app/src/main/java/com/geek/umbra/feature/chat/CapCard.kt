@@ -18,7 +18,11 @@ sealed interface CapPreview {
     val title: String?
     data class Graph(override val title: String?, val nodes: List<Pair<String, String?>>) : CapPreview
     data class Code(override val title: String?, val lang: String, val text: String) : CapPreview
-    data class Fields(override val title: String?, val rows: List<Pair<String, String>>) : CapPreview
+    /**
+     * [diffs]：改长文本时服务端算好的行内增删（设计侧 344 三.2，形状 B：fields 段上的 `diff`）。
+     * 每项把 rows 里「原 / 新」那两行合成一格画；认不得（不是数组、下标越界、两个下标相同）的那项丢掉，照 rows 画。
+     */
+    data class Fields(override val title: String?, val rows: List<Pair<String, String>>, val diffs: List<FieldDiff> = emptyList()) : CapPreview
     data class Diff(override val title: String?, val lines: List<Pair<Char, String>>) : CapPreview
     data class Items(override val title: String?, val items: List<String>) : CapPreview
     data class Plain(override val title: String?, val text: String) : CapPreview
@@ -152,9 +156,12 @@ data class CapCard(
                     }
                 } ?: emptyList())
                 "code" -> CapPreview.Code(title, o.s("lang") ?: "", o.s("text") ?: "")
-                "fields" -> CapPreview.Fields(title, (o["rows"] as? JsonArray)?.mapNotNull { r ->
-                    (r as? JsonArray)?.takeIf { it.size >= 2 }?.let { str(it[0]) to str(it[1]) }
-                } ?: emptyList())
+                "fields" -> {
+                    val rows = (o["rows"] as? JsonArray)?.mapNotNull { r ->
+                        (r as? JsonArray)?.takeIf { it.size >= 2 }?.let { str(it[0]) to str(it[1]) }
+                    } ?: emptyList()
+                    CapPreview.Fields(title, rows, FieldDiff.parse(o["diff"], rows.size))
+                }
                 "diff" -> CapPreview.Diff(title, (o["lines"] as? JsonArray)?.mapNotNull { l ->
                     (l as? JsonObject)?.let { x -> (x.s("op")?.firstOrNull() ?: ' ') to (x.s("text") ?: "") }
                 } ?: emptyList())
@@ -602,4 +609,105 @@ object CapCardRules {
         val d = (body?.get("decided_on") as? JsonObject) ?: ((body?.get("detail") as? JsonObject)?.get("decided_on") as? JsonObject)
         return (d?.get("name") as? JsonPrimitive)?.contentOrNull?.takeIf { it.isNotBlank() }
     }
+}
+
+/** 行内增删的一段：op = eq | del | ins。 */
+data class DiffHunk(val op: String, val text: String)
+
+/**
+ * fields 段上的一项 `diff`（设计侧 344 三.2，形状 B，同 PC e21f57c）：rows[iOld]（原）、rows[iNew]（新）两行合成一格，
+ * 画在两个下标里较小那个的位置。[changes] / [firstLine] 服务端没给就不写那半句。
+ */
+data class FieldDiff(val field: String, val iOld: Int, val iNew: Int, val changes: Int?, val firstLine: Int?, val hunks: List<DiffHunk>) {
+    companion object {
+        fun parse(e: JsonElement?, rowCount: Int): List<FieldDiff> {
+            val arr = e as? JsonArray ?: return emptyList()
+            return arr.mapNotNull { x ->
+                val o = x as? JsonObject ?: return@mapNotNull null
+                val idx = (o["rows"] as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.intOrNull } ?: return@mapNotNull null
+                if (idx.size != 2) return@mapNotNull null
+                val (a, b) = idx
+                if (a == b || a !in 0 until rowCount || b !in 0 until rowCount) return@mapNotNull null
+                val hunks = (o["hunks"] as? JsonArray)?.mapNotNull { h ->
+                    val ho = h as? JsonObject ?: return@mapNotNull null
+                    val op = (ho["op"] as? JsonPrimitive)?.contentOrNull?.takeIf { it == "eq" || it == "del" || it == "ins" } ?: return@mapNotNull null
+                    DiffHunk(op, (ho["text"] as? JsonPrimitive)?.contentOrNull ?: "")
+                } ?: return@mapNotNull null
+                FieldDiff(
+                    field = (o["field"] as? JsonPrimitive)?.contentOrNull ?: "", iOld = a, iNew = b,
+                    changes = (o["changes"] as? JsonPrimitive)?.intOrNull, firstLine = (o["first_line"] as? JsonPrimitive)?.intOrNull, hunks = hunks,
+                )
+            }
+        }
+    }
+}
+
+/** 行内增删的排法（纯函数，有用例；文案同 PC 语言包）。 */
+object FieldDiffRules {
+    /** fields 一格要画什么：普通一行，或一格增删（占掉原 / 新两行）。 */
+    sealed interface Cell {
+        data class Row(val label: String, val value: String) : Cell
+        data class Diff(val diff: FieldDiff, val label: String, val original: String) : Cell
+    }
+
+    fun cells(rows: List<Pair<String, String>>, diffs: List<FieldDiff>): List<Cell> {
+        // 一行只认第一项 diff：两项抢同一行时后来的那项丢掉（照 rows 画）
+        val taken = HashSet<Int>()
+        val at = HashMap<Int, FieldDiff>()
+        for (d in diffs) {
+            if (d.iOld in taken || d.iNew in taken) continue
+            taken += d.iOld; taken += d.iNew; at[minOf(d.iOld, d.iNew)] = d
+        }
+        return rows.indices.mapNotNull { i ->
+            at[i]?.let { d -> Cell.Diff(d, d.field.ifBlank { rows[i].first }, rows[d.iOld].second) }
+                ?: if (i in taken) null else Cell.Row(rows[i].first, rows[i].second)
+        }
+    }
+
+    /** 头一行：「{field} · 改了 N 处 · 第一处在第 X 行」，没给的那半句不写。 */
+    fun head(label: String, d: FieldDiff): String =
+        listOfNotNull(label.takeIf { it.isNotBlank() }, d.changes?.let { "改了 $it 处" }, d.firstLine?.let { "第一处在第 $it 行" }).joinToString(" · ")
+
+    /** hunks 按 text 里的换行切成行：每行是一串（op, 字）。 */
+    fun lines(hunks: List<DiffHunk>): List<List<DiffHunk>> {
+        val out = mutableListOf(mutableListOf<DiffHunk>())
+        for (h in hunks) {
+            val parts = h.text.split("\n")
+            parts.forEachIndexed { i, part ->
+                if (i > 0) out += mutableListOf<DiffHunk>()
+                if (part.isNotEmpty()) out.last() += DiffHunk(h.op, part)
+            }
+        }
+        return out
+    }
+
+    /** 一行要显示的东西：一行字，或「没改的 N 行」那条虚线（[from] 是这一段第一行的下标）。 */
+    sealed interface View {
+        data class Line(val index: Int) : View
+        data class Gap(val from: Int, val count: Int) : View
+    }
+
+    /**
+     * 收起没改的：有改动的行和它的上一行、下一行都显示；其余连续没改的，2 行以上收成一条虚线，只有 1 行照画。
+     * [opened]：用户点开过的那几段（按 from）。
+     */
+    fun views(lines: List<List<DiffHunk>>, opened: Set<Int> = emptySet()): List<View> {
+        val changed = lines.map { l -> l.any { it.op != "eq" } }
+        val keep = BooleanArray(lines.size) { i -> changed[i] || (i > 0 && changed[i - 1]) || (i + 1 < lines.size && changed[i + 1]) }
+        val out = mutableListOf<View>()
+        var i = 0
+        while (i < lines.size) {
+            if (keep[i]) { out += View.Line(i); i++; continue }
+            var j = i
+            while (j < lines.size && !keep[j]) j++
+            val n = j - i
+            if (n >= 2 && i !in opened) out += View.Gap(i, n) else for (k in i until j) out += View.Line(k)
+            i = j
+        }
+        return out
+    }
+
+    fun gapText(n: Int) = "没改的 $n 行 · 展开"
+    const val SHOW_ORIGINAL = "看原文"
+    const val SHOW_CHANGES = "看改动"
 }

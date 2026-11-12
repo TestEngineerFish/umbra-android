@@ -27,6 +27,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -231,11 +232,15 @@ private fun CapPreviewView(p: CapPreview, full: Boolean = false) {
                 }
                 is CapPreview.Code -> CodeLines(if (folds) p.text.lines().take(CapCardRules.CODE_FOLD_LINES) else p.text.lines())
                 is CapPreview.Fields -> Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                    for ((k, v) in p.rows) Row {
+                    for (cell in FieldDiffRules.cells(p.rows, p.diffs)) {
+                        if (cell is FieldDiffRules.Cell.Diff) { androidx.compose.runtime.key("diff-${cell.diff.iOld}-${cell.diff.iNew}") { DiffCell(cell) }; continue }
+                        val (k, v) = (cell as FieldDiffRules.Cell.Row).let { it.label to it.value }
+                        Row {
                         Text(k, color = t.muted, style = TextStyle(fontSize = 12.5.sp), modifier = Modifier.width(84.dp))
                         // 值原样保留换行和行首空格（Compose 的 Text 本来不挤空白）。没看全文也能点允许。
                         if (CapCardRules.fieldFolds(v)) androidx.compose.runtime.key(k) { FoldedFieldValue(v, Modifier.weight(1f)) }
                         else Text(v, color = t.text, style = TextStyle(fontSize = 12.5.sp, lineHeight = 18.sp), modifier = Modifier.weight(1f))
+                        }
                     }
                 }
                 is CapPreview.Diff -> Column(Modifier.horizontalScroll(rememberScrollState())) {
@@ -273,6 +278,60 @@ private fun openFullCode(p: CapPreview.Code) {
             }
         }
     })
+}
+
+/**
+ * 改长文本的一格（设计侧 344 三.2，形状 B，同 PC e21f57c）：头一行「{field} · 改了 N 处 · 第一处在第 X 行」+ 右侧「看原文 / 看改动」；
+ * 正文按行画，删掉的 dangerSoft 底 + dangerText 字 + 删除线、加上的 successSoft 底 + success 字；没改的连续 2 行以上收成一条虚线
+ * 「没改的 N 行 · 展开」。「看原文」原位换成原文全文（同样走长值折叠）。
+ */
+@Composable
+private fun DiffCell(cell: FieldDiffRules.Cell.Diff) {
+    val t = UmbraTheme.colors
+    var original by remember { mutableStateOf(false) }
+    var opened by remember { mutableStateOf(emptySet<Int>()) }
+    val style = TextStyle(fontSize = 12.5.sp, lineHeight = 18.sp)
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(FieldDiffRules.head(cell.label, cell.diff), color = t.muted, style = TextStyle(fontSize = 12.5.sp), modifier = Modifier.weight(1f))
+            Text(if (original) FieldDiffRules.SHOW_CHANGES else FieldDiffRules.SHOW_ORIGINAL, color = t.orangeText, style = TextStyle(fontSize = 12.sp),
+                modifier = Modifier.clickable(role = Role.Button) { original = !original }.padding(start = 8.dp))
+        }
+        if (original) {
+            if (CapCardRules.fieldFolds(cell.original)) FoldedFieldValue(cell.original, Modifier.fillMaxWidth())
+            else Text(cell.original, color = t.text, style = style)
+            return@Column
+        }
+        val lines = remember(cell.diff) { FieldDiffRules.lines(cell.diff.hunks) }
+        for (v in FieldDiffRules.views(lines, opened)) when (v) {
+            is FieldDiffRules.View.Line -> Text(
+                androidx.compose.ui.text.buildAnnotatedString {
+                    for (h in lines[v.index]) {
+                        val st = when (h.op) {
+                            "del" -> androidx.compose.ui.text.SpanStyle(color = t.dangerText, background = t.dangerSoft, textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough)
+                            "ins" -> androidx.compose.ui.text.SpanStyle(color = t.success, background = t.successSoft)
+                            else -> androidx.compose.ui.text.SpanStyle(color = t.text)
+                        }
+                        withStyle(st) { append(h.text) }
+                    }
+                },
+                style = style,
+            )
+            is FieldDiffRules.View.Gap -> Row(
+                Modifier.fillMaxWidth().clickable(role = Role.Button) { opened = opened + v.from }.padding(vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                val dash = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(6f, 6f))
+                Box(Modifier.weight(1f).height(1.dp).drawWithContent {
+                    drawLine(t.border, androidx.compose.ui.geometry.Offset(0f, 0f), androidx.compose.ui.geometry.Offset(size.width, 0f), strokeWidth = 1.dp.toPx(), pathEffect = dash)
+                })
+                Text(FieldDiffRules.gapText(v.count), color = t.faint, style = TextStyle(fontSize = 12.sp), modifier = Modifier.padding(horizontal = 8.dp))
+                Box(Modifier.weight(1f).height(1.dp).drawWithContent {
+                    drawLine(t.border, androidx.compose.ui.geometry.Offset(0f, 0f), androidx.compose.ui.geometry.Offset(size.width, 0f), strokeWidth = 1.dp.toPx(), pathEffect = dash)
+                })
+            }
+        }
+    }
 }
 
 /**
