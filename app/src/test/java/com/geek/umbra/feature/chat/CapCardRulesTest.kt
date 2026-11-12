@@ -176,6 +176,28 @@ class CapCardRulesTest {
 
     // 设计侧 330 五.1：回执上的［撤销］
     // 332 二：名字不会少于「引号 + 前 4 字 +…」；放得下全给；压不动时截的是行尾
+    // 服务端 action_word 优先：提醒 update 只标完成时写「完成这一次」，不按 action 拼「修改」；没带退回查表，再退回 name
+    @Test fun actionWordWins() {
+        val c = card("""{"call_id":"c1","capability":"reminders","action":"update","name":"提醒 · 完成这一次","action_word":"完成这一次",
+            "verb":"write","where":"cloud","object_name":"交房租","phase":"asked","title":"完成这一次「交房租」"}""")
+        assertEquals("提醒 · 完成这一次", CapCardRules.capName(c))
+        assertEquals("提醒 · 完成这一次 · 在云端", CapCardRules.headName(c))
+        assertEquals("提醒 · 完成这一次 · 「交房租」", CapCardRules.subject(c))
+        assertEquals("提醒 · 完成这一次　交房租", CapCardRules.readLine(c.copy(summary = null, title = "交房租")))
+        assertEquals("老卡按表", "提醒 · 修改", CapCardRules.capName(c.copy(actionWord = null)))
+        assertEquals("认不得的 action 照 name", "提醒 · 完成这一次", CapCardRules.capName(c.copy(actionWord = null, action = "mark")))
+        // PC tests/r330chat.test.ts 最后一组（0b821ce）逐条移植
+        fun n(name: String, action: String, word: String? = null) =
+            CapCardRules.capName(card("""{"call_id":"c","capability":"x","action":"$action","name":"$name","phase":"asked","title":"t"${word?.let { ",\"action_word\":\"$it\"" } ?: ""}}"""))
+        assertEquals("提醒 · 完成这一次", n("提醒 · 完成这一次", "update", "完成这一次"))
+        assertEquals("提醒 · 标回未完成", n("提醒 · 修改", "update", "标回未完成"))
+        assertEquals("工作流 · 新建", n("工作流 · 建一个工作流", "create"))
+        assertEquals("工作流 · 恢复", n("工作流 · 恢复到之前", "restore"))
+        assertEquals("提醒 · 稍后再提醒", n("提醒 · 稍后再提醒", "snooze"))
+        assertEquals("提醒", n("提醒", "update", "完成这一次"))
+        assertEquals("空白当没有", "提醒 · 修改", n("提醒 · 标回未完成", "update", "  "))
+    }
+
     @Test fun receiptNameNeverEmptied() {
         assertEquals(80, CapCardRules.receiptNameWidth(avail = 200, full = 80, min = 40, tail = 100))
         assertEquals(60, CapCardRules.receiptNameWidth(avail = 160, full = 80, min = 40, tail = 100))

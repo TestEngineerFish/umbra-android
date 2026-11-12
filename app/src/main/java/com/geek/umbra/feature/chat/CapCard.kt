@@ -44,6 +44,11 @@ data class CapCard(
     val verb: String?,
     /** 回执里的对象短名（「随机密码」「物业电话」，设计侧 326 §1）。字段名等服务端定，先按 geek-7f 建议的 `object_name` 读；没带退回卡标题。 */
     val objectName: String?,
+    /**
+     * 服务端给的动作字（`action_word`，geek-13 11-12 定）：同一个 action 可能说成不同的事 —— 提醒的 update 只标完成时是「完成这一次」，
+     * 按 action 查表会拼成「修改」。有它就用它；老卡没有再查表。
+     */
+    val actionWord: String? = null,
     val where: String?,
     val runOn: CapRunOn?,
     val phase: String,
@@ -109,7 +114,8 @@ data class CapCard(
             val undo = o["undo"] as? JsonObject
             return CapCard(
                 callId = id, capability = o.s("capability") ?: "", action = o.s("action") ?: "",
-                name = o.s("name") ?: "", verb = o.s("verb"), objectName = o.s("object_name")?.takeIf { it.isNotBlank() }, where = o.s("where"), runOn = runOn,
+                name = o.s("name") ?: "", verb = o.s("verb"), objectName = o.s("object_name")?.takeIf { it.isNotBlank() },
+                actionWord = o.s("action_word")?.takeIf { it.isNotBlank() }, where = o.s("where"), runOn = runOn,
                 phase = o.s("phase") ?: "ask", title = o.s("title") ?: "",
                 warnings = warnings, preview = pv, previewTruncated = o.b("preview_truncated") == true,
                 buttons = o.strings("buttons"), canAlways = o.b("can_always") ?: o.strings("buttons").contains("always"),
@@ -347,10 +353,13 @@ object CapCardRules {
 
     /**
      * 「能力 · 动作」：服务端转发设备能力时 name 拼的是动作说明的长句（「工作流 · 建一个工作流」），回执行一窄就把后面的
-     * 「在 iPhone 上」挤没了（326 §2）。认得的 action 换成短动词，认不得的照 name。
+     * 「在 iPhone 上」挤没了（326 §2）。动作字先用服务端的 action_word，没有再按 action 查短动词，都没有照 name。
+     * 卡头、回执、只读活动行都从这里取，三端同一条规矩。
      */
     fun capName(c: CapCard): String {
-        val short = VERB_NAME[c.action] ?: return c.name
+        // name 里没有「 · 」的原样（同 PC capCard.capActionName 0b821ce）：拼不出「能力 · 动作」。
+        if (!c.name.contains(" · ")) return c.name
+        val short = c.actionWord ?: VERB_NAME[c.action] ?: return c.name
         val cap = c.name.substringBefore(" · ").trim()
         return if (cap.isEmpty()) c.name else "$cap · $short"
     }
