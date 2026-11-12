@@ -214,6 +214,13 @@ class CapCardRulesTest {
         assertEquals("没做", odd.label)
         assertNull(odd.note)
         assertEquals("已做", CapCardRules.receipt(c.copy(outcome = "done", note = null)).label)
+        // 对照 PC d066806 tests/capCard.test.ts「#189」：note 去首尾空白、空白当没有；误带 undo 也不出；rejected 没带 decision 按拒绝
+        fun withNote(n: String) = card("""{"call_id":"c2","capability":"reminders","action":"update","name":"提醒 · 完成这一次","where":"cloud",
+            "phase":"result","outcome":"skipped","title":"t","note":"$n","buttons":["undo"],"undo":{"label":"撤销"}}""")
+        assertEquals("没动", CapCardRules.receipt(withNote("  没动 ")).note)
+        assertNull(CapCardRules.receipt(withNote("   ")).note)
+        assertFalse(CapCardRules.showsUndo(withNote("x"), blocked = false))
+        assertEquals("没做", CapCardRules.receipt(c.copy(outcome = "rejected", decision = null)).label)
     }
 
     @Test fun receiptNameNeverEmptied() {

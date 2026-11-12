@@ -127,7 +127,7 @@ data class CapCard(
                 expiresAtMs = (o["expires_at_ms"] as? JsonPrimitive)?.longOrNull,
                 pendingCount = (o["pending_count"] as? JsonPrimitive)?.intOrNull ?: 1,
                 turnId = o.s("turn_id"), turnIndex = (o["turn_index"] as? JsonPrimitive)?.intOrNull,
-                outcome = o.s("outcome"), summary = o.s("summary"), note = o.s("note")?.takeIf { it.isNotBlank() }, error = o.s("error"),
+                outcome = o.s("outcome"), summary = o.s("summary"), note = o.s("note")?.trim()?.takeIf { it.isNotEmpty() }, error = o.s("error"),
                 decision = o.s("decision"), decidedOn = decidedOn, by = o.s("by"),
                 undoLabel = undo?.s("label")?.takeIf { it.isNotBlank() },
                 canUndo = undo != null || o.strings("buttons").contains("undo"), undoneOn = undoneOn,
