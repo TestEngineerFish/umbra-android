@@ -137,7 +137,7 @@ fun MoneySettingsView() {
             scope.launch {
                 refreshing = true
                 MoneySettings.retry()
-                MoneyStore.reload(silent = true)
+                MoneyStore.refresh()
                 refreshing = false
             }
         },

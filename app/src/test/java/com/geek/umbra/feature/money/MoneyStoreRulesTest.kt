@@ -69,4 +69,16 @@ class MoneyStoreRulesTest {
         v.land(y)
         assertEquals("账本已经换了，旧账本那一轮还是落了地", "-", v.entriesYm)
     }
+
+    // 进记账页同步一次（geek-13 11-12，iOS 86c9fe2 MoneyStoreRulesTests 那 7 条照抄）
+    @Test fun onEnter() {
+        val e = MoneyRefreshRules; val t0 = 1_762_930_800_000L
+        assertEquals("第一次进：整页拉", MoneyEnterRefresh.Full, e.onEnter(false, false, null, t0))
+        assertEquals("上次失败：不受间隔管", MoneyEnterRefresh.Full, e.onEnter(false, false, t0 - 1000, t0))
+        assertEquals("离线：重探一次", MoneyEnterRefresh.Full, e.onEnter(true, true, t0, t0))
+        assertEquals("有数据、这次启动还没同步过", MoneyEnterRefresh.Sync, e.onEnter(true, false, null, t0))
+        assertEquals("5 秒前刚同步过", MoneyEnterRefresh.None, e.onEnter(true, false, t0 - 5_000, t0))
+        assertEquals("满 30 秒", MoneyEnterRefresh.Sync, e.onEnter(true, false, t0 - 30_000, t0))
+        assertEquals("时钟往回拨", MoneyEnterRefresh.Sync, e.onEnter(true, false, t0 + 60_000, t0))
+    }
 }

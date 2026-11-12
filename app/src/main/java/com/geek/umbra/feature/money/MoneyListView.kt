@@ -103,7 +103,7 @@ fun MoneyListView() {
     val openRow = remember { mutableStateOf<Any?>(null) }
     val scope = rememberCoroutineScope()
 
-    LaunchedEffect(Unit) { MoneyStore.loadIfNeeded() }
+    LaunchedEffect(Unit) { MoneyStore.enter() }
 
     val screen = remember(phase, loadedOnce, stats, offline) { MoneyStore.screenPhase(offline) }
 
@@ -147,7 +147,8 @@ fun MoneyListView() {
         onRefresh = {
             scope.launch {
                 refreshing = true
-                MoneyStore.reload(silent = true)
+                // 下拉刷新是真的刷新：生活账本先和服务端同步一轮（geek-13 11-12）
+                MoneyStore.refresh()
                 refreshing = false
             }
         },

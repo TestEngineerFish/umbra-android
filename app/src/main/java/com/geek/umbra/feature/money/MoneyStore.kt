@@ -14,10 +14,12 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.JsonObject
 import java.util.UUID
 
@@ -148,6 +150,33 @@ object MoneyStore {
         if (_phase.value == Phase.Idle || _phase.value == Phase.Error || AppGraph.http.offline.value) launch { reload() }
     }
 
+    /**
+     * 进记账页（首页 / 流水页）：没拉成过 / 上次失败 / 离线整页拉；有数据就静默同步一轮（[refresh]），30 秒内不重复（[MoneyRefreshRules]）。
+     * 秘书现在能记账、改账（服务端能力 money），记账没有变更推送 —— 不进页面时去拉，「重开 App 才看得到」（geek-13 11-12）。
+     */
+    fun enter() {
+        MoneySettings.loadIfNeeded()
+        val now = System.currentTimeMillis()
+        when (MoneyRefreshRules.onEnter(_phase.value == Phase.Ready, AppGraph.http.offline.value, lastServerSyncMs, now)) {
+            MoneyEnterRefresh.Full -> { lastServerSyncMs = now; launch { reload() } }
+            MoneyEnterRefresh.Sync -> launch { refresh() }
+            MoneyEnterRefresh.None -> Unit
+        }
+    }
+
+    /** 上次进页面 / 下拉同步的时刻（[MoneyRefreshRules.onEnter] 的间隔用）；进程内，不落盘。 */
+    private var lastServerSyncMs: Long? = null
+
+    /**
+     * 真的刷新一次（下拉刷新、进页面）：生活账本先和服务端同步一轮、等它跑完，再从本机静默重画；经营账本本来就是现拉。
+     * ⚠️ 同步完**无条件**重画，不比「同步前后本机变没变」：本机文件可能早就被别的那一轮同步写进去了，而页面手上还是更早那份
+     * （登录那一刻的同步和页面首载交错过一次：本机已有那笔、页面却画「这个月还没有记账」，重开 App 才出来）。
+     */
+    suspend fun refresh() {
+        lastServerSyncMs = System.currentTimeMillis()
+        if (usesLocal) syncLocalThenRefresh() else reload(silent = true)
+    }
+
     /** 在进程作用域里跑一个动作（页面关了也跑完，同 iOS 的 Task）。 */
     fun launch(block: suspend () -> Unit) { AppGraph.scope.launch { block() } }
 
@@ -233,13 +262,15 @@ object MoneyStore {
         val slotPool: MoneySlotPoolDTO?, val usage: Map<String, MoneyCatUsageDTO>?, val rcpt: MoneyEntriesDTO?,
     )
 
-    /** 同步一轮，拉到了新东西就静默重画。会话守卫的「开」也走它。 */
+    /**
+     * 同步一轮，跑完从本机静默重画。会话守卫的「开」、登录认出人、进页面、下拉刷新都走它。
+     * 有一轮正在跑时 sync() 只记一笔就回来 —— 等它连补的那轮一起跑完再读本机；跑完无条件重画（见 [refresh]）。
+     */
     suspend fun syncLocalThenRefresh() {
-        val before = MoneyLocal.entries.value to MoneyLocal.cats.value
         MoneyLocal.sync()
-        if (before.first != MoneyLocal.entries.value || before.second != MoneyLocal.cats.value) {
-            if (usesLocal) reload(silent = true)
-        }
+        // 封顶 15 秒：换账号那一问会让同步停着等人点，下拉刷新不能跟着一直转。
+        withTimeoutOrNull(15_000) { MoneyLocal.syncing.first { !it } }
+        if (usesLocal) reload(silent = true)
     }
 
     /** 附件在服务端挂 / 删之后，本机这笔的附件清单从服务端拿一次对齐。 */

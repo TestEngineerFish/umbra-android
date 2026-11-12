@@ -37,3 +37,27 @@ object MoneyLedgerRules {
      */
     fun readonlyBatch(flags: List<Boolean>): Boolean = flags.contains(true)
 }
+
+/** 进记账页时做什么（[MoneyRefreshRules.onEnter]）：整页拉 / 静默同步一轮 / 不发。 */
+enum class MoneyEnterRefresh { Full, Sync, None }
+
+/**
+ * 进记账首页 / 流水页时要不要向服务端同步（geek-13 11-12，三端一致）。秘书能在云端记账、改账，记账没有变更推送，
+ * 只有进页面 / 下拉时去拉。iOS: Features/Money/MoneyStoreRules.swift MoneyRefreshRules（86c9fe2）
+ */
+object MoneyRefreshRules {
+    /** 进页面同步的最小间隔：首页 ⇄ 流水页来回每次都算「进页面」，不设间隔翻一趟就是一串同步。下拉刷新不受它管。 */
+    const val ENTER_SYNC_GAP_MS = 30_000L
+
+    /**
+     * [ready]：手上有没有一份拉成了的数据；[offline]：全局离线标志（离线照样整页重拉一次，重探）；
+     * [lastSyncMs]：上次进页面 / 下拉同步的时刻，null = 这次启动还没同步过。
+     */
+    fun onEnter(ready: Boolean, offline: Boolean, lastSyncMs: Long?, nowMs: Long): MoneyEnterRefresh {
+        if (!ready || offline) return MoneyEnterRefresh.Full
+        val last = lastSyncMs ?: return MoneyEnterRefresh.Sync
+        // ⚠️ 时钟往回拨时差值是负的 —— 当成很久没同步，不当成刚同步过，否则拨回去的那段时间里一直不同步。
+        val gap = nowMs - last
+        return if (gap >= ENTER_SYNC_GAP_MS || gap < 0) MoneyEnterRefresh.Sync else MoneyEnterRefresh.None
+    }
+}

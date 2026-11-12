@@ -244,7 +244,7 @@ fun MoneyCatsView() {
         onBack = { AppGraph.router.back() },
         actions = { UmbraTopBarIcon(UmbraIconPaths.plus, "新建", { askAdd() }, tint = c.orange) },
         refreshing = refreshing,
-        onRefresh = { scope.launch { refreshing = true; MoneyStore.reload(silent = true); refreshing = false } },
+        onRefresh = { scope.launch { refreshing = true; MoneyStore.refresh(); refreshing = false } },
         topContent = umbraPhaseTop(phase, live = true) { MoneyStore.launch { MoneyStore.retry() } },
     ) {
         umbraScreenPhase(phase, { MoneyStore.launch { MoneyStore.retry() } }, "拿不到分类") {
@@ -758,7 +758,7 @@ fun MoneyCatDetailView(slug: String) {
             UmbraTopBarIcon(UmbraExtraIcons.more, "更多", { openMenu() }, tint = c.muted)
         },
         refreshing = refreshing,
-        onRefresh = { scope.launch { refreshing = true; MoneyStore.reload(silent = true); loadUsed(); refreshing = false } },
+        onRefresh = { scope.launch { refreshing = true; MoneyStore.refresh(); loadUsed(); refreshing = false } },
     ) {
         if (swapping && cat != null) {
             item(key = "swap") {

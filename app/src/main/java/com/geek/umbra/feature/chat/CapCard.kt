@@ -447,7 +447,8 @@ object CapCardRules {
             // approved = 点了、执行端正在做（稿里没画手机形制，先按「正在做」，问题清单第 4 条）
             // 点了、正在做（设计侧 324 §6a，三端统一）：胶囊「正在做」+ 转圈，灰字「能力 · 动作 · 「名字」 · 已允许」（326 补名字），别的端点的加「在 X 上」。
             c.phase == "approved" -> CapReceipt(CapPill.Busy, "正在做", subj, listOfNotNull("已允许", remoteName(c.decidedOn)?.let { "在 $it 上" }, cloud), dim = false)
-            c.outcome == "failed" -> CapReceipt(CapPill.Bad, "没跑完", subj, listOfNotNull(c.error?.takeIf { it.isNotBlank() }, cloud), dim = false)
+            // 没跑完：服务端 error 是写给模型的（「先 list 看一下」），不上屏；行下写服务端 note，没带写通用句（geek-13 11-12）。
+            c.outcome == "failed" -> CapReceipt(CapPill.Bad, "没跑完", subj, listOfNotNull(cloud), dim = false, note = failedNote(c.note))
             // 允许了但没动（服务端 #189 outcome = skipped：要完成的那一次已经过了 / 本来就完成了；设计侧 340 批次 351 定稿，同 PC 442915c）：
             // 胶囊「不用做」（和已撤销、已过期同一档），谁允许照写，行下灰字放 note（没带写默认句）。认不得的 outcome 同样归这一档。
             c.outcome != null && c.outcome !in KNOWN_OUTCOMES -> CapReceipt(CapPill.Off, "不用做", subj, listOfNotNull(by, cloud), dim = true, note = skippedNote(c.note))
@@ -456,10 +457,20 @@ object CapCardRules {
     }
 
     /** 「不用做」行下那句（同 PC capCard.skippedNote）：去首尾空白、去句末标点再统一补「。」，和撤销失败那句同一个处理；没带 / 空的写默认句。 */
-    fun skippedNote(note: String?): String {
-        val t = note?.trim()?.trimEnd('。', '.', '！', '!')?.takeIf { it.isNotEmpty() } ?: return "这件事已经不用做了，没动。"
+    fun skippedNote(note: String?): String = noteLine(note, "这件事已经不用做了，没动。")
+
+    /**
+     * 「没跑完」行下那句：服务端 note 照 skippedNote 的处理（去句末标点补「。」）；没带写通用句（PC 711932b capCard.failedNote，三端同一句）。
+     */
+    fun failedNote(note: String?): String = noteLine(note, FAILED_NOTE_DEFAULT)
+
+    /** 两句共用的整理（同 iOS noteLine）：去首尾空白、去末尾句号，统一补一个「。」；空了写兜底句。只有一处定义，改规矩不会漏一份。 */
+    private fun noteLine(note: String?, fallback: String): String {
+        val t = note?.trim()?.trimEnd('。', '.', '！', '!')?.takeIf { it.isNotEmpty() } ?: return fallback
         return "$t。"
     }
+
+    const val FAILED_NOTE_DEFAULT = "这一次没做成，可以再跟秘书说一遍，让它重试。"
 
     /** 认得的结果；skipped 也不在里面 —— 它和认不得的走同一档。 */
     private val KNOWN_OUTCOMES = setOf("done", "failed", "rejected", "expired")
@@ -515,8 +526,11 @@ object CapCardRules {
     /** verb = read 的回执不单独画，收进「看了 N 样东西」。 */
     fun isReadReceipt(c: CapCard): Boolean = c.verb == "read" && !isCard(c)
 
-    /** 活动行展开后的一行：「能力 · 动作　对象」—— 一个全角空格；对象取结果的说法 summary，空了才用 title（同 PC，tokens batch339 readActivity.look）。 */
-    fun readLine(c: CapCard): String = capName(c) + ((c.summary?.takeIf { it.isNotBlank() } ?: c.title).takeIf { it.isNotBlank() }?.let { "　$it" } ?: "")
+    /**
+     * 活动行展开后的一行：「能力 · 动作　卡标题」—— 一个全角空格。summary 是写给模型的（带内部 id、换行），326 起不上屏
+     * （geek-13 11-12，同 PC / iOS）。
+     */
+    fun readLine(c: CapCard): String = capName(c) + (c.title.takeIf { it.isNotBlank() }?.let { "　$it" } ?: "")
 
     fun readHead(n: Int): String = "看了 $n 样东西"
 

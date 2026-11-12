@@ -89,6 +89,12 @@ class CapCardRulesTest {
         assertEquals(CapReceipt(CapPill.Wait, "已处理", "工作流 · 新建 · 生成随机密码", listOf("已经在「演示电脑」上处理过了"), true),
             CapCardRules.receipt(mine, supersededBy = "演示电脑"))
         assertEquals("没跑完", CapCardRules.receipt(card("""{"call_id":"c","phase":"result","outcome":"failed","error":"超时"}""")).label)
+        // error 是给模型的，不上屏：行尾只留「在云端」；行下写 note，没带写通用句
+        val failed = CapCardRules.receipt(card("""{"call_id":"c","name":"记账 · 删除","action":"delete","where":"cloud","object_name":"午饭 · ¥32.50",
+            "phase":"result","outcome":"failed","error":"没有这笔（id 不对、已经删了，或者在经营账本里）。先 list 看一下。"}"""))
+        assertEquals(listOf("在云端"), failed.tail)
+        assertEquals("这一次没做成，可以再跟秘书说一遍，让它重试。", failed.note)
+        assertEquals("这笔已经不在了。", CapCardRules.receipt(card("""{"call_id":"c","phase":"result","outcome":"failed","error":"x","note":" 这笔已经不在了 "}""")).note)
     }
 
     @Test fun localExpiryWithGrace() {
@@ -112,7 +118,11 @@ class CapCardRulesTest {
         assertEquals(0, (out[4] as ChatBlock.Cap).turnOpen)
         assertEquals("这一轮有 3 件事等你同意", CapCardRules.turnHead(3))
         assertNull(CapCardRules.turnHead(2))
-        assertEquals("工作流 · 列出　这台电脑上的 3 个工作流", CapCardRules.readLine((out[0] as ChatBlock.CapReads).items[0]))
+        // summary 不上屏（geek-13 11-12）：卡标题空就只写「能力 · 动作」
+        assertEquals("工作流 · 列出", CapCardRules.readLine((out[0] as ChatBlock.CapReads).items[0]))
+        assertEquals("记账 · 查　查「2026-11 里含「午饭」的流水」", CapCardRules.readLine(card("""{"call_id":"m","name":"记账 · 查","action":"list",
+            "action_word":"查","verb":"read","phase":"result","outcome":"done","title":"查「2026-11 里含「午饭」的流水」",
+            "summary":"2026-11 里「午饭」：共 1 笔\n[633810479907] · 支出 ¥32.50"}""")))
         assertEquals("看了 3 样东西", CapCardRules.readHead(3))
     }
 

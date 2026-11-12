@@ -145,7 +145,7 @@ fun MoneyHomeView() {
     var refreshing by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
-    LaunchedEffect(Unit) { MoneyStore.loadIfNeeded() }
+    LaunchedEffect(Unit) { MoneyStore.enter() }
 
     // ⚠️ 标题槽换成账本切换器（G1 / switcherLayer）。UmbraScreen 的推入页标题槽画不了自定义件，
     // 所以用 leading 把「返回 + 切换器」一起画，title 留给读屏 / 页面名（不画出来）。
@@ -184,7 +184,8 @@ fun MoneyHomeView() {
         onRefresh = {
             scope.launch {
                 refreshing = true
-                MoneyStore.reload(silent = true)
+                // 下拉刷新是真的刷新：生活账本先和服务端同步一轮（geek-13 11-12）
+                MoneyStore.refresh()
                 refreshing = false
             }
         },
