@@ -327,6 +327,40 @@ object ChatStore {
         }
     }
 
+    /**
+     * 回执上的［撤销］（设计侧 330 五.1 / 协议 §8.3 `POST /cap/calls/{id}/undo`，不要 body）。点了钮位换成「正在撤销」；
+     * 成功换上回包的卡（别的端也会收到 cap_updated 原位变）；撤不了按 409 的 state / 404 由端上出字（[CapCardRules.undoOutcome]）。
+     */
+    fun undoCap(callId: String) {
+        val b = stores.values.firstNotNullOfOrNull { s -> s.blocks.firstOrNull { it is ChatBlock.Cap && it.card.callId == callId } as? ChatBlock.Cap } ?: return
+        if (b.undoing) return
+        updateCap(callId) { it.copy(undoing = true, undoNote = null) }
+        AppGraph.scope.launch {
+            when (val r = AppGraph.http.raw("POST", "/cap/calls/${UmbraUrl.segment(callId)}/undo", body = "".toRequestBody(UmbraHttp.JSON), headers = capHeaders)) {
+                is HttpResult.Ok -> {
+                    val card = runCatching { UmbraJson.parseToJsonElement(r.body) as JsonObject }.getOrNull()?.obj("meta")?.obj("cap")?.let { CapCard.parse(it) }
+                    updateCap(callId) { it.copy(card = card ?: it.card.copy(phase = "undone", buttons = emptyList()), undoing = false) }
+                }
+                is HttpResult.Fail -> {
+                    val o = runCatching { UmbraJson.parseToJsonElement(r.body) as JsonObject }.getOrNull()
+                    // state 在响应体顶层（errors.api_error 把 extra 平铺进去）；保险起见也看 detail 里那层。
+                    val state = o?.str("state") ?: o?.obj("detail")?.str("state")
+                    val out = CapCardRules.undoOutcome(r.status, state, r.detail, b.card)
+                    if (out == null) {
+                        updateCap(callId) { it.copy(undoing = false) }
+                        AppGraph.router.showToast(r.detail?.takeIf { it.isNotBlank() } ?: "没发出去，稍后再点一次。")
+                    } else updateCap(callId) { cur ->
+                        cur.copy(
+                            undoing = false, undoNote = out.note, undoBlocked = out.blocked,
+                            card = if (out.undone) cur.card.copy(phase = "undone", buttons = emptyList()) else cur.card,
+                        )
+                    }
+                }
+                else -> { updateCap(callId) { it.copy(undoing = false) }; AppGraph.router.showToast("没发出去，稍后再点一次。") }
+            }
+        }
+    }
+
     /** 「以后信任它」（§5.9）：只把网站加进信任列表，不改这张卡的按钮（308 §3）。 */
     fun trustSite(domain: String, callId: String) {
         AppGraph.scope.launch {

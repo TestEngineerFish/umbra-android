@@ -49,8 +49,8 @@ object TaskSuspendCopy {
     const val interruptedTitle = "这个任务被打断了"
     const val interruptedBody = "${Brand.productName}的服务器重启过一次，任务停在{{step}}，没跑完。可以从{{step}}接着跑。"
     const val interruptedListMeta = "已挂起 · 被服务器重启打断"
-    /** 列表行尾（设计侧 328 a：行尾写用户现在能做的事，副行写原因；绿）。 */
-    const val interruptedListTrailing = "可以接着跑"
+    /** 能接着跑时的列表副行（330 五.6：手机没有行尾格，能做的事写进琥珀副行；窄，省掉「服务器重启」，详情里有全句）。 */
+    const val interruptedListMetaReady = "已挂起 · 被打断，可以接着跑"
     /** 聊天任务卡那一行（326 a，与 PC 同一句）。 */
     const val interruptedCard = "被服务器重启打断了，可以接着跑"
     const val stepUnknown = "这一步"
@@ -153,8 +153,6 @@ data class TaskSuspendDisplay(
     val ready: Boolean,
     val listMeta: String,
     val cardText: String,
-    /** 列表行尾那句（绿）；只有被打断且能接着跑时有（328 a）。 */
-    val listTrailing: String? = null,
 ) {
     /** 列表行用不用琥珀字（设计侧 225）：**只有「可以接着跑了」琥珀**，等待档灰。 */
     val listMetaWarn: Boolean get() = ready
@@ -259,8 +257,8 @@ object TaskSuspendRules {
             val body = TaskSuspendCopy.fill(TaskSuspendCopy.interruptedBody, mapOf("step" to stepPhrase(info.step)))
             return TaskSuspendDisplay(
                 title = TaskSuspendCopy.interruptedTitle, body = body, iosHint = null, ready = info.resumeReady,
-                listMeta = TaskSuspendCopy.interruptedListMeta, cardText = TaskSuspendCopy.interruptedCard,
-                listTrailing = if (info.resumeReady) TaskSuspendCopy.interruptedListTrailing else null,
+                listMeta = if (info.resumeReady) TaskSuspendCopy.interruptedListMetaReady else TaskSuspendCopy.interruptedListMeta,
+                cardText = TaskSuspendCopy.interruptedCard,
             )
         }
         val kind = kind(info)

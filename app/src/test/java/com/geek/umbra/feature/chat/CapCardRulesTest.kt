@@ -173,4 +173,30 @@ class CapCardRulesTest {
         val mixed = card("""{"call_id":"c","phase":"ask","buttons":["once","reject"],"taint":{"domains":["forum.example.com"],"kinds":["file"],"items":[{"kind":"file","label":"物业通知.pdf"}]}}""")
         assertEquals("这一轮秘书读过不是你写的内容。如果不是你自己要改的，点「不要」。", CapCardRules.warningText(CapCardRules.warnings(mixed)[0], mixed))
     }
+
+    // 设计侧 330 五.1：回执上的［撤销］
+    @Test fun receiptUndo() {
+        val done = card("""{"call_id":"c","action":"update","name":"常用语 · 改一条常用语","object_name":"物业电话","where":"cloud",
+            "phase":"result","outcome":"done","decision":"once","buttons":["undo"],"undo":{"label":"撤销"}}""")
+        assertTrue(CapCardRules.showsUndo(done, blocked = false))
+        assertFalse(CapCardRules.showsUndo(done, blocked = true))
+        assertEquals("撤销", CapCardRules.undoLabel(done))
+        assertFalse("没带 undo 就不出钮", CapCardRules.showsUndo(card("""{"call_id":"c","phase":"result","outcome":"done"}"""), false))
+        // 撤成功：已撤销 + 名字，别的端撤的加「在 X 上撤销」，云端照旧，不再写「你允许了这一次」
+        val undone = card("""{"call_id":"c","action":"update","name":"常用语 · 改","object_name":"物业电话","where":"cloud","phase":"undone",
+            "decision":"once","undone_on":{"by_client":"client:ios","name":"iPhone"}}""")
+        assertEquals(CapReceipt(CapPill.Off, "已撤销", "常用语 · 修改 · 「物业电话」", listOf("在 iPhone 上撤销", "在云端"), true), CapCardRules.receipt(undone))
+        // 撤不了：按原因码出字
+        val R = CapCardRules
+        assertEquals("「物业电话」之后又有过改动（撤销也算一次），撤了会盖掉，所以不能撤销。", R.undoOutcome(409, "stale", "x", done)!!.note)
+        assertEquals("回收站里已经没有这条了，找不回。", R.undoOutcome(409, "gone", null, done)!!.note)
+        val failed = R.undoOutcome(409, "failed", "服务器暂时连不上。", done)!!
+        assertEquals("没撤成：服务器暂时连不上。可以再点一次撤销。", failed.note); assertFalse("失败保留钮", failed.blocked)
+        assertEquals("找不到这次操作的记录了，不能撤销。", R.undoOutcome(404, null, null, done)!!.note)
+        assertTrue(R.undoOutcome(409, "undone", null, done)!!.undone)
+        assertEquals(null, R.undoOutcome(409, "not_undoable", null, done)!!.note)
+        assertEquals(null, R.undoOutcome(500, null, null, done))
+        // 拆段：先截名字用
+        assertEquals("常用语 · 修改" to "「物业电话」", R.receiptParts(done, R.receipt(done)))
+    }
 }

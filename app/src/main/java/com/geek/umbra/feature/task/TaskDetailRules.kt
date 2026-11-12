@@ -74,5 +74,17 @@ object TaskDetailRules {
      * 「来自 X」那一格显示什么；null = 不显示。列表行、详情头、详情信息格、复制全文四处都从这里取 ——
      * 判空各写各的，下次就是列表显示、详情不显示（iOS: TaskDetailRules.swift:104）。
      */
-    fun channelLabel(raw: String?): String? = raw?.trim()?.takeIf { it.isNotEmpty() }
+    fun channelLabel(raw: String?, english: Boolean = true): String? {
+        val v = raw?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+        if (english) return v
+        // 中文界面把认得的渠道名换成中文（设计侧 330 三：「From web」→「来自网页」）；认不得的照原样。
+        return CHANNEL_ZH[v.lowercase()] ?: v
+    }
+
+    /** 渠道中文名（中文界面用）。 */
+    private val CHANNEL_ZH = mapOf("web" to "网页", "feishu" to "飞书", "lark" to "飞书", "ios" to "iPhone", "android" to "Android 手机", "pc" to "电脑")
+
+    /** 「来自网页」/「From web」：中文贴着写不留空格（iOS 键 tasks.fromChannel 的中文带空格，是给拉丁字母渠道名留的）。 */
+    fun fromChannel(label: String, english: Boolean, englishFormat: String): String =
+        if (english) englishFormat.format(label) else "来自$label"
 }

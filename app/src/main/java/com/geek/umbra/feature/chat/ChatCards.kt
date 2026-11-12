@@ -142,7 +142,8 @@ fun TaskCard(j: ChatBlock.Task, conv: String) {
             UmbraStatusBadge(st)
         }
         UmbraProgressBar(j.pct / 100f, st.bar())
-        Row(verticalAlignment = Alignment.Bottom) {
+        // 看门狗那一行挂着、且说的是同一件事（挂起太久 / 被打断）时，主行不出，由卡底那一行顶替（330 五.4）。
+        if (!com.geek.umbra.feature.task.TaskWatchdogRules.replacesMainLine(j.watchdog)) Row(verticalAlignment = Alignment.Bottom) {
             // 服务端的步骤结论可能长达几百字 —— 聊天卡是概览，限 8 行兜底，全文看任务详情
             Text(cardText ?: (if (unfinished) j.unfinishedReason else null) ?: j.message, color = if (unfinished && j.unfinishedReason != null) c.text else c.muted, style = TextStyle(fontSize = 13.sp, lineHeight = 19.5.sp), maxLines = 8, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
             Spacer(Modifier.width(8.dp))
@@ -245,7 +246,7 @@ private fun TaskCardAction(j: ChatBlock.Task, conv: String) {
  * ［停止］走任务详情同一个停止确认。
  */
 @Composable
-fun WatchdogRow(w: com.geek.umbra.feature.task.TaskWatchdog, source: ChatStore.ResumeSource, resuming: Boolean, failText: String?) {
+fun WatchdogRow(w: com.geek.umbra.feature.task.TaskWatchdog, source: ChatStore.ResumeSource, resuming: Boolean, failText: String?, resumeFrom: ChatStore.ResumeSource = source) {
     val c = UmbraTheme.colors
     val scope = rememberCoroutineScope()
     val resume = com.geek.umbra.feature.task.TaskWatchdogRules.canResume(w)
@@ -260,7 +261,7 @@ fun WatchdogRow(w: com.geek.umbra.feature.task.TaskWatchdog, source: ChatStore.R
         if (inCard) Text(com.geek.umbra.feature.task.TaskWatchdogRules.line(w), color = c.warningText, style = TextStyle(fontSize = 12.5.sp, lineHeight = 18.sp))
         if (resume || stop) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             if (resume) UmbraButton(if (resuming) TaskSuspendCopy.resuming else TaskSuspendCopy.resume, {
-                if (!resuming) scope.launch { ChatStore.resumeTask(w.taskId, source) }
+                if (!resuming) scope.launch { ChatStore.resumeTask(w.taskId, resumeFrom) }
             }, Modifier.weight(1f), height = 40.dp)
             if (stop) UmbraButton(TaskSuspendCopy.stop, {
                 com.geek.umbra.feature.task.confirmStopTask(w.taskId) { ok -> if (ok) ChatStore.clearWatchdog(w.taskId) }
@@ -270,12 +271,19 @@ fun WatchdogRow(w: com.geek.umbra.feature.task.TaskWatchdog, source: ChatStore.R
     }
 }
 
-/** 卡不在会话里的看门狗气泡：气泡下面带按钮（失败那行跟问话那颗共用一份状态）。 */
+/**
+ * 卡不在会话里的看门狗提醒收成小卡（330 五.5 稿 F）：任务名一行（13.5/600）+ 卡底那一行 + 钮，不放服务端原话（连 ⏸ ⏱ 一起）。
+ * 任务名必须留：光有那一行，不知道说的是哪个任务。
+ */
 @Composable
-fun WatchdogBubbleActions(w: com.geek.umbra.feature.task.TaskWatchdog) {
+fun WatchdogMiniCard(w: com.geek.umbra.feature.task.TaskWatchdog, name: String?) {
+    val c = UmbraTheme.colors
     val asks by ChatStore.resumeAsks.collectAsState()
     val ask = asks[w.taskId] ?: ResumeAsk()
-    WatchdogRow(w, ChatStore.ResumeSource.Ask, ask.resuming, ask.failText)
+    Column(cardModifier().padding(horizontal = 13.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+        name?.let { Text(it, color = c.text, style = TextStyle(fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold, lineHeight = 19.5.sp)) }
+        WatchdogRow(w, ChatStore.ResumeSource.Card, ask.resuming, ask.failText, resumeFrom = ChatStore.ResumeSource.Ask)
+    }
 }
 
 /** 助手「要接着跑吗？」下面那颗主钮（问话可能离任务卡很远）。条件没了就收掉，不补字。 */

@@ -69,6 +69,11 @@ data class CapCard(
     val decision: String?,
     val decidedOn: CapDecidedOn?,
     val by: String?,
+    /** 撤销钮上的字（`undo.label`）；`buttons` 含 "undo" 或带了 `undo` 才算能撤（§8.3，两样都给，认哪个都行）。 */
+    val undoLabel: String? = null,
+    val canUndo: Boolean = false,
+    /** 在哪一端撤的（`undone_on`，形状同 decided_on）：别的端撤的灰字加「在 iPhone 上撤销」。 */
+    val undoneOn: CapDecidedOn? = null,
 ) {
     companion object {
         /** `meta.cap` → 卡。没有 call_id 的不认（回 null，那条消息照普通文字画）。 */
@@ -100,6 +105,8 @@ data class CapCard(
                 else -> emptyList()
             }
             val decidedOn = (o["decided_on"] as? JsonObject)?.let { CapDecidedOn(it.s("by_client") ?: "", it.s("name") ?: "") }
+            val undoneOn = (o["undone_on"] as? JsonObject)?.let { CapDecidedOn(it.s("by_client") ?: "", it.s("name") ?: "") }
+            val undo = o["undo"] as? JsonObject
             return CapCard(
                 callId = id, capability = o.s("capability") ?: "", action = o.s("action") ?: "",
                 name = o.s("name") ?: "", verb = o.s("verb"), objectName = o.s("object_name")?.takeIf { it.isNotBlank() }, where = o.s("where"), runOn = runOn,
@@ -114,6 +121,8 @@ data class CapCard(
                 turnId = o.s("turn_id"), turnIndex = (o["turn_index"] as? JsonPrimitive)?.intOrNull,
                 outcome = o.s("outcome"), summary = o.s("summary"), error = o.s("error"),
                 decision = o.s("decision"), decidedOn = decidedOn, by = o.s("by"),
+                undoLabel = undo?.s("label")?.takeIf { it.isNotBlank() },
+                canUndo = undo != null || o.strings("buttons").contains("undo"), undoneOn = undoneOn,
             )
         }
 
@@ -419,7 +428,8 @@ object CapCardRules {
         val by = byWhom(c)
         val cloud = if (c.where == "cloud") "在云端" else null
         return when {
-            c.phase == "undone" -> CapReceipt(CapPill.Off, "已撤销", subj, emptyList(), dim = true)
+            // 撤完（330 五.1）：灰字照旧「能力 · 动作 · 「名字」」，别的端撤的加「在 X 上撤销」，云端照旧；不再写「你允许了这一次」。
+            c.phase == "undone" -> CapReceipt(CapPill.Off, "已撤销", subj, listOfNotNull(remoteName(c.undoneOn)?.let { "在 $it 上撤销" }, cloud), dim = true)
             c.phase == "expired" || c.outcome == "expired" -> CapReceipt(CapPill.Off, "已过期", subj, listOf("等了 24 小时没人点"), dim = true)
             c.outcome == "rejected" || c.decision == "reject" -> CapReceipt(CapPill.Off, "没做", subj, listOfNotNull(by), dim = true)
             c.phase == "queued" -> CapReceipt(CapPill.Wait, "已允许 · 等电脑上线", subj, listOfNotNull(by), dim = false)
@@ -432,6 +442,41 @@ object CapCardRules {
     }
 
     fun quoted(name: String): String = if (name.startsWith("「")) name else "「$name」"
+
+    // ── 回执上的［撤销］（设计侧 330 五.1 / 协议 §8.3） ─────────────────────────
+
+    /** 回执行尾出不出「撤销」：做成了、服务端说能撤、本端没被告知撤不了。 */
+    fun showsUndo(c: CapCard, blocked: Boolean): Boolean =
+        c.canUndo && !blocked && c.phase == "result" && c.outcome == "done"
+
+    /** 撤销钮上的字：`undo.label`，没带写「撤销」。 */
+    fun undoLabel(c: CapCard): String = c.undoLabel ?: "撤销"
+
+    /** 撤不了时怎么办（409 的 state / 404）：行下那句（null = 不出字）、钮收不收。字由端上按原因码出，三端同一份（330 五.1 表）。 */
+    data class UndoOutcome(val note: String?, val blocked: Boolean, val undone: Boolean = false)
+
+    fun undoOutcome(status: Int, state: String?, detail: String?, c: CapCard): UndoOutcome? = when {
+        status == 404 -> UndoOutcome("找不到这次操作的记录了，不能撤销。", blocked = true)
+        status != 409 -> null
+        state == "undone" -> UndoOutcome(null, blocked = true, undone = true)
+        state == "not_undoable" -> UndoOutcome(null, blocked = true)
+        state == "stale" -> UndoOutcome("${c.objectName?.let(::quoted) ?: "这一条"}之后又有过改动（撤销也算一次），撤了会盖掉，所以不能撤销。", blocked = true)
+        state == "gone" -> UndoOutcome("回收站里已经没有这条了，找不回。", blocked = true)
+        // 执行失败可能是一时的：保留钮，可以再点一次。
+        // 字照 PC 语言包 capCard.undoFailed（f53a010）：detail 去掉句末标点；没有 detail 写「服务器暂时连不上」。
+        state == "failed" -> UndoOutcome("没撤成：${detail?.trim()?.trimEnd('。', '.', '！', '!', '；', ';')?.takeIf { it.isNotEmpty() } ?: "服务器暂时连不上"}。可以再点一次撤销。", blocked = false)
+        else -> null
+    }
+
+    /**
+     * 回执主体拆成「能力 · 动作」和「名字」两段，放不下时先截名字（330 五.7，按 iOS）：「能力 · 动作」不截，名字至少留前 4 个字再「…」，
+     * 还放不下再截行尾。null = 这一行不分段（已处理那种主体不是「能力 · 动作 · 名字」）。
+     */
+    fun receiptParts(c: CapCard, r: CapReceipt): Pair<String, String>? {
+        val head = capName(c)
+        if (!r.subject.startsWith("$head · ")) return null
+        return head to r.subject.removePrefix("$head · ")
+    }
 
     // ── 只读活动行（314 a / 稿 L） ──────────────────────────────────────
 

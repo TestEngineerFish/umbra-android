@@ -67,4 +67,15 @@ class TaskWatchdogRulesTest {
         assertEquals(listOf(card), ChatEchoRules.visible(listOf(card, a1, a2.copy(watchdog = w2.copy(cleared = true)))))
         assertEquals(listOf(a1), ChatEchoRules.visible(listOf(a1)))
     }
+
+    // 330 五.4 / 五.5：挂起太久、被打断顶替主行；卡住两句都留；任务名给气泡小卡
+    @Test fun design330() {
+        assertTrue(TaskWatchdogRules.replacesMainLine(TaskWatchdog("t", "interrupted", listOf("resume", "stop"))))
+        assertTrue(TaskWatchdogRules.replacesMainLine(TaskWatchdog("t", "suspended", listOf("stop"))))
+        assertFalse(TaskWatchdogRules.replacesMainLine(TaskWatchdog("t", "overdue", listOf("stop"))))
+        assertFalse("收掉以后主行恢复", TaskWatchdogRules.replacesMainLine(TaskWatchdog("t", "interrupted", listOf("stop"), cleared = true)))
+        assertFalse(TaskWatchdogRules.replacesMainLine(null))
+        val w = TaskWatchdogRules.parse(meta("""{"kind":"task_watchdog","task_id":"t","reminder":"interrupted","actions":["resume","stop"],"task_name":"海外 AI 早期融资调研"}"""))!!
+        assertEquals("海外 AI 早期融资调研", w.taskName)
+    }
 }

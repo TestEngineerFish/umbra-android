@@ -573,6 +573,16 @@ object ReminderStore {
         return r to after
     }
 
+    /**
+     * 通知上的「完成」：只认弹出时那一次（[occurrenceAt]）。这条已经推到别的时刻了（另一条通知按过、或到点自动推过）就不再动，
+     * 免得提前提醒和正点提醒各按一次推两格（同 PC）。老通知没带这个数（null）照常完成。
+     */
+    fun completeOccurrence(id: String, occurrenceAt: Long?) {
+        val r = item(id) ?: return
+        if (occurrenceAt != null && r.atMs != occurrenceAt) return
+        complete(id)
+    }
+
     /** 「结束重复」（330 五.3）：回点之前那一版，给撤销用。不重复的 / 已完成的不动、回 null。 */
     fun endRepeat(id: String): Reminder? {
         val r = item(id) ?: return null

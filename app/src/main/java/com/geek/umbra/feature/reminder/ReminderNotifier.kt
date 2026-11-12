@@ -43,6 +43,8 @@ object ReminderNotifier {
     private const val EXTRA_ID = "reminderId"
     private const val EXTRA_KIND = "kind"
     private const val EXTRA_FIRE = "fireAt"
+    /** 通知弹出时这条提醒的 at：通知上的「完成」只认这一次（提前提醒和正点提醒各按一次不会推两格；同 PC）。 */
+    private const val EXTRA_OCC = "occurrenceAt"
     const val ACTION_DONE = "com.geek.umbra.reminder.DONE"
     const val ACTION_SNOOZE = "com.geek.umbra.reminder.SNOOZE"
     /** 通知的 tag 前缀：撤孤儿时只认这一类，不碰别的模块的通知。 */
@@ -179,22 +181,23 @@ object ReminderNotifier {
             // 启动器角标数（支持时）：未完成且已过期 / 今天的条数，同 iOS App 图标角标口径
             .setNumber(ReminderStore.pendingCount)
             // 不给「完成」标红 —— 完成一条提醒不是破坏性操作（iOS 同）
-            .addAction(0, ctx.getString(R.string.reminder_notif_actionDone), actionIntent(ctx, ACTION_DONE, r.id))
+            .addAction(0, ctx.getString(R.string.reminder_notif_actionDone), actionIntent(ctx, ACTION_DONE, r.id, r.atMs))
             .addAction(0, ctx.getString(R.string.reminder_notif_actionSnooze), actionIntent(ctx, ACTION_SNOOZE, r.id))
         if (!ahead && r.note.isNotEmpty()) b.setSubText(r.note)
         runCatching { NotificationManagerCompat.from(ctx).notify(TAG_PREFIX + r.id, if (ahead) NOTIF_AHEAD else NOTIF_MAIN, b.build()) }
     }
 
-    private fun actionIntent(ctx: Context, action: String, id: String): PendingIntent =
+    private fun actionIntent(ctx: Context, action: String, id: String, occurrenceAt: Long? = null): PendingIntent =
         PendingIntent.getBroadcast(
             ctx, 0,
             Intent(ctx, ReminderActionReceiver::class.java).setAction(action).setData(Uri.parse("umbra-action://reminder/${Uri.encode(id)}"))
-                .putExtra(EXTRA_ID, id),
+                .putExtra(EXTRA_ID, id).apply { if (occurrenceAt != null) putExtra(EXTRA_OCC, occurrenceAt) },
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
     internal fun idOf(i: Intent): String? = i.getStringExtra(EXTRA_ID)
     internal fun kindOf(i: Intent): String = i.getStringExtra(EXTRA_KIND) ?: KIND_MAIN
+    internal fun occurrenceOf(i: Intent): Long? = if (i.hasExtra(EXTRA_OCC)) i.getLongExtra(EXTRA_OCC, 0) else null
     internal fun fireOf(i: Intent): Long = i.getLongExtra(EXTRA_FIRE, System.currentTimeMillis())
 }
 
@@ -224,7 +227,7 @@ class ReminderActionReceiver : BroadcastReceiver() {
         ReminderStore.start()
         val id = ReminderNotifier.idOf(intent) ?: return
         when (intent.action) {
-            ReminderNotifier.ACTION_DONE -> ReminderStore.complete(id)
+            ReminderNotifier.ACTION_DONE -> ReminderStore.completeOccurrence(id, ReminderNotifier.occurrenceOf(intent))
             ReminderNotifier.ACTION_SNOOZE -> ReminderStore.snooze(id)
         }
         ReminderNotifier.dismiss(context, id)

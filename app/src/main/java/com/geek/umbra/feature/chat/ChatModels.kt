@@ -288,6 +288,10 @@ sealed interface ChatBlock {
         val supersededBy: String? = null,
         val expanded: Boolean = false,
         val turnOpen: Int = 0,
+        /** 回执上的［撤销］（330 五.1）：在撤（钮位换转圈「正在撤销」）/ 撤不了的原因（行下一行）/ 钮收掉了。 */
+        val undoing: Boolean = false,
+        val undoNote: String? = null,
+        val undoBlocked: Boolean = false,
     ) : ChatBlock
 
     /** 带保险箱密钥的工作流说明卡（§13.4 `meta.cap_notice`）。 */

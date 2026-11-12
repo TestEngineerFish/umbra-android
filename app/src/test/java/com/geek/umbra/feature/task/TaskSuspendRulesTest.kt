@@ -190,14 +190,12 @@ class TaskSuspendRulesTest {
         val d = TaskSuspendRules.display("suspended", info)!!
         assertEquals("这个任务被打断了", d.title)
         assertEquals("长尾雀的服务器重启过一次，任务停在第 2 步，没跑完。可以从第 2 步接着跑。", d.body)
-        assertEquals("已挂起 · 被服务器重启打断", d.listMeta)
+        assertEquals("330 五.6：能接着跑时琥珀副行", "已挂起 · 被打断，可以接着跑", d.listMeta)
         assertEquals("被服务器重启打断了，可以接着跑", d.cardText)
-        // 328 a：列表行尾绿字「可以接着跑」；没就绪时没有
-        assertEquals("可以接着跑", d.listTrailing)
         assertTrue(TaskSuspendRules.showsResume("suspended", info))
         val waiting = TaskSuspendRules.display("suspended", TaskSuspendInfo(reason = "interrupted"))!!
         assertFalse(waiting.title.contains("上线"))
-        assertEquals(null, waiting.listTrailing)
+        assertEquals("没就绪时副行照旧", "已挂起 · 被服务器重启打断", waiting.listMeta)
         assertEquals("长尾雀的服务器重启过一次，任务停在这一步，没跑完。可以从这一步接着跑。", waiting.body)
     }
 }

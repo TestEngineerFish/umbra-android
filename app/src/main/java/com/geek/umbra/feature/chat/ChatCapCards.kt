@@ -296,11 +296,64 @@ private fun CapReceiptRow(b: ChatBlock.Cap, card: CapCard) {
                 Text(r.label, color = fg, style = TextStyle(fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold), maxLines = 1)
             }
             Spacer(Modifier.width(8.dp))
-            Text(r.subject + r.tail.joinToString("") { " · $it" }, color = if (r.dim) t.muted else t.text,
-                style = TextStyle(fontSize = 12.5.sp), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+            ReceiptLine(CapCardRules.receiptParts(card, r), r.subject, r.tail.joinToString("") { " · $it" },
+                if (r.dim) t.muted else t.text, Modifier.weight(1f))
+            // 行尾［撤销］（330 五.1 稿 D）：12 muted 文字钮；点了换转圈「正在撤销」（faint），行的其他部分不动。
+            if (b.undoing) {
+                Spacer(Modifier.width(8.dp))
+                com.geek.umbra.designsystem.UmbraSpinningIcon(UmbraIconPaths.spinnerArc, t.faint, 11.dp)
+                Spacer(Modifier.width(4.dp))
+                Text("正在撤销", color = t.faint, style = TextStyle(fontSize = 12.sp), maxLines = 1)
+            } else if (CapCardRules.showsUndo(card, b.undoBlocked)) {
+                Text(CapCardRules.undoLabel(card), color = t.muted, style = TextStyle(fontSize = 12.sp), maxLines = 1,
+                    modifier = Modifier.heightIn(min = 38.dp).clickable(role = Role.Button) { ChatStore.undoCap(card.callId) }
+                        .padding(start = 10.dp, top = 11.dp, bottom = 11.dp))
+            }
         }
+        // 撤不了的原因（端上按原因码出字）：行下一行 12 muted。
+        b.undoNote?.let { Text(it, color = t.muted, style = TextStyle(fontSize = 12.sp, lineHeight = 17.sp), modifier = Modifier.padding(start = 12.dp, top = 4.dp, end = 10.dp)) }
         if (b.expanded && card.preview.isNotEmpty()) Column(Modifier.fillMaxWidth().padding(top = 6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             for (p in card.preview) CapPreviewView(p)
+        }
+    }
+}
+
+/**
+ * 回执主体那一格：放不下时先截名字（330 五.7，按 iOS）——「能力 · 动作」不截；名字至少留前 4 个字 +「…」；还放不下再截行尾。
+ * [parts] 为 null（已处理那种）时整串一个 Text 在行尾截。
+ */
+@Composable
+private fun ReceiptLine(parts: Pair<String, String>?, plain: String, tail: String, color: androidx.compose.ui.graphics.Color, modifier: Modifier) {
+    val style = TextStyle(fontSize = 12.5.sp)
+    if (parts == null) {
+        Text(plain + tail, color = color, style = style, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = modifier)
+        return
+    }
+    val (head, obj) = parts
+    androidx.compose.ui.layout.Layout(
+        contents = listOf(
+            { Text(head, color = color, style = style, maxLines = 1, softWrap = false) },
+            { Text(" · $obj", color = color, style = style, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+            { Text(tail, color = color, style = style, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+            // 只量不画：名字留前 4 个字 +「…」那么宽
+            { Text(" · " + obj.take(5) + "…", style = style, maxLines = 1, softWrap = false) },
+        ),
+        modifier = modifier,
+    ) { (h, o, tl, mn), c ->
+        val w = c.maxWidth
+        val hp = h.first().measure(androidx.compose.ui.unit.Constraints(maxWidth = w))
+        val avail = (w - hp.width).coerceAtLeast(0)
+        val oFull = o.first().maxIntrinsicWidth(c.maxHeight)
+        val tFull = tl.first().maxIntrinsicWidth(c.maxHeight)
+        val oMin = minOf(oFull, mn.first().maxIntrinsicWidth(c.maxHeight))
+        val oW = if (oFull + tFull <= avail) oFull else maxOf(oMin, avail - tFull).coerceAtMost(avail)
+        val op = o.first().measure(androidx.compose.ui.unit.Constraints(maxWidth = oW))
+        val tp = tl.first().measure(androidx.compose.ui.unit.Constraints(maxWidth = (avail - op.width).coerceAtLeast(0)))
+        val ht = maxOf(hp.height, op.height, tp.height)
+        layout(w, ht) {
+            hp.placeRelative(0, (ht - hp.height) / 2)
+            op.placeRelative(hp.width, (ht - op.height) / 2)
+            tp.placeRelative(hp.width + op.width, (ht - tp.height) / 2)
         }
     }
 }

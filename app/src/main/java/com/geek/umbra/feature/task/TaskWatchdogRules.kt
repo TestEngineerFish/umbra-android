@@ -27,6 +27,8 @@ data class TaskWatchdog(
     /** suspended 档带的挂起字段（形状同任务的挂起字段），用来说「等「X」上线」那半句。 */
     val suspend: TaskSuspendInfo = TaskSuspendInfo(),
     val cleared: Boolean = false,
+    /** 任务名（服务端 #185 `task_name`）：卡不在会话里时气泡收成小卡，第一行就是它（330 五.5）。 */
+    val taskName: String? = null,
 )
 
 object TaskWatchdogRules {
@@ -56,8 +58,12 @@ object TaskWatchdogRules {
             step = num("step")?.intOrNull?.takeIf { it > 0 }, stepName = str("step_name"),
             sinceMs = num("since_ms")?.longOrNull?.takeIf { it > 0 }, suspendedSecs = num("suspended_secs")?.longOrNull?.takeIf { it > 0 },
             suspend = if (reminder == SUSPENDED) info else TaskSuspendInfo(),
+            taskName = str("task_name"),
         )
     }
+
+    /** 那一行挂着时顶不顶替卡的主行（330 五.4）：挂起太久、被打断说的和主行是一件事 → 顶替；卡住时主行说进度、两句都留。 */
+    fun replacesMainLine(w: TaskWatchdog?): Boolean = w != null && !w.cleared && w.reminder != OVERDUE
 
     fun canResume(w: TaskWatchdog): Boolean = !w.cleared && "resume" in w.actions
     fun canStop(w: TaskWatchdog): Boolean = !w.cleared && "stop" in w.actions

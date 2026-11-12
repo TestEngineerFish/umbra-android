@@ -689,7 +689,11 @@ private fun BlockRow(
                 } else {
                     // 非早报的执勤消息（say 那种）：气泡上方标头、下方卡底反馈钮（iOS ChatThreadView.swift:446/469）
                     if (duty != null) com.geek.umbra.feature.duty.DutyMessageHeader(duty)
-                    if (b.text.isNotEmpty() || b.streaming) AiBubble(b, contentW, flash, if (b.text.isNotEmpty()) botMenu(b.text, b.serverId, "assistant") else emptyList())
+                    // 看门狗提醒（卡不在会话里）：不放服务端原话，收成小卡（330 五.5）。任务名先用 meta.task_name，老消息按 task_id 查本机任务名，
+                    // 再没有就不写名字那一行（同 PC）。
+                    val dog = b.watchdog
+                    if (dog != null) WatchdogMiniCard(dog, dog.taskName ?: com.geek.umbra.feature.task.TasksStore.items.value.firstOrNull { it.id == dog.taskId }?.title)
+                    else if (b.text.isNotEmpty() || b.streaming) AiBubble(b, contentW, flash, if (b.text.isNotEmpty()) botMenu(b.text, b.serverId, "assistant") else emptyList())
                     b.vision?.let { VisionFootnote(it, conv, b.id) }
                     if (duty != null) com.geek.umbra.feature.duty.DutyCardFooter(duty)
                 }
@@ -701,7 +705,6 @@ private fun BlockRow(
                 }
                 KeptToolsRow(b.toolsRun)
                 b.resumeTaskId?.let { ResumeAskAction(it) }
-                b.watchdog?.let { WatchdogBubbleActions(it) }
                 if (b.citations.isNotEmpty() && !b.streaming) KbCitationChips(b.citations)
             }
         }
