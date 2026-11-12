@@ -114,7 +114,8 @@ private fun CapFullCard(b: ChatBlock.Cap, c: CapCard) {
             if (c.phase != "waiting_device") {
                 for (w in CapCardRules.warnings(c)) CapWarningRow(w, c)
                 for (p in c.preview) CapPreviewView(p)
-                if (c.previewTruncated) Text("预览太长，后面几段没带过来。", color = t.faint, style = TextStyle(fontSize = 12.sp))
+                // 服务端兜底：整卡超过 48KB 从后往前丢段（字同 PC 4a9a794）
+                if (c.previewTruncated) Text(CapCardRules.PREVIEW_TRUNCATED, color = t.faint, style = TextStyle(fontSize = 12.sp))
             }
             if (CapCardRules.isOpen(c)) {
                 CapScope(b, c)
@@ -423,6 +424,7 @@ private fun CapReceiptRow(b: ChatBlock.Cap, card: CapCard) {
         (b.undoNote ?: r.note)?.let { Text(it, color = t.muted, style = TextStyle(fontSize = 12.sp, lineHeight = 17.sp), modifier = Modifier.padding(start = 12.dp, top = 4.dp, end = 10.dp)) }
         if (b.expanded && card.preview.isNotEmpty()) Column(Modifier.fillMaxWidth().padding(top = 6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             for (p in card.preview) CapPreviewView(p)
+            if (card.previewTruncated) Text(CapCardRules.PREVIEW_TRUNCATED, color = t.faint, style = TextStyle(fontSize = 12.sp))
         }
     }
 }
