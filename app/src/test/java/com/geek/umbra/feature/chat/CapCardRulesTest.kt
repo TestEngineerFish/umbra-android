@@ -234,6 +234,35 @@ class CapCardRulesTest {
         assertEquals("没做", CapCardRules.receipt(c.copy(outcome = "rejected", decision = null)).label)
     }
 
+    // 设计侧 342 四.1：问过用户的读留回执（不出撤销）；规则 / 系统默认放行的读才收进活动行
+    @Test fun askedReadKeepsReceipt() {
+        fun read(extra: String) = card("""{"call_id":"r","name":"记账 · 查","action":"list","action_word":"查","verb":"read","where":"cloud",
+            "phase":"result","outcome":"done","title":"查「2026-11 的流水」","object_name":"2026-11 的流水","buttons":["undo"]$extra}""")
+        val asked = read(""","decision":"once"""")
+        assertFalse(CapCardRules.isReadReceipt(asked))
+        assertEquals("已做", CapCardRules.receipt(asked).label)
+        assertEquals(listOf("你允许了这一次", "在云端"), CapCardRules.receipt(asked).tail)
+        assertFalse("读不用撤", CapCardRules.showsUndo(asked, blocked = false))
+        assertFalse("总是允许的那一次也留", CapCardRules.isReadReceipt(read(""","decision":"always"""")))
+        assertFalse("别的端点的也算问过", CapCardRules.isReadReceipt(read(""","decided_on":{"by_client":"ios","name":"iPhone"}""")))
+        assertTrue("规则放行", CapCardRules.isReadReceipt(read(""","by":"rule"""")))
+        assertTrue("系统默认", CapCardRules.isReadReceipt(read(""","by":"default"""")))
+        assertTrue("什么都没带（老卡）照旧进活动行", CapCardRules.isReadReceipt(read("")))
+        assertFalse("过期没人点：出过卡，留「已过期」回执", CapCardRules.isReadReceipt(read("").copy(phase = "expired")))
+        assertTrue("规整成 rule 的 decision", CapCardRules.isReadReceipt(read(""","decision":"rule"""")))
+    }
+
+    // 设计侧 342 四.2：金额拆字段，紧跟在引号外，永远不截；名字带金额时最少留 2 个字；没带金额照旧整串
+    @Test fun amountSplit() {
+        val c = card("""{"call_id":"m","name":"记账 · 新建","action":"create","verb":"write","where":"cloud","phase":"result","outcome":"done",
+            "by":"default","title":"t","object_name":"午饭","object_amount":"¥32.50"}""")
+        val r = CapCardRules.receipt(c)
+        assertEquals("记账 · 新建 · 「午饭」\u00A0¥32.50", r.subject)
+        assertEquals(CapCardRules.ReceiptParts("记账 · 新建", "「午饭」", "\u00A0¥32.50", 2), CapCardRules.receiptParts(c, r))
+        val old = card("""{"call_id":"m","name":"记账 · 新建","action":"create","phase":"result","outcome":"done","title":"t","object_name":"午饭 · ¥32.50"}""")
+        assertEquals("老服务端不拆：整串", CapCardRules.ReceiptParts("记账 · 新建", "「午饭 · ¥32.50」", null, 4), CapCardRules.receiptParts(old, CapCardRules.receipt(old)))
+    }
+
     @Test fun receiptNameNeverEmptied() {
         assertEquals(80, CapCardRules.receiptNameWidth(avail = 200, full = 80, min = 40, tail = 100))
         assertEquals(60, CapCardRules.receiptNameWidth(avail = 160, full = 80, min = 40, tail = 100))
@@ -270,6 +299,6 @@ class CapCardRulesTest {
         assertEquals(null, R.undoOutcome(409, "not_undoable", null, done)!!.note)
         assertEquals(null, R.undoOutcome(500, null, null, done))
         // 拆段：先截名字用
-        assertEquals("常用语 · 修改" to "「物业电话」", R.receiptParts(done, R.receipt(done)))
+        assertEquals(CapCardRules.ReceiptParts("常用语 · 修改", "「物业电话」", null, 4), R.receiptParts(done, R.receipt(done)))
     }
 }

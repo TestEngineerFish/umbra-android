@@ -45,6 +45,11 @@ data class CapCard(
     /** 回执里的对象短名（「随机密码」「物业电话」，设计侧 326 §1）。字段名等服务端定，先按 geek-7f 建议的 `object_name` 读；没带退回卡标题。 */
     val objectName: String?,
     /**
+     * 对象的金额（服务端 `object_amount`，「¥32.50」，设计侧 342 四.2）：记账的名字和金额拆成两个字段，
+     * 排在引号外「「午饭」 ¥32.50」，放不下时金额永远不截。没带（老服务端 / 不是记账）时照旧整串用 object_name，端上不自己拆。
+     */
+    val objectAmount: String? = null,
+    /**
      * 服务端给的动作字（`action_word`，geek-13 11-12 定）：同一个 action 可能说成不同的事 —— 提醒的 update 只标完成时是「完成这一次」，
      * 按 action 查表会拼成「修改」。有它就用它；老卡没有再查表。
      */
@@ -117,6 +122,7 @@ data class CapCard(
             return CapCard(
                 callId = id, capability = o.s("capability") ?: "", action = o.s("action") ?: "",
                 name = o.s("name") ?: "", verb = o.s("verb"), objectName = o.s("object_name")?.takeIf { it.isNotBlank() },
+                objectAmount = o.s("object_amount")?.trim()?.takeIf { it.isNotEmpty() },
                 actionWord = o.s("action_word")?.takeIf { it.isNotBlank() }, where = o.s("where"), runOn = runOn,
                 phase = o.s("phase") ?: "ask", title = o.s("title") ?: "",
                 warnings = warnings, preview = pv, previewTruncated = o.b("preview_truncated") == true,
@@ -426,9 +432,12 @@ object CapCardRules {
      * 没带对象短名时退回卡标题，至少不空着。
      */
     fun subject(c: CapCard): String {
-        val obj = c.objectName?.let(::quoted) ?: c.title
+        val obj = c.objectName?.let { quoted(it) + amountSuffix(c) } ?: c.title
         return listOf(capName(c), obj).filter { it.isNotBlank() }.distinct().joinToString(" · ")
     }
+
+    /** 名字后面那段金额：「 ¥32.50」（紧跟在引号外，一个不换行空格，同 PC 3e8c0f5）；没有金额是空串。 */
+    fun amountSuffix(c: CapCard): String = c.objectAmount?.let { "\u00A0$it" } ?: ""
 
     /**
      * 定了以后那一行（稿 C / F2 / F3）。[supersededBy]：本端点了却拿到 409（别的端先点了），写「已处理 · 已经在「X」上处理过了」。
@@ -481,7 +490,8 @@ object CapCardRules {
 
     /** 回执行尾出不出「撤销」：做成了、服务端说能撤、本端没被告知撤不了。 */
     fun showsUndo(c: CapCard, blocked: Boolean): Boolean =
-        c.canUndo && !blocked && c.phase == "result" && c.outcome == "done"
+        // 读不用撤（342 四.1）：服务端就算带了撤销也不出
+        c.canUndo && !blocked && c.phase == "result" && c.outcome == "done" && c.verb != "read"
 
     /** 撤销钮上的字：`undo.label`，没带写「撤销」。 */
     fun undoLabel(c: CapCard): String = c.undoLabel ?: "撤销"
@@ -518,11 +528,18 @@ object CapCardRules {
      * 回执主体拆成「能力 · 动作」和「名字」两段，放不下时先截名字（330 五.7，按 iOS）：「能力 · 动作」不截，名字至少留前 4 个字再「…」，
      * 还放不下再截行尾。null = 这一行不分段（已处理那种主体不是「能力 · 动作 · 名字」）。
      */
-    fun receiptParts(c: CapCard, r: CapReceipt): Pair<String, String>? {
+    fun receiptParts(c: CapCard, r: CapReceipt): ReceiptParts? {
         val head = capName(c)
         if (!r.subject.startsWith("$head · ")) return null
-        return head to r.subject.removePrefix("$head · ")
+        val rest = r.subject.removePrefix("$head · ")
+        val amount = amountSuffix(c)
+        // 带金额：金额单独一段、永远不截，名字最少留 2 个字（给金额让位，342 四.2）；不带照 330 的 4 个字。
+        return if (amount.isNotEmpty() && rest.endsWith(amount)) ReceiptParts(head, rest.removeSuffix(amount), amount, minNameChars = 2)
+        else ReceiptParts(head, rest, null, minNameChars = 4)
     }
+
+    /** 回执主体分段：[head]「能力 · 动作」不截；[name]「「名字」」先截，至少留引号 + [minNameChars] 个字 +「…」；[amount] 不截。 */
+    data class ReceiptParts(val head: String, val name: String, val amount: String?, val minNameChars: Int)
 
     /**
      * 回执名字那一格给多宽（330 五.7 / 332 二）：放得下全给；放不下先压名字，但不少于「引号 + 前 4 个字 +…」[min]，
@@ -536,7 +553,17 @@ object CapCardRules {
     // ── 只读活动行（314 a / 稿 L） ──────────────────────────────────────
 
     /** verb = read 的回执不单独画，收进「看了 N 样东西」。 */
-    fun isReadReceipt(c: CapCard): Boolean = c.verb == "read" && !isCard(c)
+    fun isReadReceipt(c: CapCard): Boolean = c.verb == "read" && !isCard(c) && !askedUser(c)
+
+    /**
+     * 这次是不是走过卡、用户在卡上点过（设计侧 342 四.1）：问过用户的读留回执（「已做 · 记账 · 查 · … · 你允许了这一次」），
+     * 没问过的（规则 / 系统默认直接放行，by = rule | default）才收进只读活动行。点「总是允许」的那一次也留；之后按规则放行的进活动行。
+     */
+    fun askedUser(c: CapCard): Boolean {
+        // 同 PC 3e8c0f5：服务端 by = rule | default（规整成 decision rule）的是没问过；过期没人点的也算问过 —— 出过卡（画「已过期」回执）。
+        if (c.by == "rule" || c.by == "default" || c.decision == "rule" || c.decision == "default") return false
+        return c.decidedOn != null || c.decision != null || c.phase == "expired" || c.outcome == "expired"
+    }
 
     /**
      * 活动行展开后的一行：「能力 · 动作　卡标题」—— 一个全角空格。summary 是写给模型的（带内部 id、换行），326 起不上屏

@@ -319,42 +319,45 @@ private fun CapReceiptRow(b: ChatBlock.Cap, card: CapCard) {
 }
 
 /**
- * 回执主体那一格：放不下时先截名字（330 五.7，按 iOS）——「能力 · 动作」不截；名字至少留前 4 个字 +「…」；还放不下再截行尾。
- * [parts] 为 null（已处理那种）时整串一个 Text 在行尾截。
+ * 回执主体那一格：放不下时先截名字（330 五.7，按 iOS）——「能力 · 动作」不截；名字至少留引号 + 前 N 个字 +「…」（带金额 2 个、不带 4 个）；
+ * 金额（342 四.2）永远不截，紧跟在名字后面；还放不下再截行尾。[parts] 为 null（已处理那种）时整串一个 Text 在行尾截。
  */
 @Composable
-private fun ReceiptLine(parts: Pair<String, String>?, plain: String, tail: String, color: androidx.compose.ui.graphics.Color, modifier: Modifier) {
+private fun ReceiptLine(parts: CapCardRules.ReceiptParts?, plain: String, tail: String, color: androidx.compose.ui.graphics.Color, modifier: Modifier) {
     val style = TextStyle(fontSize = 12.5.sp)
     if (parts == null) {
         Text(plain + tail, color = color, style = style, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = modifier)
         return
     }
-    val (head, obj) = parts
+    val obj = parts.name
     androidx.compose.ui.layout.Layout(
         contents = listOf(
-            { Text(head, color = color, style = style, maxLines = 1, softWrap = false) },
+            { Text(parts.head, color = color, style = style, maxLines = 1, softWrap = false) },
             // softWrap = false：不然拉丁名字（Tax-ID-2024）会在「 · 」后面的空格断行，第一行只剩「 ·…」，名字截光（332 二）。
             { Text(" · $obj", color = color, style = style, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis) },
+            { Text(parts.amount ?: "", color = color, style = style, maxLines = 1, softWrap = false) },
             { Text(tail, color = color, style = style, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis) },
-            // 只量不画：名字留前 4 个字 +「…」那么宽
-            { Text(" · " + obj.take(5) + "…", style = style, maxLines = 1, softWrap = false) },
+            // 只量不画：名字留引号 + 前 N 个字 +「…」那么宽
+            { Text(" · " + obj.take(parts.minNameChars + 1) + "…", style = style, maxLines = 1, softWrap = false) },
         ),
         modifier = modifier,
-    ) { (h, o, tl, mn), c ->
+    ) { (h, o, am, tl, mn), c ->
         val w = c.maxWidth
         val hp = h.first().measure(androidx.compose.ui.unit.Constraints(maxWidth = w))
-        val avail = (w - hp.width).coerceAtLeast(0)
+        val ap = am.first().measure(androidx.compose.ui.unit.Constraints(maxWidth = (w - hp.width).coerceAtLeast(0)))
+        val avail = (w - hp.width - ap.width).coerceAtLeast(0)
         val oFull = o.first().maxIntrinsicWidth(c.maxHeight)
         val tFull = tl.first().maxIntrinsicWidth(c.maxHeight)
         val oMin = minOf(oFull, mn.first().maxIntrinsicWidth(c.maxHeight))
         val oW = CapCardRules.receiptNameWidth(avail, oFull, oMin, tFull)
         val op = o.first().measure(androidx.compose.ui.unit.Constraints(maxWidth = oW))
         val tp = tl.first().measure(androidx.compose.ui.unit.Constraints(maxWidth = (avail - op.width).coerceAtLeast(0)))
-        val ht = maxOf(hp.height, op.height, tp.height)
+        val ht = maxOf(hp.height, op.height, ap.height, tp.height)
         layout(w, ht) {
             hp.placeRelative(0, (ht - hp.height) / 2)
             op.placeRelative(hp.width, (ht - op.height) / 2)
-            tp.placeRelative(hp.width + op.width, (ht - tp.height) / 2)
+            ap.placeRelative(hp.width + op.width, (ht - ap.height) / 2)
+            tp.placeRelative(hp.width + op.width + ap.width, (ht - tp.height) / 2)
         }
     }
 }
