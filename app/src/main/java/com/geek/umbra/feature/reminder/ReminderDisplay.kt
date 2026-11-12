@@ -152,10 +152,20 @@ fun Reminder.cloneAsNew(): Reminder {
 val Reminder.repeatEnded: Boolean
     get() = repeatRule != "不重复" && repeatEndMs != null && System.currentTimeMillis() > repeatEndMs
 
+/** 是不是重复提醒（「完成这一次」「结束重复」这两套字只对它出）。 */
+val Reminder.repeats: Boolean get() = repeatRule != "不重复"
+
+/**
+ * 点完成之后那句吐司（330 五.3 稿 A / B）：重复提醒推到下一次时「已完成这一次 · 下次 <那一行的时间>」，
+ * 其余（单次、推到头）「已完成 · 标题」。下次的时间用列表行上同一种写法（今天 / 明天 / 11月14日 …）。
+ */
+fun completeToast(before: Reminder, after: Reminder): String =
+    if (before.repeats && !after.done) "已完成这一次 · 下次 ${after.timeLabel}" else "已完成 · ${before.text}"
+
 /** 列表分组。过期在最前；地点提醒没有日期，单开「到地方时」一组排在日期分组后面（批次 288 §三）。 */
 val Reminder.group: String
     get() {
-        if (done) return if (repeatEnded) "重复已结束" else "已完成"
+        if (done) return if (repeatEnded) "已结束重复" else "已完成"
         if (!ReminderPlace.timed(this)) return "到地方时"
         val now = System.currentTimeMillis()
         if (atMs < now) return "已过期"

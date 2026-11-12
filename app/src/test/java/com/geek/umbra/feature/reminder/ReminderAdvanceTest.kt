@@ -440,4 +440,17 @@ class ReminderAdvanceTest {
         // 完成后的结果再被到点自动推：还没到下一次，不动
         assertNull(ReminderAdvance.applied(c, now, fallbackTz = sh))
     }
+
+    // 「结束重复」（330 五.3）：repeatEndMs = 现在、done、at 不动；不重复 / 已完成原样
+    @Test fun endRepeat() {
+        val now = 1_791_180_000_000L
+        val daily = rem(1_791_248_400_000L, rule = "每天", updated = 1_700_000_000_000L)
+        val e = ReminderAdvance.endRepeat(daily, now)
+        assertTrue(e.done); assertEquals(now, e.repeatEndMs); assertEquals(daily.atMs, e.atMs); assertEquals(now, e.updatedAtMs)
+        assertTrue("和自己设的结束日到了是同一种", ReminderAdvance.applied(e.copy(done = false), now + 1, fallbackTz = sh)?.done ?: true)
+        val once = rem(1_791_248_400_000L)
+        assertTrue(ReminderAdvance.endRepeat(once, now) === once)
+        val done = daily.copy(done = true)
+        assertTrue(ReminderAdvance.endRepeat(done, now) === done)
+    }
 }

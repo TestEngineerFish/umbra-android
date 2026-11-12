@@ -565,17 +565,29 @@ object ReminderStore {
      * 点「完成」（列表圈 / 右滑 / 详情滑动完成 / 通知动作都走这里）：重复提醒只完成这一次、推到下一次，见 [ReminderAdvance.completed]。
      * 回点之前那一版，给撤销用。
      */
-    fun complete(id: String): Reminder? {
+    fun complete(id: String): Pair<Reminder, Reminder>? {
         val r = item(id) ?: return null
-        if (r.done) return r
-        commit(ReminderAdvance.completed(r, System.currentTimeMillis(), holidayCalendar))
+        if (r.done) return r to r
+        val after = ReminderAdvance.completed(r, System.currentTimeMillis(), holidayCalendar)
+        commit(after)
+        return r to after
+    }
+
+    /** 「结束重复」（330 五.3）：回点之前那一版，给撤销用。不重复的 / 已完成的不动、回 null。 */
+    fun endRepeat(id: String): Reminder? {
+        val r = item(id) ?: return null
+        val after = ReminderAdvance.endRepeat(r, System.currentTimeMillis())
+        if (after === r) return null
+        commit(after)
         return r
     }
 
-    /** 撤销完成：at / done / 锚定日退回点之前那一版（不是只把 done 改回 false —— 重复提醒的 at 已经推走了）。 */
+    /**
+     * 撤销完成 / 结束重复：at / done / 锚定日 / 结束日退回点之前那一版（不是只把 done 改回 false —— 重复提醒的 at 已经推走了）。
+     */
     fun undoComplete(before: Reminder) {
         val cur = item(before.id) ?: return
-        commit(cur.copy(atMs = before.atMs, done = before.done, anchorDay = before.anchorDay))
+        commit(cur.copy(atMs = before.atMs, done = before.done, anchorDay = before.anchorDay, repeatEndMs = before.repeatEndMs))
     }
 
     /** 「再等 N 分钟」：从现在往后推，不是从原时间推（原时间可能已经过去两小时了）。 */

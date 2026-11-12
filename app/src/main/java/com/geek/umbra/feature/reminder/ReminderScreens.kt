@@ -128,8 +128,8 @@ import kotlin.math.roundToInt
 
 /** 地点提醒没有日期，「到地方时」排在日期分组后面（Reminder.group，批次 288 §三）。 */
 private val todoOrder = listOf("已过期", "今天", "明天", "本周", "更远", "到地方时")
-/** 完成段两组：「已完成」是这件事做完了，「重复已结束」是这套重复结束了（两端同序，PC GROUP_ORDER）。 */
-private val doneOrder = listOf("已完成", "重复已结束")
+/** 完成段两组：「已完成」是这件事做完了，「已结束重复」是这套重复结束了（两端同序，PC GROUP_ORDER；330 五.3 改字）。 */
+private val doneOrder = listOf("已完成", "已结束重复")
 
 // MARK: - 列表
 
@@ -172,8 +172,8 @@ fun RemListScreen() {
         }
         if (leavingId != null) {
             // 另一行还在收合：这一行不排队动画，直接完成（同样只完成这一次）。
-            store.complete(r.id)
-            router.showToast("「${r.text}」已完成")
+            val (before, after) = store.complete(r.id) ?: return
+            router.showToast(completeToast(before, after), "撤销") { store.undoComplete(before) }
             return
         }
         leavingId = r.id
@@ -181,9 +181,9 @@ fun RemListScreen() {
             delay(900)
             if (leavingId != r.id) return@launch
             leavingId = null
-            // 重复提醒只完成这一次（推到下一次）；撤销退回点之前那一版（11-12 统一方案）。字样等设计侧 330，先沿用这句。
-            val before = store.complete(r.id) ?: return@launch
-            router.showToast("「${r.text}」已完成", "撤销") { store.undoComplete(before) }
+            // 重复提醒只完成这一次（推到下一次）；撤销退回点之前那一版（11-12 统一方案，吐司字照 330 稿 A / B）。
+            val (before, after) = store.complete(r.id) ?: return@launch
+            router.showToast(completeToast(before, after), "撤销") { store.undoComplete(before) }
         }
     }
 
@@ -263,7 +263,7 @@ fun RemListScreen() {
                                 ReminderRow(r, leavingId == r.id, onToggle = { toggleAnimated(r) })
                             }
                         }
-                        if (name == "重复已结束") {
+                        if (name == "已结束重复") {
                             Text(
                                 "这套重复到期了，不再自动生成。里面的每一条是不是被处理过，看它自己那一行。",
                                 color = c.muted, style = TextStyle(fontSize = 11.5.sp), modifier = Modifier.padding(start = 4.dp, top = 6.dp),
@@ -276,7 +276,10 @@ fun RemListScreen() {
     }
 }
 
-/** 列表一行：点圈 = 完成，点行 = 进详情；左滑「删除 / 再等 10 分钟」，右滑「完成 / 取消完成」（都只露按钮）。 */
+/**
+ * 列表一行：点圈 = 完成，点行 = 进详情；左滑「删除 /（重复的）结束重复 / 再等 10 分钟」，右滑「完成 / 取消完成」（都只露按钮）。
+ * 重复提醒右滑那颗写「完成这一次」（330 五.3）。
+ */
 @Composable
 private fun ReminderRow(r: Reminder, leaving: Boolean, onToggle: () -> Unit) {
     val c = UmbraTheme.colors
@@ -293,12 +296,17 @@ private fun ReminderRow(r: Reminder, leaving: Boolean, onToggle: () -> Unit) {
                 confirmLabel = delOk, destructive = true,
             ) { store.delete(r.id); router.showToast("已移入回收站 · 保留 30 天") })
         })
+        // 结束重复（330 五.3 稿 C）：左滑第二颗，不弹确认，吐司带撤销。单次的、已完成的没有。
+        if (r.repeats && !r.done) add(UmbraSwipeAction("结束重复", UmbraIconPaths.stopSquare, c.muted) {
+            val before = store.endRepeat(r.id) ?: return@UmbraSwipeAction
+            router.showToast("已结束重复 · ${r.text}", "撤销") { store.undoComplete(before) }
+        })
         if (r.canSnoozeNow) add(UmbraSwipeAction("再等 10 分钟", UmbraExtraIcons.alarmClock, c.warning) {
             store.snooze(r.id); router.showToast("好，10 分钟后再叫你")
         })
     }
     val checked = r.done || leaving
-    val leading = listOf(UmbraSwipeAction(if (checked) "取消完成" else "完成", if (checked) UmbraIconPaths.x else UmbraIconPaths.check, c.success, onClick = onToggle))
+    val leading = listOf(UmbraSwipeAction(if (checked) "取消完成" else if (r.repeats) "完成这一次" else "完成", if (checked) UmbraIconPaths.x else UmbraIconPaths.check, c.success, onClick = onToggle))
     UmbraRevealSwipeRow(leading = leading, trailing = trailing, resetKey = r) {
         Row(
             Modifier.fillMaxWidth().background(c.card).clickable { router.go(Route.RemDetail(r.id)) }
@@ -333,7 +341,9 @@ private fun ReminderRow(r: Reminder, leaving: Boolean, onToggle: () -> Unit) {
                     } else Text(r.timeLabel, color = if (r.overdue) c.dangerText else c.muted, style = TextStyle(fontSize = 13.sp))
                     if (r.overdue) Chip("已过期", c.dangerText, c.dangerSoft)
                     if (r.pushRejection != null) Chip("服务端不收这条", c.warningText, c.warningSoft, UmbraIconPaths.alertTriangle)
-                    if (r.repeatRule != "不重复") Chip(r.repeatLabel + r.repeatEndSuffix, c.orangeText, c.orangeSoft, UmbraIconPaths.repeatArrows)
+                    // 结束了的重复（点了「结束重复」或自己设的结束日到了）副行写「已结束重复」（330 五.3），灰。
+                    if (r.done && r.repeatEnded) Chip("已结束重复", c.muted, c.chip)
+                    else if (r.repeatRule != "不重复") Chip(r.repeatLabel + r.repeatEndSuffix, c.orangeText, c.orangeSoft, UmbraIconPaths.repeatArrows)
                     if (r.atts.isNotEmpty()) Chip("${r.atts.size}", c.muted, c.chip, UmbraIconPaths.image)
                 }
             }
@@ -623,12 +633,18 @@ private fun DetailBottomBar(r: Reminder, id: String) {
                 ReminderStore.setDone(r.id, false); router.showToast("已标回待办"); router.back()
             }, Modifier.fillMaxWidth(), kind = UmbraButtonKind.Secondary)
         } else {
-            SlideToComplete {
-                ReminderStore.complete(r.id)
-                router.showToast("已完成「${r.text}」")
+            SlideToComplete(if (r.repeats) "滑动完成这一次" else "滑动完成") {
+                val (before, after) = ReminderStore.complete(r.id) ?: return@SlideToComplete
+                router.showToast(completeToast(before, after), "撤销") { ReminderStore.undoComplete(before) }
                 // 组件停 420ms 之后的回调：这期间人可能已经返回 / 切了 Tab，只在详情页仍在眼前时退。
                 router.back(ifShowing = Route.RemDetail(id))
             }
+            // 结束重复（330 五.3 稿 C）：详情底部一颗次要钮，不弹确认，吐司带撤销；单次的没有。
+            if (r.repeats) UmbraButton("结束重复", {
+                val before = ReminderStore.endRepeat(r.id) ?: return@UmbraButton
+                router.showToast("已结束重复 · ${r.text}", "撤销") { ReminderStore.undoComplete(before) }
+                router.back()
+            }, Modifier.fillMaxWidth(), kind = UmbraButtonKind.Secondary)
             if (r.canSnoozeNow) {
                 SnoozeButton(r)
                 Text("长按「稍后提醒」可以换时间", color = c.faint, textAlign = TextAlign.Center, style = TextStyle(fontSize = 11.sp), modifier = Modifier.fillMaxWidth())
@@ -675,7 +691,7 @@ private fun SnoozeButton(r: Reminder) {
  * iOS: ReminderViews.swift UmbraSlideToComplete
  */
 @Composable
-fun SlideToComplete(onComplete: () -> Unit) {
+fun SlideToComplete(label: String = "滑动完成", onComplete: () -> Unit) {
     val c = UmbraTheme.colors
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
@@ -695,7 +711,7 @@ fun SlideToComplete(onComplete: () -> Unit) {
             val w = with(density) { 46.dp.toPx() }
             val center = shimmer * with(density) { 72.dp.toPx() } + with(density) { 36.dp.toPx() }
             Text(
-                "滑动完成",
+                label,
                 style = TextStyle(
                     fontSize = 15.5.sp, fontWeight = FontWeight.SemiBold,
                     brush = Brush.horizontalGradient(
@@ -714,7 +730,7 @@ fun SlideToComplete(onComplete: () -> Unit) {
             Modifier.offset { IntOffset((with(density) { 4.dp.toPx() } + x.value).roundToInt(), 0) }.align(Alignment.CenterStart)
                 .size(46.dp).shadow(8.dp, CircleShape, ambientColor = c.orange.copy(alpha = 0.38f), spotColor = c.orange.copy(alpha = 0.38f))
                 .clip(CircleShape).background(c.orange)
-                .semantics { contentDescription = "滑动完成" }
+                .semantics { contentDescription = label }
                 .pointerInput(travel) {
                     detectHorizontalDragGestures(
                         onDragEnd = {

@@ -267,6 +267,16 @@ object ReminderAdvance {
     }
 
     /**
+     * 「结束重复」（设计侧 330 五.3 稿 C）：repeatEndMs 写成现在 —— 和「自己设的结束日到了」在数据上是同一种，列表里都显示「已结束重复」。
+     * 统一方案说由 advance 置 done，但 at 还在将来时 advance 不会动（它只推过点的），所以这里直接置 done、at 不动，结果和推到头一样。
+     * 不重复的、已经完成的原样返回。戳同 [completed]。
+     */
+    fun endRepeat(r: Reminder, nowMs: Long): Reminder {
+        if (r.done || ReminderWire.ruleToWire(r.repeatRule) == "none") return r
+        return r.copy(repeatEndMs = nowMs, done = true, updatedAtMs = maxOf(nowMs, add(r.updatedAtMs, 1) ?: r.updatedAtMs))
+    }
+
+    /**
      * 冷启动那次推进该不该**先放着这一行、等同步拉完节假日表再推**（umbra-ios#72）：「工作日」规则且日历缺 now 那一年
      * 或推进落点那一年（按提醒时区取公历年）→ 先放着。iOS: ReminderAdvance.swift:377
      */
