@@ -12,5 +12,7 @@ object ChatModule {
     fun register(guard: SessionGuard) {
         ChatStore.start()
         guard.register("聊天", onLock = { ChatStore.onLock() }, onUnlock = { ChatStore.onUnlock() })
+        // 长连接断线重连：断着时的消息、卡片状态、任务进度补一次（会话列表预览 / 未读一并）。
+        com.geek.umbra.app.ReconnectCatchUp.register("chat") { ChatStore.catchUp() }
     }
 }

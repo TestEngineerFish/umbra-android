@@ -10,5 +10,7 @@ import com.geek.umbra.app.SessionGuard
 object TaskModule {
     fun register(guard: SessionGuard) {
         guard.register("tasks", onLock = { TasksStore.sessionLocked() }, onUnlock = { TasksStore.sessionUnlocked() })
+        // 长连接断线重连：漏掉的 task_update 补一次 —— 列表与工具 Tab 角标重拉；聊天里的任务卡由 ChatModule 那一条补。
+        com.geek.umbra.app.ReconnectCatchUp.register("tasks") { TasksStore.catchUp() }
     }
 }

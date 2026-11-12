@@ -161,6 +161,12 @@ object DutyStore {
         scope.launch { withContext(BackgroundWork) { block() } }
     }
 
+    /** 长连接断线重连后补一次（ReconnectCatchUp）：页面开着就整页重拉；没开着记 stale，下次进页面 appear 本来就重拉。 */
+    fun catchUp() {
+        if (visible <= 0) { stale = true; return }
+        bg { reload() }
+    }
+
     fun handleUpdated() {
         if (visible <= 0) { stale = true; return }
         bg { reloadListOnly() }

@@ -17,5 +17,7 @@ object InspirationModule {
             onLock = { InspirationLocal.sessionLocked() },
             onUnlock = { InspirationLocal.sessionUnlocked(); InspirationStore.startListening() },
         )
+        // 长连接断线重连：断着时秘书改的灵感收不到广播，补同步一轮（跑完 synced 让页面重读）。
+        com.geek.umbra.app.ReconnectCatchUp.register("inspiration") { AppGraph.scope.launch { InspirationLocal.sync() } }
     }
 }

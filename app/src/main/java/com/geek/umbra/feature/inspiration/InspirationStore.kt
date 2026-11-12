@@ -2,7 +2,6 @@ package com.geek.umbra.feature.inspiration
 
 import com.geek.umbra.app.AppGraph
 import com.geek.umbra.designsystem.UmbraScreenPhase
-import com.geek.umbra.net.SocketState
 import com.geek.umbra.net.str
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -41,8 +40,7 @@ object InspirationStore {
 
     /**
      * WS inspiration_*（saved / updated / deleted …）→ 立即同步并重载（iOS 经 .inspirationChanged 通知）。
-     * 另外两路（geek-13 11-12）：任何一轮同步跑完都从本机重读一次；长连接断线重连回到在线时补同步一轮 ——
-     * 断着的那段时间里秘书改的，广播收不到（切后台超过 60 秒长连接会被主动断开，回前台重连也走这一路）。
+     * 另外（geek-13 11-12）：任何一轮同步跑完都从本机重读一次。长连接断线重连后的补同步登记在 app/ReconnectCatchUp（InspirationModule）。
      */
     fun startListening() {
         if (started) return
@@ -55,15 +53,6 @@ object InspirationStore {
             }
         }
         AppGraph.scope.launch { InspirationLocal.synced.collect { load(sync = false) } }
-        AppGraph.scope.launch {
-            var wasOnline: Boolean? = null
-            AppGraph.socket.state.collect { st ->
-                val on = st == SocketState.Online
-                // 第一次见到在线不补：登录 / 解锁那一刻 sessionUnlocked 已经同步过。
-                if (on && wasOnline == false) AppGraph.scope.launch { InspirationLocal.sync() }
-                if (wasOnline != null || on) wasOnline = on
-            }
-        }
     }
 
     suspend fun retry() {

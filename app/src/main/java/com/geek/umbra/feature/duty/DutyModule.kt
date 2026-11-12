@@ -18,6 +18,8 @@ object DutyModule {
 
     fun register(guard: SessionGuard) {
         guard.register("执勤", onLock = { DutyStore.clear() }, onUnlock = {})
+        // 长连接断线重连：执勤只靠广播重拉，断着时的变化补一次。
+        com.geek.umbra.app.ReconnectCatchUp.register("duty") { DutyStore.catchUp() }
         if (!collecting) {
             collecting = true
             AppGraph.scope.launch {

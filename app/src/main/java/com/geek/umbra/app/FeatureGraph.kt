@@ -19,6 +19,8 @@ import com.geek.umbra.feature.vault.VaultModule
 /** 各功能模块的守卫登记集中在这一处调用，模块自己的 Store 在各自包里（object 单例，用到才建）。 */
 object FeatureGraph {
     fun registerGuards(guard: SessionGuard) {
+        // 先于各模块：模块在自己的 register 里往它登记「重连后补一轮」。
+        ReconnectCatchUp.start(guard)
         ChatModule.register(guard)
         ReminderModule.register(guard)
         ToolModule.register(guard)

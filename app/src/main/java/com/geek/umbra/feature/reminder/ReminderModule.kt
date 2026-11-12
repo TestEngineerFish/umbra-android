@@ -14,6 +14,8 @@ object ReminderModule {
     fun register(guard: SessionGuard) {
         ReminderStore.start()
         guard.register("reminder", onLock = { ReminderStore.sessionLocked() }, onUnlock = { ReminderStore.sessionUnlocked() })
+        // 长连接断线重连：断着时秘书改了时间 / 标了完成，广播收不到 —— 补同步一轮，合并落地时整体重排本机闹钟（applyMerged）。
+        com.geek.umbra.app.ReconnectCatchUp.register("reminder") { ReminderStore.syncNow() }
     }
 }
 

@@ -517,8 +517,13 @@ object ChatStore {
 
     /** /conversations：预览与会话顺序。 */
     private fun loadConversationsList() {
-        AppGraph.scope.launch {
-            val rows = withContext(BackgroundWork) { AppGraph.http.get<List<JsonObject>>("/conversations") } ?: return@launch
+        AppGraph.scope.launch { applyConversationsList() }
+    }
+
+    /** 拉 /conversations 并落预览。没拉到回 false。 */
+    private suspend fun applyConversationsList(): Boolean {
+        run {
+            val rows = withContext(BackgroundWork) { AppGraph.http.get<List<JsonObject>>("/conversations") } ?: return false
             for (r in rows) {
                 val conv = r.str("conversation") ?: continue
                 store(conv)
@@ -535,6 +540,86 @@ object ChatStore {
                     else -> null
                 }
                 if (name != null) setUnfinishedPreview(conv, name, r.str("last_at")) else setPreview(conv, r.str("last_content") ?: "", r.str("last_at"))
+            }
+        }
+        return true
+    }
+
+    // MARK: - 长连接断线重连后补一次（app/ReconnectCatchUp，geek-13 11-12）
+
+    /**
+     * 断着的那段时间里的消息、卡片状态、任务进度，广播收不到、重连也不补发 —— 这里补一次：
+     * ① 会话列表预览，最后一条时间变了的会话（不是当前开着的、手上也没铺过的）标未读；
+     * ② 手上铺过的会话各拉最新一页，新的接到后面（当前会话直接上屏，别的会话标未读）；
+     * ③ 流里的权限卡按 /cap/calls 对齐；④ 还没结束的任务卡按 /tasks/{id} 补一次进度（漏掉的 task_update）。
+     */
+    fun catchUp() {
+        AppGraph.scope.launch {
+            withContext(BackgroundWork) {
+                val before = _previews.value.mapValues { it.value.at }
+                if (applyConversationsList()) {
+                    for ((conv, p) in _previews.value) {
+                        if (conv == _activeConv.value || stores[conv]?.loaded == true) continue
+                        if (before.containsKey(conv) && before[conv] != p.at) { _unread.value = _unread.value + conv; updateBadge() }
+                    }
+                }
+                for ((conv, st) in stores.toList()) if (st.loaded) catchUpConv(conv, st)
+                refreshCapCalls()
+                catchUpTaskCards()
+            }
+        }
+    }
+
+    private suspend fun catchUpConv(conv: String, s: ConvStore) {
+        fun busy() = s.assistantIdx != null || s.blocks.any { it is ChatBlock.Image && (it.state == ImageState.Uploading || it.state == ImageState.AwaitingReceipt) }
+        if (busy()) return
+        val messages = fetchHistory(conv) ?: return
+        if (busy()) return
+        val rows = messages.map { ChatCatchUpRules.Row(msgId(it), it.str("role") ?: "", it.str("content") ?: "") }
+        val echoes = s.blocks.filter { it.serverId == null }.mapNotNull { b ->
+            when (b) {
+                is ChatBlock.User -> "user" to b.text
+                is ChatBlock.Assistant -> if (b.thinking || b.streaming) null else "assistant" to b.text
+                is ChatBlock.Device -> "device" to b.text
+                else -> null
+            }
+        }
+        when (val p = ChatCatchUpRules.plan(s.blocks.mapNotNull { it.serverId }.maxOrNull(), rows, echoes, ChatHistoryPaging.PAGE_SIZE)) {
+            ChatCatchUpRules.Plan.None -> Unit
+            ChatCatchUpRules.Plan.Reload -> reloadConv(conv)
+            is ChatCatchUpRules.Plan.Append -> {
+                val want = p.ids.toSet()
+                val add = messages.filter { msgId(it) in want }.sortedBy { msgId(it) }.mapNotNull { historyToBlock(it) }
+                if (add.isEmpty()) return
+                s.blocks.addAll(add)
+                s.taskMap.clear()
+                s.blocks.forEachIndexed { i, b -> if (b is ChatBlock.Task) s.taskMap[b.taskId] = i }
+                reflect(conv)
+            }
+        }
+    }
+
+    /** 还没结束的任务卡补一次进度：拉 /tasks/{id}，状态或进度变了就当一条 task_update 喂回去（卡、问话那颗钮、预览都跟着走）。 */
+    private suspend fun catchUpTaskCards() {
+        for ((conv, st) in stores.toList()) {
+            for (b in st.blocks.toList()) {
+                val j = b as? ChatBlock.Task ?: continue
+                if (!TaskDetailRules.isActive(j.status) && j.status != "suspended") continue
+                val o = AppGraph.http.get<JsonObject>("/tasks/${UmbraUrl.segment(j.taskId)}") ?: continue
+                val t = o.obj("task") ?: continue
+                val status = t.str("status") ?: continue
+                val total = t.long("steps_total") ?: 0L
+                val done = t.long("steps_done") ?: 0L
+                val overall = if (status == "done") 1.0 else if (total > 0) done.toDouble() / total else j.pct / 100.0
+                // 卡上那一句 = 漏掉的那条 task_update 的 message；详情里没有这个字段，取事件流里最后一条有话的（「🛑 已手动停止」）。
+                val message = (o["events"] as? JsonArray)?.mapNotNull { (it as? JsonObject)?.str("message")?.takeIf { m -> m.isNotBlank() } }?.lastOrNull()
+                if (status == j.status && (overall * 100).toInt().coerceIn(0, 100) == j.pct && (message == null || message == j.message)) continue
+                val extra = mutableMapOf<String, kotlinx.serialization.json.JsonElement>(
+                    "task_id" to JsonPrimitive(j.taskId), "conversation" to JsonPrimitive(conv), "overall" to JsonPrimitive(overall),
+                )
+                if (message != null) extra["message"] = JsonPrimitive(message)
+                val msg = JsonObject(t + extra)
+                handleTaskUpdate(msg)
             }
         }
     }

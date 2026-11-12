@@ -111,6 +111,12 @@ object TasksStore {
         AppGraph.scope.launch { withContext(BackgroundWork) { loadTasks() } }
     }
 
+    /** 长连接断线重连后补一次（ReconnectCatchUp）：漏掉的 task_update 靠重拉列表补回来（工具 Tab 角标跟着列表算）。 */
+    fun catchUp() {
+        if (!started) return
+        AppGraph.scope.launch { withContext(BackgroundWork) { loadTasks() } }
+    }
+
     /** 登出：清掉上一个账号的任务，角标撤掉（守卫「关」）。 */
     fun sessionLocked() {
         _items.value = emptyList()
