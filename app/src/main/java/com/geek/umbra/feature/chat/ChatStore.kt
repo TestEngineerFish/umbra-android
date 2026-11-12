@@ -295,7 +295,7 @@ object ChatStore {
 
     /**
      * 点卡：只发「决定 + 第几档」（§8.3），参数和范围都在执行端。回包的卡直接换上；409 = 别的端先点了（或已过期），
-     * 收成「已处理 · 已经在「X」上处理过了」；501 = 服务端能力的卡还没接（第 3 步）。
+     * 收成「已处理 · 已经在「X」上处理过了」。服务端能力（where=cloud，常用语）自 #183 起在服务端执行，和设备能力同一条路，不再有 501 那一档。
      */
     fun decideCap(callId: String, decision: String) {
         val b = stores.values.firstNotNullOfOrNull { s -> s.blocks.firstOrNull { it is ChatBlock.Cap && it.card.callId == callId } as? ChatBlock.Cap } ?: return
@@ -319,7 +319,6 @@ object ChatStore {
                                 else cur.copy(deciding = false, card = cur.card.copy(phase = "result", outcome = "expired", buttons = emptyList()))
                             }
                         }
-                        501 -> { updateCap(callId) { it.copy(deciding = false) }; AppGraph.router.showToast("这类卡还不能在手机上点") }
                         else -> { updateCap(callId) { it.copy(deciding = false) }; AppGraph.router.showToast(r.detail?.takeIf { it.isNotBlank() } ?: "没发出去，稍后再点一次。") }
                     }
                 }
