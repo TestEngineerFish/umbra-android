@@ -21,7 +21,7 @@ import java.util.Base64
  * 主题判据与装包（ThemeRules / ThemePackage / Ed25519 / ThemeOfficial）的行为用例 —— 逐条照抄 iOS `Tools/swifttests/ThemeRulesTests.swift`。
  *
  * 夹具在 `app/src/test/resources/theme/`：从 iOS 仓 `Tools/swifttests/fixtures/theme/` 复制（它又是 umbra-plugins 正本的副本）。
- * 两头钉（同 iOS）：umbra-plugins / UmbraPC 仓并排在同一个父目录下时，要求副本与它们**逐字节相同**；不在就只用副本跑并打一行说明。
+ * 两头钉（同 iOS）：umbra-plugins / UmbraPC 仓并排在同一个父目录下时，要求副本与它们**逐字节相同**（umbra-plugins 比 origin/main，不看工作区）；不在就只用副本跑并打一行说明。
  * 先自校准（selfTest），再逐条比 25 条跨语言用例的 expect / paths / pairs / warnings，再钉住抄的常量与 theme-keys.json 一致。
  *
  * 写成「一个计数器 + 最后一起断言」而不是一条一个 @Test：和 iOS 读数可以直接比条数（iOS 120 条），一处不过也能看到其余全部。
@@ -87,9 +87,14 @@ class ThemeRulesTest {
             "official-sea-salt.tokens.json" to "themes/com.umbra.theme.sea-salt/tokens.json",
             "official-graphite.tokens.json" to "themes/com.umbra.theme.graphite/tokens.json",
         )
-        if (File(plugins, "sdk/theme-keys.json").exists()) {
+        // ⚠️ 比的是插件仓的 **origin/main**（`git show`），不是它的工作区（同 iOS b25c154，geek-13 11-12）：那个仓是别的会话干活的地方，
+        // 它切到特性分支（2026-11-12 停在 feat/theme-342）时工作区里是还没合的新正本 —— 拿工作区比，这里会因为别人切了分支而变红。
+        // 仓在、却取不到 origin/main（没 fetch / 离线 / 路径改了）→ ✗「取不到正本」，不静默算过。
+        if (File(plugins, ".git").exists()) {
             for ((mine, theirs) in map) {
-                expect(File(plugins, theirs).readBytes().contentEquals(local(mine)), true, "夹具 $mine 与 umbra-plugins $theirs 逐字节相同（正本改了就重新复制）")
+                val up = gitShow(plugins, "origin/main", theirs)
+                if (up == null) { expect(false, true, "取不到正本：umbra-plugins origin/main:$theirs（先 git fetch；离线时这一项没法比）"); continue }
+                expect(up.contentEquals(local(mine)), true, "夹具 $mine 与 umbra-plugins origin/main:$theirs 逐字节相同（正本改了就重新复制）")
             }
         } else {
             map.forEach { local(it.first) }
@@ -100,6 +105,13 @@ class ThemeRulesTest {
         else println("• 主题：找不到 UmbraPC 仓，发布方公钥这次只和本仓副本比")
         expect(ThemePublisher.PEM.toByteArray().contentEquals(local("publisher.pub")), true, "内嵌的发布方公钥 = publisher.pub 原文")
     }
+
+    /** `git -C repo show ref:path` 的原始字节；git 失败（ref / 路径不存在）回 null。 */
+    private fun gitShow(repo: File, ref: String, path: String): ByteArray? = runCatching {
+        val p = ProcessBuilder("git", "-C", repo.path, "show", "$ref:$path").redirectError(ProcessBuilder.Redirect.to(File("/dev/null"))).start()
+        val out = p.inputStream.readBytes()
+        if (p.waitFor() == 0) out else null
+    }.getOrNull()
 
     private fun selfTestCases(spec: JsonObject) {
         val st = spec["selfTest"].obj()!!
