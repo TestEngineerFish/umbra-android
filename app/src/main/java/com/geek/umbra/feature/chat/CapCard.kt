@@ -498,8 +498,20 @@ object CapCardRules {
         state == "gone" -> UndoOutcome("回收站里已经没有这条了，找不回。", blocked = true)
         // 执行失败可能是一时的：保留钮，可以再点一次。
         // 字照 PC 语言包 capCard.undoFailed（f53a010）：detail 去掉句末标点；没有 detail 写「服务器暂时连不上」。
-        state == "failed" -> UndoOutcome("没撤成：${detail?.trim()?.trimEnd('。', '.', '！', '!', '；', ';')?.takeIf { it.isNotEmpty() } ?: "服务器暂时连不上"}。可以再点一次撤销。", blocked = false)
+        state == "failed" -> UndoOutcome(undoFailedText(detail), blocked = false)
         else -> null
+    }
+
+    /**
+     * 撤销失败那句（PC 782bc89）：服务端 #190 起 detail 是给人看的话，没原因时只回「没撤成。」——
+     * 先去掉开头的「没撤成」（连同后面的冒号 / 逗号 / 句号）再当原因，不然叠成「没撤成：没撤成。」；什么都不剩写「没撤成。可以再点一次撤销。」。
+     * 没有 detail（断网 / 500）照旧写「服务器暂时连不上」。
+     */
+    fun undoFailedText(detail: String?): String {
+        val raw = detail?.trim()?.takeIf { it.isNotEmpty() } ?: return "没撤成：服务器暂时连不上。可以再点一次撤销。"
+        val reason = raw.removePrefix("没撤成").trimStart('：', ':', '，', ',', '。', '.', ' ')
+            .trim().trimEnd('。', '.', '！', '!', '；', ';')
+        return if (reason.isEmpty()) "没撤成。可以再点一次撤销。" else "没撤成：$reason。可以再点一次撤销。"
     }
 
     /**

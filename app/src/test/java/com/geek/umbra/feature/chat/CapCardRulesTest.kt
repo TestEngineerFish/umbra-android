@@ -260,6 +260,11 @@ class CapCardRulesTest {
         assertEquals("回收站里已经没有这条了，找不回。", R.undoOutcome(409, "gone", null, done)!!.note)
         val failed = R.undoOutcome(409, "failed", "服务器暂时连不上。", done)!!
         assertEquals("没撤成：服务器暂时连不上。可以再点一次撤销。", failed.note); assertFalse("失败保留钮", failed.blocked)
+        // PC 782bc89：服务端 #190 起 detail 是给人看的话，开头的「没撤成」去掉再拼，不叠字
+        assertEquals("没撤成。可以再点一次撤销。", CapCardRules.undoFailedText("没撤成。"))
+        assertEquals("没撤成：回收站满了。可以再点一次撤销。", CapCardRules.undoFailedText("没撤成：回收站满了。"))
+        assertEquals("没撤成：回收站满了。可以再点一次撤销。", CapCardRules.undoFailedText("回收站满了"))
+        assertEquals("没撤成：服务器暂时连不上。可以再点一次撤销。", CapCardRules.undoFailedText("  "))
         assertEquals("找不到这次操作的记录了，不能撤销。", R.undoOutcome(404, null, null, done)!!.note)
         assertTrue(R.undoOutcome(409, "undone", null, done)!!.undone)
         assertEquals(null, R.undoOutcome(409, "not_undoable", null, done)!!.note)
