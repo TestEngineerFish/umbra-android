@@ -1,0 +1,531 @@
+{
+ "_note": "重复提醒「点完成」三端 + 服务端共用用例（由 PC completeOnce 生成：scripts/gen-reminder-complete-cases.mjs；PC 测试 tests/reminderComplete.test.ts 逐条核）。规则见 scanner.ts completeOnce 注释。",
+ "cases": [
+  {
+   "name": "不重复：照旧整条完成",
+   "tz": "Asia/Shanghai",
+   "reminder": {
+    "atMs": 1791162000000,
+    "repeatRule": "none",
+    "customFreq": "day",
+    "customN": 1,
+    "repeatEndMs": null,
+    "done": false,
+    "tz": "Asia/Shanghai"
+   },
+   "nowMs": 1791180000000,
+   "wall": {
+    "at": "2026-10-05T09:00",
+    "now": "2026-10-05T14:00",
+    "expect": "2026-10-05T09:00（at 不动）"
+   },
+   "expect": {
+    "atMs": 1791162000000,
+    "done": true
+   }
+  },
+  {
+   "name": "每天：已过点一次 → 明天同一时刻",
+   "tz": "Asia/Shanghai",
+   "reminder": {
+    "atMs": 1791162000000,
+    "repeatRule": "daily",
+    "customFreq": "day",
+    "customN": 1,
+    "repeatEndMs": null,
+    "done": false,
+    "tz": "Asia/Shanghai"
+   },
+   "nowMs": 1791180000000,
+   "wall": {
+    "at": "2026-10-05T09:00",
+    "now": "2026-10-05T14:00",
+    "expect": "2026-10-06T09:00"
+   },
+   "expect": {
+    "atMs": 1791248400000,
+    "done": false
+   }
+  },
+  {
+   "name": "每天：已过点好几次 → 现在之后的下一次（漏掉的一起跳过）",
+   "tz": "Asia/Shanghai",
+   "reminder": {
+    "atMs": 1790816400000,
+    "repeatRule": "daily",
+    "customFreq": "day",
+    "customN": 1,
+    "repeatEndMs": null,
+    "done": false,
+    "tz": "Asia/Shanghai"
+   },
+   "nowMs": 1791180000000,
+   "wall": {
+    "at": "2026-10-01T09:00",
+    "now": "2026-10-05T14:00",
+    "expect": "2026-10-06T09:00"
+   },
+   "expect": {
+    "atMs": 1791248400000,
+    "done": false
+   }
+  },
+  {
+   "name": "每天：提前完成 → 跳过这一次、到再下一次",
+   "tz": "Asia/Shanghai",
+   "reminder": {
+    "atMs": 1791248400000,
+    "repeatRule": "daily",
+    "customFreq": "day",
+    "customN": 1,
+    "repeatEndMs": null,
+    "done": false,
+    "tz": "Asia/Shanghai"
+   },
+   "nowMs": 1791180000000,
+   "wall": {
+    "at": "2026-10-06T09:00",
+    "now": "2026-10-05T14:00",
+    "expect": "2026-10-07T09:00"
+   },
+   "expect": {
+    "atMs": 1791334800000,
+    "done": false
+   }
+  },
+  {
+   "name": "每天：at 恰等于 now → 明天",
+   "tz": "Asia/Shanghai",
+   "reminder": {
+    "atMs": 1791180000000,
+    "repeatRule": "daily",
+    "customFreq": "day",
+    "customN": 1,
+    "repeatEndMs": null,
+    "done": false,
+    "tz": "Asia/Shanghai"
+   },
+   "nowMs": 1791180000000,
+   "wall": {
+    "at": "2026-10-05T14:00",
+    "now": "2026-10-05T14:00",
+    "expect": "2026-10-06T14:00"
+   },
+   "expect": {
+    "atMs": 1791266400000,
+    "done": false
+   }
+  },
+  {
+   "name": "每周：提前完成 → 下周同一天",
+   "tz": "Asia/Shanghai",
+   "reminder": {
+    "atMs": 1791333000000,
+    "repeatRule": "weekly",
+    "customFreq": "day",
+    "customN": 1,
+    "repeatEndMs": null,
+    "done": false,
+    "tz": "Asia/Shanghai"
+   },
+   "nowMs": 1791180000000,
+   "wall": {
+    "at": "2026-10-07T08:30",
+    "now": "2026-10-05T14:00",
+    "expect": "2026-10-14T08:30"
+   },
+   "expect": {
+    "atMs": 1791937800000,
+    "done": false
+   }
+  },
+  {
+   "name": "每周选一、三、五：周一提前完成 → 周三",
+   "tz": "Asia/Shanghai",
+   "reminder": {
+    "atMs": 1791162000000,
+    "repeatRule": "weekly",
+    "customFreq": "day",
+    "customN": 1,
+    "repeatEndMs": null,
+    "done": false,
+    "tz": "Asia/Shanghai",
+    "weekDays": [
+     0,
+     2,
+     4
+    ]
+   },
+   "nowMs": 1791115200000,
+   "wall": {
+    "at": "2026-10-05T09:00",
+    "now": "2026-10-04T20:00",
+    "expect": "2026-10-07T09:00"
+   },
+   "expect": {
+    "atMs": 1791334800000,
+    "done": false
+   }
+  },
+  {
+   "name": "每周选一、三、五：周五过点完成 → 下周一",
+   "tz": "Asia/Shanghai",
+   "reminder": {
+    "atMs": 1791507600000,
+    "repeatRule": "weekly",
+    "customFreq": "day",
+    "customN": 1,
+    "repeatEndMs": null,
+    "done": false,
+    "tz": "Asia/Shanghai",
+    "weekDays": [
+     0,
+     2,
+     4
+    ]
+   },
+   "nowMs": 1791511200000,
+   "wall": {
+    "at": "2026-10-09T09:00",
+    "now": "2026-10-09T10:00",
+    "expect": "2026-10-12T09:00"
+   },
+   "expect": {
+    "atMs": 1791766800000,
+    "done": false
+   }
+  },
+  {
+   "name": "每月 31 号：1/31 提前完成 → 2/28",
+   "tz": "Asia/Shanghai",
+   "reminder": {
+    "atMs": 1769821200000,
+    "repeatRule": "monthly",
+    "customFreq": "day",
+    "customN": 1,
+    "repeatEndMs": null,
+    "done": false,
+    "tz": "Asia/Shanghai"
+   },
+   "nowMs": 1768874400000,
+   "wall": {
+    "at": "2026-01-31T09:00",
+    "now": "2026-01-20T10:00",
+    "expect": "2026-02-28T09:00"
+   },
+   "expect": {
+    "atMs": 1772240400000,
+    "done": false
+   }
+  },
+  {
+   "name": "每月 31 号（锚定日 31）：2/28 提前完成 → 3/31",
+   "tz": "Asia/Shanghai",
+   "reminder": {
+    "atMs": 1772240400000,
+    "repeatRule": "monthly",
+    "customFreq": "day",
+    "customN": 1,
+    "repeatEndMs": null,
+    "done": false,
+    "tz": "Asia/Shanghai",
+    "anchorDay": 31
+   },
+   "nowMs": 1771552800000,
+   "wall": {
+    "at": "2026-02-28T09:00",
+    "now": "2026-02-20T10:00",
+    "expect": "2026-03-31T09:00"
+   },
+   "expect": {
+    "atMs": 1774918800000,
+    "done": false
+   }
+  },
+  {
+   "name": "每月 31 号：闰年 1/31 过点完成 → 2/29",
+   "tz": "Asia/Shanghai",
+   "reminder": {
+    "atMs": 1706662800000,
+    "repeatRule": "monthly",
+    "customFreq": "day",
+    "customN": 1,
+    "repeatEndMs": null,
+    "done": false,
+    "tz": "Asia/Shanghai"
+   },
+   "nowMs": 1706666400000,
+   "wall": {
+    "at": "2024-01-31T09:00",
+    "now": "2024-01-31T10:00",
+    "expect": "2024-02-29T09:00"
+   },
+   "expect": {
+    "atMs": 1709168400000,
+    "done": false
+   }
+  },
+  {
+   "name": "工作日（不带节假日表）：周五提前完成 → 下周一",
+   "tz": "Asia/Shanghai",
+   "reminder": {
+    "atMs": 1791507600000,
+    "repeatRule": "weekday",
+    "customFreq": "day",
+    "customN": 1,
+    "repeatEndMs": null,
+    "done": false,
+    "tz": "Asia/Shanghai"
+   },
+   "nowMs": 1791460800000,
+   "wall": {
+    "at": "2026-10-09T09:00",
+    "now": "2026-10-08T20:00",
+    "expect": "2026-10-12T09:00"
+   },
+   "expect": {
+    "atMs": 1791766800000,
+    "done": false
+   }
+  },
+  {
+   "name": "每 3 小时：提前完成 → 再下一次",
+   "tz": "Asia/Shanghai",
+   "reminder": {
+    "atMs": 1791183600000,
+    "repeatRule": "custom",
+    "customFreq": "hour",
+    "customN": 3,
+    "repeatEndMs": null,
+    "done": false,
+    "tz": "Asia/Shanghai"
+   },
+   "nowMs": 1791180000000,
+   "wall": {
+    "at": "2026-10-05T15:00",
+    "now": "2026-10-05T14:00",
+    "expect": "2026-10-05T18:00"
+   },
+   "expect": {
+    "atMs": 1791194400000,
+    "done": false
+   }
+  },
+  {
+   "name": "每 3 小时：已过点好几次 → 现在之后的下一次",
+   "tz": "Asia/Shanghai",
+   "reminder": {
+    "atMs": 1791133200000,
+    "repeatRule": "custom",
+    "customFreq": "hour",
+    "customN": 3,
+    "repeatEndMs": null,
+    "done": false,
+    "tz": "Asia/Shanghai"
+   },
+   "nowMs": 1791180000000,
+   "wall": {
+    "at": "2026-10-05T01:00",
+    "now": "2026-10-05T14:00",
+    "expect": "2026-10-05T16:00"
+   },
+   "expect": {
+    "atMs": 1791187200000,
+    "done": false
+   }
+  },
+  {
+   "name": "每 2 月：8/31 提前完成 → 10/31",
+   "tz": "Asia/Shanghai",
+   "reminder": {
+    "atMs": 1788130800000,
+    "repeatRule": "custom",
+    "customFreq": "month",
+    "customN": 2,
+    "repeatEndMs": null,
+    "done": false,
+    "tz": "Asia/Shanghai"
+   },
+   "nowMs": 1787191200000,
+   "wall": {
+    "at": "2026-08-31T07:00",
+    "now": "2026-08-20T10:00",
+    "expect": "2026-10-31T07:00"
+   },
+   "expect": {
+    "atMs": 1793401200000,
+    "done": false
+   }
+  },
+  {
+   "name": "每年：2/29 过点完成 → 次年 2/28",
+   "tz": "Asia/Shanghai",
+   "reminder": {
+    "atMs": 1709161200000,
+    "repeatRule": "custom",
+    "customFreq": "year",
+    "customN": 1,
+    "repeatEndMs": null,
+    "done": false,
+    "tz": "Asia/Shanghai"
+   },
+   "nowMs": 1709258400000,
+   "wall": {
+    "at": "2024-02-29T07:00",
+    "now": "2024-03-01T10:00",
+    "expect": "2025-02-28T07:00"
+   },
+   "expect": {
+    "atMs": 1740697200000,
+    "done": false
+   }
+  },
+  {
+   "name": "越过结束日：提前完成最后一次 → 整条完成（重复已结束），at 不动",
+   "tz": "Asia/Shanghai",
+   "reminder": {
+    "atMs": 1791248400000,
+    "repeatRule": "daily",
+    "customFreq": "day",
+    "customN": 1,
+    "repeatEndMs": 1791302399999,
+    "done": false,
+    "tz": "Asia/Shanghai"
+   },
+   "nowMs": 1791180000000,
+   "wall": {
+    "at": "2026-10-06T09:00",
+    "now": "2026-10-05T14:00",
+    "end": "2026-10-06T23:59:59.999",
+    "expect": "2026-10-06T09:00（at 不动）"
+   },
+   "expect": {
+    "atMs": 1791248400000,
+    "done": true
+   }
+  },
+  {
+   "name": "结束日当天那次照算：过点完成 → 结束日当天",
+   "tz": "Asia/Shanghai",
+   "reminder": {
+    "atMs": 1791162000000,
+    "repeatRule": "daily",
+    "customFreq": "day",
+    "customN": 1,
+    "repeatEndMs": 1791302399999,
+    "done": false,
+    "tz": "Asia/Shanghai"
+   },
+   "nowMs": 1791180000000,
+   "wall": {
+    "at": "2026-10-05T09:00",
+    "now": "2026-10-05T14:00",
+    "end": "2026-10-06T23:59:59.999",
+    "expect": "2026-10-06T09:00"
+   },
+   "expect": {
+    "atMs": 1791248400000,
+    "done": false
+   }
+  },
+  {
+   "name": "已经完成的：原样（不重新排上）",
+   "tz": "Asia/Shanghai",
+   "reminder": {
+    "atMs": 1791162000000,
+    "repeatRule": "daily",
+    "customFreq": "day",
+    "customN": 1,
+    "repeatEndMs": null,
+    "done": true,
+    "tz": "Asia/Shanghai"
+   },
+   "nowMs": 1791180000000,
+   "wall": {
+    "at": "2026-10-05T09:00",
+    "now": "2026-10-05T14:00",
+    "expect": "2026-10-05T09:00（at 不动）"
+   },
+   "expect": {
+    "atMs": 1791162000000,
+    "done": true
+   }
+  },
+  {
+   "name": "地点提醒（重复）：没有下一次，整条完成",
+   "tz": "Asia/Shanghai",
+   "reminder": {
+    "atMs": 0,
+    "repeatRule": "daily",
+    "customFreq": "day",
+    "customN": 1,
+    "repeatEndMs": null,
+    "done": false,
+    "tz": "Asia/Shanghai",
+    "place": {
+     "name": "家",
+     "lat": 31.2,
+     "lng": 121.5,
+     "radiusM": 100,
+     "trigger": "arrive"
+    }
+   },
+   "nowMs": 1791180000000,
+   "wall": {
+    "at": null,
+    "now": "2026-10-05T14:00",
+    "expect": null
+   },
+   "expect": {
+    "atMs": 0,
+    "done": true
+   }
+  },
+  {
+   "name": "推不动（再推一步越过日期上限）：整条完成",
+   "tz": "UTC",
+   "reminder": {
+    "atMs": 8639999946000000,
+    "repeatRule": "daily",
+    "customFreq": "day",
+    "customN": 1,
+    "repeatEndMs": null,
+    "done": false,
+    "tz": "UTC"
+   },
+   "nowMs": 8639999949600000,
+   "wall": {
+    "at": "+275760-09-12T09:00",
+    "now": "+275760-09-12T10:00",
+    "expect": "275760-09-12T09:00（at 不动）"
+   },
+   "expect": {
+    "atMs": 8639999946000000,
+    "done": true
+   }
+  },
+  {
+   "name": "纽约时区每天：夏令时结束那天提前完成 → 次日 09:00（按提醒自己的时区）",
+   "tz": "America/New_York",
+   "reminder": {
+    "atMs": 1793541600000,
+    "repeatRule": "daily",
+    "customFreq": "day",
+    "customN": 1,
+    "repeatEndMs": null,
+    "done": false,
+    "tz": "America/New_York"
+   },
+   "nowMs": 1793491200000,
+   "wall": {
+    "at": "2026-11-01T09:00",
+    "now": "2026-10-31T20:00",
+    "expect": "2026-11-02T09:00"
+   },
+   "expect": {
+    "atMs": 1793628000000,
+    "done": false
+   }
+  }
+ ]
+}

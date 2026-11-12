@@ -247,6 +247,8 @@ object ReminderAdvance {
      * 戳取 max(现在, 原值 + 1)：这是用户的改动，要赢过自动推的「原值 + 1」。落库 / 推送由调用方（ReminderStore.commit）做。
      */
     fun completed(r: Reminder, nowMs: Long, cal: HolidayCalendar? = null, fallbackTz: ZoneId = ZoneId.systemDefault()): Reminder {
+        // 本来就完成了的原样返回，不重新排上（PC completeOnce 同；共用用例「已经完成的：原样」）。
+        if (r.done) return r
         val stamp = maxOf(nowMs, add(r.updatedAtMs, 1) ?: r.updatedAtMs)
         val rule = ReminderWire.ruleToWire(r.repeatRule)
         if (rule == "none" || !ReminderPlace.timed(r)) return r.copy(done = true, updatedAtMs = stamp)
