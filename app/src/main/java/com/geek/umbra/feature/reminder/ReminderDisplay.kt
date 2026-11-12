@@ -152,8 +152,8 @@ fun Reminder.cloneAsNew(): Reminder {
 val Reminder.repeatEnded: Boolean
     get() = repeatRule != "不重复" && repeatEndMs != null && System.currentTimeMillis() > repeatEndMs
 
-/** 是不是重复提醒（「完成这一次」「结束重复」这两套字只对它出）。 */
-val Reminder.repeats: Boolean get() = repeatRule != "不重复"
+/** 是不是会推到下一次的重复提醒（「完成这一次」「结束重复」这两套字只对它出；地点提醒没有下一次，不算）。 */
+val Reminder.repeats: Boolean get() = repeatRule != "不重复" && ReminderPlace.timed(this)
 
 /**
  * 点完成之后那句吐司（330 五.3 稿 A / B）：重复提醒推到下一次时「已完成这一次 · 下次 <那一行的时间>」，

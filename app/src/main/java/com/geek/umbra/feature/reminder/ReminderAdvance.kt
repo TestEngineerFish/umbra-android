@@ -272,7 +272,8 @@ object ReminderAdvance {
      * 不重复的、已经完成的原样返回。戳同 [completed]。
      */
     fun endRepeat(r: Reminder, nowMs: Long): Reminder {
-        if (r.done || ReminderWire.ruleToWire(r.repeatRule) == "none") return r
+        // 地点提醒没有「下一次」，不给这一项（同 iOS endedRepeat 的 usesTime）。
+        if (r.done || ReminderWire.ruleToWire(r.repeatRule) == "none" || !ReminderPlace.timed(r)) return r
         return r.copy(repeatEndMs = nowMs, done = true, updatedAtMs = maxOf(nowMs, add(r.updatedAtMs, 1) ?: r.updatedAtMs))
     }
 
