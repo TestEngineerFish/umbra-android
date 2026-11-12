@@ -70,6 +70,8 @@ data class CapCard(
     // 定了以后（服务端 cap_gateway：phase result + outcome / summary / error / decision / decided_on / by）
     val outcome: String?,
     val summary: String?,
+    /** 给人看的那句（服务端 #189）：outcome = skipped 时说为什么没动（「这一次已经过了，现在的下次是 X，没动」），画在回执行下。 */
+    val note: String? = null,
     val error: String?,
     val decision: String?,
     val decidedOn: CapDecidedOn?,
@@ -125,7 +127,7 @@ data class CapCard(
                 expiresAtMs = (o["expires_at_ms"] as? JsonPrimitive)?.longOrNull,
                 pendingCount = (o["pending_count"] as? JsonPrimitive)?.intOrNull ?: 1,
                 turnId = o.s("turn_id"), turnIndex = (o["turn_index"] as? JsonPrimitive)?.intOrNull,
-                outcome = o.s("outcome"), summary = o.s("summary"), error = o.s("error"),
+                outcome = o.s("outcome"), summary = o.s("summary"), note = o.s("note")?.takeIf { it.isNotBlank() }, error = o.s("error"),
                 decision = o.s("decision"), decidedOn = decidedOn, by = o.s("by"),
                 undoLabel = undo?.s("label")?.takeIf { it.isNotBlank() },
                 canUndo = undo != null || o.strings("buttons").contains("undo"), undoneOn = undoneOn,
@@ -168,7 +170,7 @@ data class CapCard(
 enum class CapPill { Ok, Wait, Off, Bad, Busy }
 
 /** 一行回执（38 高）：胶囊 + 主体 + 灰字。 */
-data class CapReceipt(val pill: CapPill, val label: String, val subject: String, val tail: List<String>, val dim: Boolean)
+data class CapReceipt(val pill: CapPill, val label: String, val subject: String, val tail: List<String>, val dim: Boolean, val note: String? = null)
 
 /** 带保险箱密钥的工作流说明卡（§13.4 `meta.cap_notice`，设计侧 310 Q10·I / 312）。手机永远不是那台电脑：用 body_remote、不出按钮。 */
 data class CapNotice(val title: String, val body: String) {
@@ -446,9 +448,15 @@ object CapCardRules {
             // 点了、正在做（设计侧 324 §6a，三端统一）：胶囊「正在做」+ 转圈，灰字「能力 · 动作 · 「名字」 · 已允许」（326 补名字），别的端点的加「在 X 上」。
             c.phase == "approved" -> CapReceipt(CapPill.Busy, "正在做", subj, listOfNotNull("已允许", remoteName(c.decidedOn)?.let { "在 $it 上" }, cloud), dim = false)
             c.outcome == "failed" -> CapReceipt(CapPill.Bad, "没跑完", subj, listOfNotNull(c.error?.takeIf { it.isNotBlank() }, cloud), dim = false)
+            // 允许了但没动（服务端 #189 outcome = skipped：要完成的那一次已经过了 / 本来就完成了）：胶囊用「没做」那一档，
+            // 不写「你允许了这一次」（写了像做成了），行下灰字放 note。认不得的 outcome 同样兜底当「没做」画（geek-13 11-12 暂定，三端一致）。
+            c.outcome != null && c.outcome !in KNOWN_OUTCOMES -> CapReceipt(CapPill.Off, "没做", subj, listOfNotNull(cloud), dim = true, note = c.note)
             else -> CapReceipt(CapPill.Ok, "已做", subj, listOfNotNull(by, cloud), dim = false)
         }
     }
+
+    /** 认得的结果；skipped 也不在里面 —— 它和认不得的走同一档。 */
+    private val KNOWN_OUTCOMES = setOf("done", "failed", "rejected", "expired")
 
     fun quoted(name: String): String = if (name.startsWith("「")) name else "「$name」"
 

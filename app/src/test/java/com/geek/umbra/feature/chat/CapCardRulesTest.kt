@@ -198,6 +198,24 @@ class CapCardRulesTest {
         assertEquals("空白当没有", "提醒 · 修改", n("提醒 · 标回未完成", "update", "  "))
     }
 
+    // 服务端 #189：outcome = skipped（允许了但没动）→「没做」档、不写谁允许、行下 note、没有撤销；认不得的 outcome 同样兜底
+    @Test fun skippedReceipt() {
+        val c = card("""{"call_id":"c1","capability":"reminders","action":"update","name":"提醒 · 完成这一次","action_word":"完成这一次",
+            "where":"cloud","object_name":"交房租","phase":"result","outcome":"skipped","title":"完成这一次「交房租」",
+            "note":"这一次已经过了，现在的下次是 2099-02-10 09:00（周二），没动","decision":"once","buttons":[]}""")
+        val r = CapCardRules.receipt(c)
+        assertEquals(CapPill.Off, r.pill)
+        assertEquals("没做", r.label)
+        assertEquals("提醒 · 完成这一次 · 「交房租」", r.subject)
+        assertEquals(listOf("在云端"), r.tail)
+        assertEquals("这一次已经过了，现在的下次是 2099-02-10 09:00（周二），没动", r.note)
+        assertFalse(CapCardRules.showsUndo(c, blocked = false))
+        val odd = CapCardRules.receipt(c.copy(outcome = "partial", note = null))
+        assertEquals("没做", odd.label)
+        assertNull(odd.note)
+        assertEquals("已做", CapCardRules.receipt(c.copy(outcome = "done", note = null)).label)
+    }
+
     @Test fun receiptNameNeverEmptied() {
         assertEquals(80, CapCardRules.receiptNameWidth(avail = 200, full = 80, min = 40, tail = 100))
         assertEquals(60, CapCardRules.receiptNameWidth(avail = 160, full = 80, min = 40, tail = 100))

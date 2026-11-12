@@ -310,8 +310,8 @@ private fun CapReceiptRow(b: ChatBlock.Cap, card: CapCard) {
                         .padding(start = 10.dp, top = 11.dp, bottom = 11.dp))
             }
         }
-        // 撤不了的原因（端上按原因码出字）：行下一行 12 muted。
-        b.undoNote?.let { Text(it, color = t.muted, style = TextStyle(fontSize = 12.sp, lineHeight = 17.sp), modifier = Modifier.padding(start = 12.dp, top = 4.dp, end = 10.dp)) }
+        // 撤不了的原因（端上按原因码出字）/ 没动的那句（服务端 note）：同一个位置，行下一行 12 muted。
+        (b.undoNote ?: r.note)?.let { Text(it, color = t.muted, style = TextStyle(fontSize = 12.sp, lineHeight = 17.sp), modifier = Modifier.padding(start = 12.dp, top = 4.dp, end = 10.dp)) }
         if (b.expanded && card.preview.isNotEmpty()) Column(Modifier.fillMaxWidth().padding(top = 6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             for (p in card.preview) CapPreviewView(p)
         }
