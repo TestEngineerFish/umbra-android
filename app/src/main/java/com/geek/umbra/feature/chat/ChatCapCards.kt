@@ -232,7 +232,15 @@ private fun CapPreviewView(p: CapPreview, full: Boolean = false) {
                 is CapPreview.Fields -> Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
                     for ((k, v) in p.rows) Row {
                         Text(k, color = t.muted, style = TextStyle(fontSize = 12.5.sp), modifier = Modifier.width(84.dp))
-                        Text(v, color = t.text, style = TextStyle(fontSize = 12.5.sp, lineHeight = 18.sp), modifier = Modifier.weight(1f))
+                        // 值原样保留换行和行首空格（Compose 的 Text 本来不挤空白）；长值折到 6 行，每格各自「展开全文」进全屏只读页
+                        //（服务端 #193 给全文，同 PC 52a955d；手机不就地展开，同代码段，306 §3）。没看全文也能点允许。
+                        val folds = CapCardRules.fieldFolds(v)
+                        Column(Modifier.weight(1f)) {
+                            Text(v, color = t.text, style = TextStyle(fontSize = 12.5.sp, lineHeight = 18.sp),
+                                maxLines = if (folds) CapCardRules.FIELD_FOLD_LINES else Int.MAX_VALUE, overflow = TextOverflow.Ellipsis)
+                            if (folds) Text("展开全文", color = t.orangeText, style = TextStyle(fontSize = 12.sp),
+                                modifier = Modifier.clickable(role = Role.Button) { openFullField(k, v) }.padding(top = 4.dp))
+                        }
                     }
                 }
                 is CapPreview.Diff -> Column(Modifier.horizontalScroll(rememberScrollState())) {
@@ -267,6 +275,21 @@ private fun openFullCode(p: CapPreview.Code) {
             Text(CapCardRules.segHead(p), color = t.muted, style = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.SemiBold))
             Box(Modifier.fillMaxWidth().heightIn(max = 640.dp).clip(rowShape).background(t.bg).padding(10.dp).verticalScroll(rememberScrollState())) {
                 CodeLines(p.text.lines())
+            }
+        }
+    })
+}
+
+/** fields 一格的全文（全屏只读页，同 [openFullCode]）：标题是这一格的名字，正文保留换行，可选中复制。 */
+private fun openFullField(label: String, text: String) {
+    AppGraph.router.present(UmbraSheet("cap-field-${label.hashCode()}-${text.hashCode()}") { _ ->
+        val t = UmbraTheme.colors
+        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(label, color = t.muted, style = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.SemiBold))
+            Box(Modifier.fillMaxWidth().heightIn(max = 640.dp).clip(rowShape).background(t.bg).padding(10.dp).verticalScroll(rememberScrollState())) {
+                androidx.compose.foundation.text.selection.SelectionContainer {
+                    Text(text, color = t.text, style = TextStyle(fontSize = 13.5.sp, lineHeight = 21.sp))
+                }
             }
         }
     })

@@ -263,6 +263,16 @@ class CapCardRulesTest {
         assertEquals("老服务端不拆：整串", CapCardRules.ReceiptParts("记账 · 新建", "「午饭 · ¥32.50」", null, 4), CapCardRules.receiptParts(old, CapCardRules.receipt(old)))
     }
 
+    // 服务端 #193 给全文：fields 长值超过 6 行或 300 字就折（同 PC 52a955d）；按字符数数，emoji 算一个
+    @Test fun fieldFold() {
+        assertFalse(CapCardRules.fieldFolds("短"))
+        assertFalse("正好 6 行", CapCardRules.fieldFolds((1..6).joinToString("\n") { "第 $it 行" }))
+        assertTrue("7 行", CapCardRules.fieldFolds((1..7).joinToString("\n") { "第 $it 行" }))
+        assertFalse("正好 300 字", CapCardRules.fieldFolds("字".repeat(300)))
+        assertTrue("301 字", CapCardRules.fieldFolds("字".repeat(301)))
+        assertFalse("300 个 emoji（600 个 UTF-16 码元）不算超", CapCardRules.fieldFolds("😀".repeat(300)))
+    }
+
     @Test fun receiptNameNeverEmptied() {
         assertEquals(80, CapCardRules.receiptNameWidth(avail = 200, full = 80, min = 40, tail = 100))
         assertEquals(60, CapCardRules.receiptNameWidth(avail = 160, full = 80, min = 40, tail = 100))

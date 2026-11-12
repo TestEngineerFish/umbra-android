@@ -385,6 +385,15 @@ object CapCardRules {
     /** code 段收起的行数：手机 6 行（306 §3）。 */
     const val CODE_FOLD_LINES = 6
 
+    /**
+     * fields 一格的值太长就折起来（服务端 #193 起要写入的内容给全文、最长 4000 字、保留换行，由端上折；同 PC 52a955d，阈值暂定等设计侧 344）：
+     * 超过 6 行或 300 字（按字符数，不按 UTF-16 码元），显示前 6 行 +「展开全文」。
+     */
+    const val FIELD_FOLD_LINES = 6
+    const val FIELD_FOLD_CHARS = 300
+
+    fun fieldFolds(v: String): Boolean = v.split("\n").size > FIELD_FOLD_LINES || v.codePointCount(0, v.length) > FIELD_FOLD_CHARS
+
     /** code 段头部「bash · 14 行」。 */
     fun codeHead(p: CapPreview.Code): String = "${p.lang.ifEmpty { "文本" }} · ${p.text.lines().size} 行"
 
