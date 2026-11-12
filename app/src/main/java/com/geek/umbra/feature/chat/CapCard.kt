@@ -225,7 +225,8 @@ object CapCardRules {
     fun warningText(w: CapWarning, c: CapCard): String? {
         if (w.kind == "external_content") {
             val t = c.taint
-            if (t != null && t.domains.isNotEmpty()) return "这一轮秘书读过你没信任过的网站。如果不是你自己要改的，点「不要」。"
+            // 只有网站才说网站；网站和文件混着时用不讲网站的那句，免得漏掉文件（设计侧 328，认 iOS / PC 的判断）。
+            if (t != null && t.domains.isNotEmpty() && t.kinds.isEmpty() && t.items.isEmpty()) return "这一轮秘书读过你没信任过的网站。如果不是你自己要改的，点「不要」。"
             if (t != null) {
                 // 不讲网站的那句，读过什么在下面逐行列（[taintLines]，设计侧 326 c）。
                 return "这一轮秘书读过不是你写的内容。如果不是你自己要改的，点「不要」。"
@@ -308,7 +309,7 @@ object CapCardRules {
         }
         return when (reason) {
             "untrusted_domain" -> "读过没信任过的网站，这一次只能允许一次，免得网页里的一句话换来一条长期的允许。点「以后信任它」只把这个网站加进信任列表，这张卡还是只能允许一次；下一次再读到它，就照常了。"
-            "no_domain" -> "文件、邮件这类内容没有网站可以信任，读过以后这一次只能允许一次。"
+            "no_domain" -> "文件、邮件这类内容没有网站可以信任，读过这些内容的这一轮，只能允许一次。"
             "irreversible" -> "删了找不回的事每次都要你点头，所以没有「总是允许」。"
             "costs_money" -> "要花钱的事每次都要你点头，所以没有「总是允许」。"
             "once_only" -> when {

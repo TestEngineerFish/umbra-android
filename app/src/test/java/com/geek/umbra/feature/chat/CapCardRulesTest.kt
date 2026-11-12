@@ -58,7 +58,7 @@ class CapCardRulesTest {
         // 没有域名的外来内容：说读过什么，不给信任入口
         val file = card("""{"call_id":"c","phase":"ask","buttons":["once","reject"],"taint":{"domains":[],"kinds":["file"],"items":[{"kind":"file","label":"物业通知.pdf"}]}}""")
         assertEquals("这一轮秘书读过不是你写的内容。如果不是你自己要改的，点「不要」。", CapCardRules.warningText(CapCardRules.warnings(file)[0], file))
-        assertEquals("文件、邮件这类内容没有网站可以信任，读过以后这一次只能允许一次。", CapCardRules.footnote(file))
+        assertEquals("文件、邮件这类内容没有网站可以信任，读过这些内容的这一轮，只能允许一次。", CapCardRules.footnote(file))
         // 执行端说了原因就用它
         val ask = card("""{"call_id":"c","phase":"ask","buttons":["once","reject"],"once_reason":"ask_rule"}""")
         assertEquals("你设过这件事每次都问。", CapCardRules.footnote(ask))
@@ -166,5 +166,11 @@ class CapCardRulesTest {
         assertEquals(CapReceipt(CapPill.Busy, "正在做", "工作流 · 运行 · 「随机密码」", listOf("已允许"), false), CapCardRules.receipt(busy))
         // 认不得的 action 照 name
         assertEquals("回收站 · 彻底删除", CapCardRules.headName(card("""{"call_id":"c","action":"purge","name":"回收站 · 彻底删除"}""")))
+    }
+
+    // 设计侧 328：网站和文件混着时标题用不讲网站的那句
+    @Test fun mixedTaintTitle() {
+        val mixed = card("""{"call_id":"c","phase":"ask","buttons":["once","reject"],"taint":{"domains":["forum.example.com"],"kinds":["file"],"items":[{"kind":"file","label":"物业通知.pdf"}]}}""")
+        assertEquals("这一轮秘书读过不是你写的内容。如果不是你自己要改的，点「不要」。", CapCardRules.warningText(CapCardRules.warnings(mixed)[0], mixed))
     }
 }

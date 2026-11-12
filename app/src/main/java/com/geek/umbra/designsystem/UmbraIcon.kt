@@ -110,6 +110,8 @@ fun UmbraIconBlock(
  * 等 iOS 也用上时挪进 UmbraIconPath.swift 再重新生成。
  */
 object UmbraExtraIcons {
+    /** coins：两枚错开的硬币（设计侧 328 c，umbra-icons.json 1.24.0，stroke 1.8）。iOS 还没进生成表，先放这里。 */
+    const val coins = "M15 9a6 6 0 1 1-6 6M3 9a6 6 0 1 0 12 0A6 6 0 1 0 3 9M9 7.4v3.2"
     /** 两个人（保险箱「多账号」节点；设计侧 293 稿上的 multi 图标，逐字照抄）。 */
     const val users = "M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM2.5 20a6.5 6.5 0 0 1 13 0M15.5 4.3a3.5 3.5 0 0 1 0 6.4M17.5 14.2A6.5 6.5 0 0 1 21.5 20"
     /** Lucide arrow-left。设计侧 199 答复第 3 条：Android 推入页返回用它（22、stroke 2、热区 48），不用 iOS 的 chevron。 */

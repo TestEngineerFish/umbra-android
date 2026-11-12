@@ -261,18 +261,24 @@ private fun TaskRow(task: TaskItem) {
                 Text(it, color = c.muted, style = TextStyle(fontSize = 13.5.sp, lineHeight = 19.sp), maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
         }
+        // 挂起：胶囊换成「已挂起 · 原因」那一行字。等待档灰、「可以接着跑了」琥珀（设计侧 225，判据说了算）。
+        val sus = TaskSuspendRules.display(task.status, task.suspendInfo)
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-            // 挂起：胶囊换成「已挂起 · 原因」那一行字。等待档灰、「可以接着跑了」琥珀（设计侧 225，判据说了算）。
-            val sus = TaskSuspendRules.display(task.status, task.suspendInfo)
-            if (sus != null) {
-                Text(sus.listMeta, color = if (sus.listMetaWarn) c.warningText else c.muted, style = TextStyle(fontSize = 13.sp),
-                    maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
-            } else UmbraStatusBadge(if (unfinished) UmbraStatus.Unfinished else st.ui())
-            TaskDetailRules.channelLabel(task.channel)?.let {
-                Text(stringResource(R.string.tasks_fromChannel, it), color = c.faint, style = TextStyle(fontSize = 13.sp), maxLines = 1,
-                    overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+            // 原因、来源、时间占左边剩下的宽；行尾那句（328 a）固定在最右，不跟它们抢宽。
+            Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                if (sus != null) {
+                    // 被打断（328 a）：副行只说原因（灰），能做的事放行尾绿字「可以接着跑」。
+                    Text(sus.listMeta, color = if (sus.listMetaWarn && sus.listTrailing == null) c.warningText else c.muted, style = TextStyle(fontSize = 13.sp),
+                        maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                } else UmbraStatusBadge(if (unfinished) UmbraStatus.Unfinished else st.ui())
+                TaskDetailRules.channelLabel(task.channel)?.let {
+                    // 来源（「来自网页」）很短，按自身宽度排；剩下的宽都给前面的原因，免得两者平分把原因挤成两行。
+                    Text(stringResource(R.string.tasks_fromChannel, it), color = c.faint, style = TextStyle(fontSize = 13.sp), maxLines = 1,
+                        overflow = TextOverflow.Ellipsis)
+                }
+                Text("· ${TaskTime.relative(task.updated_at)}", color = c.faint, style = TextStyle(fontSize = 13.sp), maxLines = 1)
             }
-            Text("· ${TaskTime.relative(task.updated_at)}", color = c.faint, style = TextStyle(fontSize = 13.sp), maxLines = 1)
+            sus?.listTrailing?.let { Text(it, color = c.success, style = TextStyle(fontSize = 13.sp, fontWeight = UmbraType.weight560), maxLines = 1) }
         }
         // 进度只在服务端真给了步骤数时画：一根永远 0% 的条比不画更容易被当成「卡住了」。
         if (st == TaskStatusKind.Running && prog != null) UmbraProgressBar(prog.fraction, c.orange)

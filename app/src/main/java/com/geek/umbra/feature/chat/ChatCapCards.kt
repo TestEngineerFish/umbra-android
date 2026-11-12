@@ -132,7 +132,18 @@ private fun CapWarningRow(w: CapWarning, c: CapCard) {
     val ink = if (danger) t.dangerText else t.warningText
     Column(Modifier.fillMaxWidth().clip(rowShape).background(if (danger) t.dangerSoft else t.warningSoft).padding(horizontal = 10.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(text, color = ink, style = TextStyle(fontSize = 12.5.sp, lineHeight = 18.sp))
+        Row(verticalAlignment = Alignment.Top) {
+            // 每种警告前一颗 13 的图标（iOS CapCardViews warnIcon）；要花钱用 coins（设计侧 328 c，iOS 从 wallet 换回来）。
+            val (icon, sw) = when (w.kind) {
+                "costs_money" -> com.geek.umbra.designsystem.UmbraExtraIcons.coins to 1.8f
+                "runs_code" -> UmbraIconPaths.code to 2f
+                "external_content" -> UmbraIconPaths.globe to 2f
+                else -> UmbraIconPaths.alertTriangle to 2f
+            }
+            UmbraIcon(icon, ink, Modifier.padding(top = 2.dp), size = 13.dp, strokeWidth = sw)
+            Spacer(Modifier.width(8.dp))
+            Text(text, color = ink, style = TextStyle(fontSize = 12.5.sp, lineHeight = 18.sp))
+        }
         if (w.kind == "external_content" && c.trustOffers.isNotEmpty()) {
             for (d in c.trustOffers) Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(d, color = t.text, style = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 12.sp), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
