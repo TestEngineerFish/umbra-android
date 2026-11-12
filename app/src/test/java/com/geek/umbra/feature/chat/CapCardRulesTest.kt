@@ -175,6 +175,16 @@ class CapCardRulesTest {
     }
 
     // 设计侧 330 五.1：回执上的［撤销］
+    // 332 二：名字不会少于「引号 + 前 4 字 +…」；放得下全给；压不动时截的是行尾
+    @Test fun receiptNameNeverEmptied() {
+        assertEquals(80, CapCardRules.receiptNameWidth(avail = 200, full = 80, min = 40, tail = 100))
+        assertEquals(60, CapCardRules.receiptNameWidth(avail = 160, full = 80, min = 40, tail = 100))
+        assertEquals("行尾太长也不压到 min 以下", 40, CapCardRules.receiptNameWidth(avail = 120, full = 80, min = 40, tail = 300))
+        assertEquals("名字本来就短", 30, CapCardRules.receiptNameWidth(avail = 50, full = 30, min = 40, tail = 300))
+        assertEquals("整格连 min 都放不下才跟着截", 25, CapCardRules.receiptNameWidth(avail = 25, full = 80, min = 40, tail = 300))
+        assertEquals(0, CapCardRules.receiptNameWidth(avail = 0, full = 80, min = 40, tail = 300))
+    }
+
     @Test fun receiptUndo() {
         val done = card("""{"call_id":"c","action":"update","name":"常用语 · 改一条常用语","object_name":"物业电话","where":"cloud",
             "phase":"result","outcome":"done","decision":"once","buttons":["undo"],"undo":{"label":"撤销"}}""")

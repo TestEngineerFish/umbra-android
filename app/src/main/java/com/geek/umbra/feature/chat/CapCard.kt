@@ -478,6 +478,15 @@ object CapCardRules {
         return head to r.subject.removePrefix("$head · ")
     }
 
+    /**
+     * 回执名字那一格给多宽（330 五.7 / 332 二）：放得下全给；放不下先压名字，但不少于「引号 + 前 4 个字 +…」[min]，
+     * 剩下的才给行尾去截。只有整格连 [min] 都放不下时（窄到不现实）名字才跟着截。
+     */
+    fun receiptNameWidth(avail: Int, full: Int, min: Int, tail: Int): Int {
+        if (full + tail <= avail) return full
+        return maxOf(minOf(min, full), avail - tail).coerceAtMost(avail).coerceAtLeast(0)
+    }
+
     // ── 只读活动行（314 a / 稿 L） ──────────────────────────────────────
 
     /** verb = read 的回执不单独画，收进「看了 N 样东西」。 */

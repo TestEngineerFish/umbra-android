@@ -263,12 +263,6 @@ fun RemListScreen() {
                                 ReminderRow(r, leavingId == r.id, onToggle = { toggleAnimated(r) })
                             }
                         }
-                        if (name == "已结束重复") {
-                            Text(
-                                "这套重复到期了，不再自动生成。里面的每一条是不是被处理过，看它自己那一行。",
-                                color = c.muted, style = TextStyle(fontSize = 11.5.sp), modifier = Modifier.padding(start = 4.dp, top = 6.dp),
-                            )
-                        }
                     }
                 }
             }
@@ -306,6 +300,8 @@ private fun ReminderRow(r: Reminder, leaving: Boolean, onToggle: () -> Unit) {
         })
     }
     val checked = r.done || leaving
+    // 结束了的重复：只看「done + 这套到头了」，和分组同一个判据（Reminder.group）。
+    val ended = r.done && r.repeatEnded
     val leading = listOf(UmbraSwipeAction(if (checked) "取消完成" else if (r.repeats) "完成这一次" else "完成", if (checked) UmbraIconPaths.x else UmbraIconPaths.check, c.success, onClick = onToggle))
     UmbraRevealSwipeRow(leading = leading, trailing = trailing, resetKey = r) {
         Row(
@@ -326,7 +322,8 @@ private fun ReminderRow(r: Reminder, leaving: Boolean, onToggle: () -> Unit) {
                 Text(
                     r.text, maxLines = 2, overflow = TextOverflow.Ellipsis,
                     color = if (r.done) c.faint else c.text,
-                    style = TextStyle(fontSize = 16.sp, lineHeight = 22.sp, textDecoration = if (r.done) TextDecoration.LineThrough else null),
+                    // 删除线只给「这件做完了」；结束了的重复是一整套不再响的安排，只变淡不划线（332 五.1）。
+                    style = TextStyle(fontSize = 16.sp, lineHeight = 22.sp, textDecoration = if (r.done && !ended) TextDecoration.LineThrough else null),
                 )
                 Spacer(Modifier.height(5.dp))
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(7.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -341,9 +338,12 @@ private fun ReminderRow(r: Reminder, leaving: Boolean, onToggle: () -> Unit) {
                     } else Text(r.timeLabel, color = if (r.overdue) c.dangerText else c.muted, style = TextStyle(fontSize = 13.sp))
                     if (r.overdue) Chip("已过期", c.dangerText, c.dangerSoft)
                     if (r.pushRejection != null) Chip("服务端不收这条", c.warningText, c.warningSoft, UmbraIconPaths.alertTriangle)
-                    // 结束了的重复（点了「结束重复」或自己设的结束日到了）副行写「已结束重复」（330 五.3），灰。
-                    if (r.done && r.repeatEnded) Chip("已结束重复", c.muted, c.chip)
-                    else if (r.repeatRule != "不重复") Chip(r.repeatLabel + r.repeatEndSuffix, c.orangeText, c.orangeSoft, UmbraIconPaths.repeatArrows)
+                    // 结束了的重复（点了「结束重复」或自己设的结束日到了）：组名已经说了，行上不另加胶囊；
+                    // 重复胶囊照旧带结束日，换 chip 底 muted 字表示不再响，箭头跟着变灰（332 五.1 / 五.2）。
+                    if (r.repeatRule != "不重复") Chip(
+                        r.repeatLabel + r.repeatEndSuffix,
+                        if (ended) c.muted else c.orangeText, if (ended) c.chip else c.orangeSoft, UmbraIconPaths.repeatArrows,
+                    )
                     if (r.atts.isNotEmpty()) Chip("${r.atts.size}", c.muted, c.chip, UmbraIconPaths.image)
                 }
             }

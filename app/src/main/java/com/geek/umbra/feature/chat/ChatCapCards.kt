@@ -333,8 +333,9 @@ private fun ReceiptLine(parts: Pair<String, String>?, plain: String, tail: Strin
     androidx.compose.ui.layout.Layout(
         contents = listOf(
             { Text(head, color = color, style = style, maxLines = 1, softWrap = false) },
-            { Text(" · $obj", color = color, style = style, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-            { Text(tail, color = color, style = style, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+            // softWrap = false：不然拉丁名字（Tax-ID-2024）会在「 · 」后面的空格断行，第一行只剩「 ·…」，名字截光（332 二）。
+            { Text(" · $obj", color = color, style = style, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis) },
+            { Text(tail, color = color, style = style, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis) },
             // 只量不画：名字留前 4 个字 +「…」那么宽
             { Text(" · " + obj.take(5) + "…", style = style, maxLines = 1, softWrap = false) },
         ),
@@ -346,7 +347,7 @@ private fun ReceiptLine(parts: Pair<String, String>?, plain: String, tail: Strin
         val oFull = o.first().maxIntrinsicWidth(c.maxHeight)
         val tFull = tl.first().maxIntrinsicWidth(c.maxHeight)
         val oMin = minOf(oFull, mn.first().maxIntrinsicWidth(c.maxHeight))
-        val oW = if (oFull + tFull <= avail) oFull else maxOf(oMin, avail - tFull).coerceAtMost(avail)
+        val oW = CapCardRules.receiptNameWidth(avail, oFull, oMin, tFull)
         val op = o.first().measure(androidx.compose.ui.unit.Constraints(maxWidth = oW))
         val tp = tl.first().measure(androidx.compose.ui.unit.Constraints(maxWidth = (avail - op.width).coerceAtLeast(0)))
         val ht = maxOf(hp.height, op.height, tp.height)
