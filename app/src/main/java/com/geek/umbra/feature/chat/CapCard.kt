@@ -42,6 +42,8 @@ data class CapCard(
     val action: String,
     val name: String,
     val verb: String?,
+    /** 回执里的对象短名（「随机密码」「物业电话」，设计侧 326 §1）。字段名等服务端定，先按 geek-7f 建议的 `object_name` 读；没带退回卡标题。 */
+    val objectName: String?,
     val where: String?,
     val runOn: CapRunOn?,
     val phase: String,
@@ -100,7 +102,7 @@ data class CapCard(
             val decidedOn = (o["decided_on"] as? JsonObject)?.let { CapDecidedOn(it.s("by_client") ?: "", it.s("name") ?: "") }
             return CapCard(
                 callId = id, capability = o.s("capability") ?: "", action = o.s("action") ?: "",
-                name = o.s("name") ?: "", verb = o.s("verb"), where = o.s("where"), runOn = runOn,
+                name = o.s("name") ?: "", verb = o.s("verb"), objectName = o.s("object_name")?.takeIf { it.isNotBlank() }, where = o.s("where"), runOn = runOn,
                 phase = o.s("phase") ?: "ask", title = o.s("title") ?: "",
                 warnings = warnings, preview = pv, previewTruncated = o.b("preview_truncated") == true,
                 buttons = o.strings("buttons"), canAlways = o.b("can_always") ?: o.strings("buttons").contains("always"),
@@ -225,10 +227,8 @@ object CapCardRules {
             val t = c.taint
             if (t != null && t.domains.isNotEmpty()) return "这一轮秘书读过你没信任过的网站。如果不是你自己要改的，点「不要」。"
             if (t != null) {
-                val lines = taintLines(t)
-                // 一样时直接说读过什么；几样时说「几样」、下面逐行列（[taintLines]，设计侧 324 §6c）。
-                return if (lines.size == 1) "这一轮秘书${lines[0]}。如果不是你自己要改的，点「不要」。"
-                else "这一轮秘书读过几样外来内容。如果不是你自己要改的，点「不要」。"
+                // 不讲网站的那句，读过什么在下面逐行列（[taintLines]，设计侧 326 c）。
+                return "这一轮秘书读过不是你写的内容。如果不是你自己要改的，点「不要」。"
             }
         }
         return w.text
@@ -329,8 +329,24 @@ object CapCardRules {
         return if (!r.online) "${name}现在不在线。点了以后它一上线就执行（24 小时内）。" to true else "会在 $name 上执行" to false
     }
 
+    /**
+     * 动作的短动词，按 action 查（PC gate.ts VERB_NAME 同一张表，设计侧 326 §2「三端用同一套短动词」）。
+     * 卡上的 verb 是风险类（write / delete…），分不出新建和修改，不能拿来当字。
+     */
+    private val VERB_NAME = mapOf("list" to "列出", "get" to "查看", "create" to "新建", "update" to "修改", "delete" to "删除", "run" to "运行")
+
+    /**
+     * 「能力 · 动作」：服务端转发设备能力时 name 拼的是动作说明的长句（「工作流 · 建一个工作流」），回执行一窄就把后面的
+     * 「在 iPhone 上」挤没了（326 §2）。认得的 action 换成短动词，认不得的照 name。
+     */
+    fun capName(c: CapCard): String {
+        val short = VERB_NAME[c.action] ?: return c.name
+        val cap = c.name.substringBefore(" · ").trim()
+        return if (cap.isEmpty()) c.name else "$cap · $short"
+    }
+
     /** 卡头的能力名：服务端能力（where=cloud）后面写「 · 在云端」（设计侧 324 §5）；设备能力的执行端另起一行。 */
-    fun headName(c: CapCard): String = if (c.where == "cloud") "${c.name} · 在云端" else c.name
+    fun headName(c: CapCard): String = if (c.where == "cloud") "${capName(c)} · 在云端" else capName(c)
 
     /** 卡头右端胶囊。 */
     fun askPill(c: CapCard): String = if (c.phase == "paused") "停住了 · 等你同意" else "等你同意"
@@ -384,8 +400,14 @@ object CapCardRules {
         }
     }
 
-    /** 回执主体：「name · title」（规则放行的回执 title 是对象名，见服务端 on_task_result 注释）。 */
-    fun subject(c: CapCard): String = listOf(c.name, c.title).filter { it.isNotBlank() }.distinct().joinToString(" · ")
+    /**
+     * 回执主体：「能力 · 动作 · 「名字」」（设计侧 326 §1：前面已说做的是什么，后面只补对谁做的；不带卡标题，不用执行端回给秘书的 text）。
+     * 没带对象短名时退回卡标题，至少不空着。
+     */
+    fun subject(c: CapCard): String {
+        val obj = c.objectName?.let(::quoted) ?: c.title
+        return listOf(capName(c), obj).filter { it.isNotBlank() }.distinct().joinToString(" · ")
+    }
 
     /**
      * 定了以后那一行（稿 C / F2 / F3）。[supersededBy]：本端点了却拿到 409（别的端先点了），写「已处理 · 已经在「X」上处理过了」。
@@ -401,8 +423,8 @@ object CapCardRules {
             c.outcome == "rejected" || c.decision == "reject" -> CapReceipt(CapPill.Off, "没做", subj, listOfNotNull(by), dim = true)
             c.phase == "queued" -> CapReceipt(CapPill.Wait, "已允许 · 等电脑上线", subj, listOfNotNull(by), dim = false)
             // approved = 点了、执行端正在做（稿里没画手机形制，先按「正在做」，问题清单第 4 条）
-            // 点了、正在做（设计侧 324 §6a，三端统一）：胶囊「正在做」+ 转圈，灰字「能力 · 动作 · 已允许」，别的端点的加「在 X 上」。
-            c.phase == "approved" -> CapReceipt(CapPill.Busy, "正在做", c.name, listOfNotNull("已允许", remoteName(c.decidedOn)?.let { "在 $it 上" }, cloud), dim = false)
+            // 点了、正在做（设计侧 324 §6a，三端统一）：胶囊「正在做」+ 转圈，灰字「能力 · 动作 · 「名字」 · 已允许」（326 补名字），别的端点的加「在 X 上」。
+            c.phase == "approved" -> CapReceipt(CapPill.Busy, "正在做", subj, listOfNotNull("已允许", remoteName(c.decidedOn)?.let { "在 $it 上" }, cloud), dim = false)
             c.outcome == "failed" -> CapReceipt(CapPill.Bad, "没跑完", subj, listOfNotNull(c.error?.takeIf { it.isNotBlank() }, cloud), dim = false)
             else -> CapReceipt(CapPill.Ok, "已做", subj, listOfNotNull(by, cloud), dim = false)
         }
@@ -416,7 +438,7 @@ object CapCardRules {
     fun isReadReceipt(c: CapCard): Boolean = c.verb == "read" && !isCard(c)
 
     /** 活动行展开后的一行：「能力 · 动作　对象」—— 一个全角空格；对象取结果的说法 summary，空了才用 title（同 PC，tokens batch339 readActivity.look）。 */
-    fun readLine(c: CapCard): String = c.name + ((c.summary?.takeIf { it.isNotBlank() } ?: c.title).takeIf { it.isNotBlank() }?.let { "　$it" } ?: "")
+    fun readLine(c: CapCard): String = capName(c) + ((c.summary?.takeIf { it.isNotBlank() } ?: c.title).takeIf { it.isNotBlank() }?.let { "　$it" } ?: "")
 
     fun readHead(n: Int): String = "看了 $n 样东西"
 

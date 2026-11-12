@@ -184,17 +184,17 @@ class TaskSuspendRulesTest {
             TaskSuspendInfo.fromJson(obj("""{"missing_capability_labels":[null,"设计"]}""")).labels)
     }
 
-    // interrupted：单独一档，不说「等设备上线」；就绪时照常出「接着跑」（临时字面，geek-7f 11-11）
+    // interrupted：单独一档，不说「等设备上线」；就绪时照常出「接着跑」（设计侧 326 a 定稿）
     @Test fun interruptedHasOwnCopy() {
         val info = TaskSuspendInfo(reason = "interrupted", step = 2, resumeReady = true)
         val d = TaskSuspendRules.display("suspended", info)!!
-        assertEquals("这个任务被服务重启打断了", d.title)
-        assertEquals("没跑完，可以从第 2 步接着跑。", d.body)
-        assertEquals("已挂起 · 被重启打断", d.listMeta)
-        assertEquals("这个任务被服务重启打断了，没跑完，可以从第 2 步接着跑。", d.cardText)
+        assertEquals("这个任务被打断了", d.title)
+        assertEquals("长尾雀的服务器重启过一次，任务停在第 2 步，没跑完。可以从第 2 步接着跑。", d.body)
+        assertEquals("已挂起 · 被服务器重启打断", d.listMeta)
+        assertEquals("被服务器重启打断了，可以接着跑", d.cardText)
         assertTrue(TaskSuspendRules.showsResume("suspended", info))
         val waiting = TaskSuspendRules.display("suspended", TaskSuspendInfo(reason = "interrupted"))!!
         assertFalse(waiting.title.contains("上线"))
-        assertEquals("没跑完，可以从这一步接着跑。", waiting.body)
+        assertEquals("长尾雀的服务器重启过一次，任务停在这一步，没跑完。可以从这一步接着跑。", waiting.body)
     }
 }

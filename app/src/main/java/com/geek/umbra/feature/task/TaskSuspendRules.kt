@@ -42,12 +42,15 @@ object TaskSuspendCopy {
     const val listPrefix = "已挂起 · "
     const val stepNumbered = "第 {{n}} 步"
     /**
-     * 挂起原因 interrupted（服务重启打断了任务，没跑完，可以接着跑）的临时字面（geek-7f 11-11 定，等设计侧出正式的）。
+     * 挂起原因 interrupted（服务器重启打断了任务，没跑完，可以接着跑），设计侧 326 a 定稿：
+     * 标题不放原因（原因在正文第一句）；一律写「服务器重启」（「服务重启」用户读不懂）；不道歉。
      * 不能落进设备档：那档会说「在等「能做这一步的设备」上线」，和这件事不对题。
      */
-    const val interruptedTitle = "这个任务被服务重启打断了"
-    const val interruptedBody = "没跑完，可以从{{step}}接着跑。"
-    const val interruptedListMeta = "已挂起 · 被重启打断"
+    const val interruptedTitle = "这个任务被打断了"
+    const val interruptedBody = "${Brand.productName}的服务器重启过一次，任务停在{{step}}，没跑完。可以从{{step}}接着跑。"
+    const val interruptedListMeta = "已挂起 · 被服务器重启打断"
+    /** 聊天任务卡那一行（326 a，与 PC 同一句）。 */
+    const val interruptedCard = "被服务器重启打断了，可以接着跑"
     const val stepUnknown = "这一步"
     const val stop = "停止"
     const val copyDetail = "复制详情"
@@ -188,7 +191,7 @@ sealed interface TaskResumeOutcome {
 }
 
 object TaskSuspendRules {
-    /** 挂起原因：服务重启打断了任务（服务端看门狗，2026-11-11）。 */
+    /** 挂起原因：服务器重启打断了任务（服务端看门狗，2026-11-11）。 */
     const val INTERRUPTED = "interrupted"
 
     /** 发「接着跑」的路径（按一个路径段编码 id）。 */
@@ -252,7 +255,7 @@ object TaskSuspendRules {
             val body = TaskSuspendCopy.fill(TaskSuspendCopy.interruptedBody, mapOf("step" to stepPhrase(info.step)))
             return TaskSuspendDisplay(
                 title = TaskSuspendCopy.interruptedTitle, body = body, iosHint = null, ready = info.resumeReady,
-                listMeta = TaskSuspendCopy.interruptedListMeta, cardText = TaskSuspendCopy.interruptedTitle + "，" + body,
+                listMeta = TaskSuspendCopy.interruptedListMeta, cardText = TaskSuspendCopy.interruptedCard,
             )
         }
         val kind = kind(info)

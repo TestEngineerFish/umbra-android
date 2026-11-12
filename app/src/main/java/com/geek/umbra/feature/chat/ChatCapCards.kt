@@ -133,12 +133,6 @@ private fun CapWarningRow(w: CapWarning, c: CapCard) {
     Column(Modifier.fillMaxWidth().clip(rowShape).background(if (danger) t.dangerSoft else t.warningSoft).padding(horizontal = 10.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(text, color = ink, style = TextStyle(fontSize = 12.5.sp, lineHeight = 18.sp))
-        // 没有域名的外来内容：几样时逐行列（一样时已经写进上面那句）；不给信任入口。
-        val t0 = c.taint
-        if (w.kind == "external_content" && t0 != null && t0.domains.isEmpty()) {
-            val lines = CapCardRules.taintLines(t0)
-            if (lines.size > 1) for (l in lines) Text("· $l", color = ink, style = TextStyle(fontSize = 12.5.sp, lineHeight = 18.sp))
-        }
         if (w.kind == "external_content" && c.trustOffers.isNotEmpty()) {
             for (d in c.trustOffers) Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(d, color = t.text, style = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 12.sp), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
@@ -146,6 +140,11 @@ private fun CapWarningRow(w: CapWarning, c: CapCard) {
                     modifier = Modifier.heightIn(min = 32.dp).clickable(role = Role.Button) { ChatStore.trustSite(d, c.callId) }.padding(start = 10.dp, top = 6.dp, bottom = 6.dp))
             }
             Text("论坛、网盘、文档站这类谁都能发内容的网站，信任它就等于信任在那里写东西的每一个人。", color = ink, style = TextStyle(fontSize = 12.sp, lineHeight = 17.sp))
+        }
+        // 没有域名的外来内容（文件、邮件…）逐行列，不给信任入口；和网站混着时也在同一块里、排在网站那几行后面（设计侧 326 c）。
+        val t0 = c.taint
+        if (w.kind == "external_content" && t0 != null && (t0.kinds.isNotEmpty() || t0.items.isNotEmpty())) {
+            for (l in CapCardRules.taintLines(t0)) Text("· $l", color = ink, style = TextStyle(fontSize = 12.5.sp, lineHeight = 18.sp))
         }
     }
 }

@@ -57,7 +57,7 @@ class CapCardRulesTest {
         assertTrue(CapCardRules.footnote(web)!!.startsWith("读过没信任过的网站"))
         // 没有域名的外来内容：说读过什么，不给信任入口
         val file = card("""{"call_id":"c","phase":"ask","buttons":["once","reject"],"taint":{"domains":[],"kinds":["file"],"items":[{"kind":"file","label":"物业通知.pdf"}]}}""")
-        assertEquals("这一轮秘书读过文件「物业通知.pdf」。如果不是你自己要改的，点「不要」。", CapCardRules.warningText(CapCardRules.warnings(file)[0], file))
+        assertEquals("这一轮秘书读过不是你写的内容。如果不是你自己要改的，点「不要」。", CapCardRules.warningText(CapCardRules.warnings(file)[0], file))
         assertEquals("文件、邮件这类内容没有网站可以信任，读过以后这一次只能允许一次。", CapCardRules.footnote(file))
         // 执行端说了原因就用它
         val ask = card("""{"call_id":"c","phase":"ask","buttons":["once","reject"],"once_reason":"ask_rule"}""")
@@ -134,7 +134,7 @@ class CapCardRulesTest {
     // 设计侧 324：正在做、派活时不在线、没有域名的外来内容那张表、在云端
     @Test fun design324() {
         val busy = card("""{"call_id":"c","name":"工作流 · 运行","title":"x","phase":"approved","decision":"once","decided_on":{"by_client":"client:ios","name":"iPhone"}}""")
-        assertEquals(CapReceipt(CapPill.Busy, "正在做", "工作流 · 运行", listOf("已允许", "在 iPhone 上"), false), CapCardRules.receipt(busy))
+        assertEquals(CapReceipt(CapPill.Busy, "正在做", "工作流 · 运行 · x", listOf("已允许", "在 iPhone 上"), false), CapCardRules.receipt(busy))
         val mineBusy = card("""{"call_id":"c","name":"工作流 · 运行","phase":"approved","decided_on":{"by_client":"client:android","name":"Android 手机"}}""")
         assertEquals(listOf("已允许"), CapCardRules.receipt(mineBusy).tail)
         val wait = card("""{"call_id":"c","phase":"waiting_device","run_on":{"device_id":"m","device_name":"Sam 的 MacBook","online":false}}""")
@@ -146,10 +146,25 @@ class CapCardRulesTest {
         assertEquals(listOf("读过文件「a.xlsx」", "读过文件「b」", "读过文件「c」", "还有 2 样", "读过一封邮件（来自 zhang@example.com）",
             "读过知识库里的「客户名单」", "读过以前的聊天记录", "读过工具的输出"), CapCardRules.taintLines(t))
         val many = card("""{"call_id":"c","phase":"ask","buttons":["once","reject"],"taint":{"domains":[],"kinds":["file","tool"]}}""")
-        assertEquals("这一轮秘书读过几样外来内容。如果不是你自己要改的，点「不要」。", CapCardRules.warningText(CapCardRules.warnings(many)[0], many))
+        assertEquals("这一轮秘书读过不是你写的内容。如果不是你自己要改的，点「不要」。", CapCardRules.warningText(CapCardRules.warnings(many)[0], many))
         val cloud = card("""{"call_id":"c","name":"常用语 · 删除","where":"cloud","phase":"result","outcome":"done","decision":"once"}""")
         assertEquals("常用语 · 删除 · 在云端", CapCardRules.headName(cloud))
         assertEquals(listOf("你允许了这一次", "在云端"), CapCardRules.receipt(cloud).tail)
         assertEquals("工作流 · 新建", CapCardRules.headName(card("""{"call_id":"c","name":"工作流 · 新建","where":"device"}""")))
+    }
+
+    // 设计侧 326：卡头 / 回执用短动词（按 action 查，服务端转发的长句不用）；回执只写对象短名，没带退回卡标题
+    @Test fun design326() {
+        val relayed = card("""{"call_id":"c","capability":"pc.workflow","action":"create","name":"工作流 · 建一个工作流","verb":"write","title":"新建工作流「随机密码」",
+            "phase":"result","outcome":"done","decision":"once","summary":"建好了，快捷入口打 pw 试试"}""")
+        assertEquals("工作流 · 新建", CapCardRules.headName(relayed))
+        assertEquals("工作流 · 新建 · 新建工作流「随机密码」", CapCardRules.receipt(relayed).subject)
+        val named = card("""{"call_id":"c","action":"update","name":"常用语 · 改一条常用语","object_name":"物业电话","where":"cloud","title":"改「物业电话」",
+            "phase":"result","outcome":"done","decision":"once"}""")
+        assertEquals(CapReceipt(CapPill.Ok, "已做", "常用语 · 修改 · 「物业电话」", listOf("你允许了这一次", "在云端"), false), CapCardRules.receipt(named))
+        val busy = card("""{"call_id":"c","action":"run","name":"工作流 · 运行一个工作流","object_name":"随机密码","phase":"approved","decided_on":{"by_client":"client:android","name":"Android 手机"}}""")
+        assertEquals(CapReceipt(CapPill.Busy, "正在做", "工作流 · 运行 · 「随机密码」", listOf("已允许"), false), CapCardRules.receipt(busy))
+        // 认不得的 action 照 name
+        assertEquals("回收站 · 彻底删除", CapCardRules.headName(card("""{"call_id":"c","action":"purge","name":"回收站 · 彻底删除"}""")))
     }
 }
