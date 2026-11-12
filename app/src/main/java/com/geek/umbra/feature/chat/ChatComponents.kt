@@ -121,7 +121,7 @@ fun ChatMenuBox(items: List<ChatMenuItem>, modifier: Modifier = Modifier, onClic
         ),
     ) {
         content()
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }, containerColor = c.card, modifier = Modifier.widthIn(min = 180.dp)) {
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }, containerColor = c.ctl, modifier = Modifier.widthIn(min = 180.dp)) {
             items.forEach { it ->
                 DropdownMenuItem(
                     text = { Text(it.label, color = if (it.danger) c.dangerText else c.text) },

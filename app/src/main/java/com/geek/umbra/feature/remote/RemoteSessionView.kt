@@ -853,7 +853,7 @@ private fun ToolButton(t: Tool, onTouch: () -> Unit) {
             ) { UmbraIcon(t.icon, if (t.on) c.onAccent else UmbraRemoteColors.fgTool, size = UmbraRemoteDimens.toolIcon) }
         }
         t.menu?.let { items ->
-            DropdownMenu(expanded = open, onDismissRequest = { open = false }, containerColor = c.card, modifier = Modifier.widthIn(min = 180.dp)) {
+            DropdownMenu(expanded = open, onDismissRequest = { open = false }, containerColor = c.ctl, modifier = Modifier.widthIn(min = 180.dp)) {
                 items.forEach { item ->
                     DropdownMenuItem(
                         text = { Text(item.label, color = c.text) },

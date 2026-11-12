@@ -503,7 +503,7 @@ private fun BizTierRow(tier: DeductTier, onTier: (DeductTier) -> Unit, tierAuto:
                 Text(tier.label, color = c.text, style = TextStyle(fontSize = 12.5.sp))
                 UmbraIcon(UmbraIconPaths.chevronDown, c.faint, size = 12.dp, strokeWidth = 1.8f)
             }
-            DropdownMenu(expanded = open, onDismissRequest = { open = false }, containerColor = c.card, modifier = Modifier.widthIn(min = 180.dp)) {
+            DropdownMenu(expanded = open, onDismissRequest = { open = false }, containerColor = c.ctl, modifier = Modifier.widthIn(min = 180.dp)) {
                 DeductTier.entries.forEach { k ->
                     DropdownMenuItem(text = { Text(k.label, color = c.text) }, onClick = { open = false; onTier(k) })
                 }

@@ -288,7 +288,7 @@ private fun BlockEditor(b: VBlock, idx: Int, count: Int, onChange: (VBlock) -> U
                 Box(Modifier.size(UmbraDimens.tapMin).clickable(role = Role.Button) { menu = true }, contentAlignment = Alignment.Center) {
                     UmbraIcon(UmbraExtraIcons.more, c.faint, size = 18.dp, contentDescription = "更多")
                 }
-                DropdownMenu(menu, { menu = false }, containerColor = c.card, modifier = Modifier.widthIn(min = 180.dp)) {
+                DropdownMenu(menu, { menu = false }, containerColor = c.ctl, modifier = Modifier.widthIn(min = 180.dp)) {
                     DropdownMenuItem({ Text(VaultRecordCopy.BLOCK_MENU[0], color = if (idx > 0) c.text else c.faint) }, { menu = false; onMove(-1) }, enabled = idx > 0)
                     DropdownMenuItem({ Text(VaultRecordCopy.BLOCK_MENU[1], color = if (idx < count - 1) c.text else c.faint) }, { menu = false; onMove(1) }, enabled = idx < count - 1)
                     DropdownMenuItem({ Text(VaultRecordCopy.BLOCK_MENU[2], color = c.dangerText) }, { menu = false; onRemove() })

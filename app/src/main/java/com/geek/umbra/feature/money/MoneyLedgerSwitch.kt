@@ -88,7 +88,7 @@ fun MoneyLedgerSwitch(modifier: Modifier = Modifier) {
             Spacer(Modifier.width(6.dp))
             UmbraIcon(UmbraIconPaths.chevronDown, c.muted, size = 12.dp, strokeWidth = 1.9f)
         }
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }, containerColor = c.card, modifier = Modifier.widthIn(min = 180.dp)) {
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }, containerColor = c.ctl, modifier = Modifier.widthIn(min = 180.dp)) {
             Ledger.entries.forEach { v ->
                 DropdownMenuItem(
                     text = { Text(v.displayName, color = c.text) },

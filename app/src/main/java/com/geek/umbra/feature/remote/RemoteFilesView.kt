@@ -306,7 +306,7 @@ private fun TransferRow(client: RemoteClient, t: RemoteTransfer) {
                         } else Box {
                             // 9 及以下菜单只剩「分享…」一项，不弹，直接分享（批次 202 ②）。走分享之后行尾仍是［存储］—— 拿不到对方 App 存没存。
                             RowAction(stringResource(R.string.remote_files_save)) { if (Build.VERSION.SDK_INT >= 29) menu = true else share(ctx, file) }
-                            DropdownMenu(expanded = menu, onDismissRequest = { menu = false }, containerColor = c.card, modifier = Modifier.widthIn(min = 180.dp)) {
+                            DropdownMenu(expanded = menu, onDismissRequest = { menu = false }, containerColor = c.ctl, modifier = Modifier.widthIn(min = 180.dp)) {
                                 DropdownMenuItem(
                                     text = { Text("分享…", color = c.text) },
                                     leadingIcon = { UmbraIcon(UmbraIconPaths.shareUp, c.text, size = 18.dp) },

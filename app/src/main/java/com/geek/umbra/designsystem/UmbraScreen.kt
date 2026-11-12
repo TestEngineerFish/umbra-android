@@ -128,14 +128,15 @@ fun UmbraTopBarText(text: String, onClick: () -> Unit, enabled: Boolean = true, 
 }
 
 /**
- * 锚定小弹框（设计侧 199 答复第 5 条）：card 底、圆角 12、阴影 0 8 24 黑 13%、行高 48、最小宽 180；
+ * 锚定小弹框（设计侧 199 答复第 5 条）：ctl 底（338）、圆角 12、阴影 0 8 24 黑 13%、行高 48、最小宽 180；
  * 删除类项用 dangerText（但它永远不是最终执行，点了还要过确认弹窗）。各模块的长按 / ⋯ 菜单都用这一对。
  */
 @Composable
 fun UmbraDropdown(expanded: Boolean, onDismiss: () -> Unit, content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
     DropdownMenu(
         expanded = expanded, onDismissRequest = onDismiss,
-        containerColor = UmbraTheme.colors.card,
+        // 菜单浮在白面上：控件那一档的底（深色比白面亮一档，338 `--ctl`）
+        containerColor = UmbraTheme.colors.ctl,
         shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
         shadowElevation = 8.dp, tonalElevation = 0.dp,
         modifier = Modifier.widthIn(min = 180.dp),
@@ -225,7 +226,17 @@ fun UmbraScreen(
         }
         Box(Modifier.weight(1f).fillMaxWidth()) {
             if (onRefresh != null) {
-                PullToRefreshBox(isRefreshing = refreshing, onRefresh = onRefresh, modifier = Modifier.fillMaxSize()) { list() }
+                // 下拉的转圈用强调色、托底用控件那一档（默认是 Material 的灰紫，和 Umbra 的色不在一套里，342 视觉清单第 5 条）
+                val pull = androidx.compose.material3.pulltorefresh.rememberPullToRefreshState()
+                PullToRefreshBox(
+                    isRefreshing = refreshing, onRefresh = onRefresh, modifier = Modifier.fillMaxSize(), state = pull,
+                    indicator = {
+                        androidx.compose.material3.pulltorefresh.PullToRefreshDefaults.Indicator(
+                            state = pull, isRefreshing = refreshing, modifier = Modifier.align(Alignment.TopCenter),
+                            containerColor = UmbraTheme.colors.ctl, color = UmbraTheme.colors.orange,
+                        )
+                    },
+                ) { list() }
             } else list()
         }
         if (bottomBar != null) {

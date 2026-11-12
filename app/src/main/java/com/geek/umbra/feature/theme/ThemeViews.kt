@@ -373,7 +373,7 @@ private fun AppearanceCard(card: ThemeCard, mode: ThemeMode, inUse: Boolean, try
         }
         // 长按：在用的那张只有一项灰着的「在用」（不出空菜单）；内置的只有「用这个」；商城装的「用这个」+ 红字「卸载」；
         // 装了但用不了的只剩「卸载」（「用这个」点了也只会说用不了）。
-        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }, containerColor = c.card, modifier = Modifier.widthIn(min = 180.dp)) {
+        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }, containerColor = c.ctl, modifier = Modifier.widthIn(min = 180.dp)) {
             if (inUse) {
                 DropdownMenuItem(text = { Text(stringResource(R.string.theme_inUse), color = c.faint) }, onClick = {}, enabled = false)
             } else {

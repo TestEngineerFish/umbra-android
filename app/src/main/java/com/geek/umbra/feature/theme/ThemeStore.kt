@@ -168,16 +168,16 @@ object ThemeStore {
 
     /**
      * 默认主题在缩略图上画的那几色：Android 自己的内置值（同 `UmbraTokens.kt`，不随当前主题变 —— 缩略图要画的是「换过去会是什么样」）。
-     * 值同 iOS `ThemeStore.defaultSwatch`（两端内置底色一样，都是 iOS v2）。
+     * 值同 iOS `ThemeStore.defaultSwatch`；底 / 白面已按设计侧 338 改（iOS 跟进前两端暂时不一样）。
      */
     val defaultSwatch: ThemePalette = mapOf(
         ThemeMode.Light to mapOf(
-            ThemeKey.Bg to "#F1EFEA", ThemeKey.Card to "#FFFFFF", ThemeKey.Nav to "#15110E", ThemeKey.Chip to "#F2F0EC",
+            ThemeKey.Bg to "#F1EEE9", ThemeKey.Card to "#FFFFFF", ThemeKey.Nav to "#15110E", ThemeKey.Chip to "#F2F0EC",
             ThemeKey.Border to "#E6E3DC", ThemeKey.Text to "#1F2320", ThemeKey.Muted to "#656B65", ThemeKey.Faint to "#9A9992",
             ThemeKey.Accent to "#E8590C", ThemeKey.AccentSoft to "#FFF1E6", ThemeKey.OnAccent to "#FFFFFF",
         ),
         ThemeMode.Dark to mapOf(
-            ThemeKey.Bg to "#151310", ThemeKey.Card to "#26231F", ThemeKey.Nav to "#15110E", ThemeKey.Chip to "#2A251F",
+            ThemeKey.Bg to "#1A1815", ThemeKey.Card to "#25221E", ThemeKey.Nav to "#15110E", ThemeKey.Chip to "#2A251F",
             ThemeKey.Border to "#332E26", ThemeKey.Text to "#EDEAE3", ThemeKey.Muted to "#9A938A", ThemeKey.Faint to "#6E675E",
             ThemeKey.Accent to "#E8590C", ThemeKey.AccentSoft to "#E8590C29", ThemeKey.OnAccent to "#FFFFFF",
         ),

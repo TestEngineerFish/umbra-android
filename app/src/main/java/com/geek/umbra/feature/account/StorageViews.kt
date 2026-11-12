@@ -293,7 +293,7 @@ fun StoragePage() {
             var open by remember { mutableStateOf(false) }
             Box {
                 UmbraTopBarIcon(UmbraExtraIcons.more, "更多", { open = true })
-                DropdownMenu(expanded = open, onDismissRequest = { open = false }, containerColor = c.card, modifier = Modifier.widthIn(min = 180.dp)) {
+                DropdownMenu(expanded = open, onDismissRequest = { open = false }, containerColor = c.ctl, modifier = Modifier.widthIn(min = 180.dp)) {
                     DropdownMenuItem(
                         text = {
                             Text(

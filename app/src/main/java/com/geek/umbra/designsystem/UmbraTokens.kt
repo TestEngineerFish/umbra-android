@@ -28,6 +28,11 @@ data class UmbraColorScheme(
     // 表面 / 中性
     val bg: Color, val card: Color, val titlebar: Color, val rail: Color,
     val chip: Color, val hover: Color, val track: Color,
+    /**
+     * 控件底（设计侧 338 `--ctl`）：浮在白面上的东西 —— 弹出菜单。浅色和白面同为白（靠阴影分出来），
+     * 深色比白面再亮一档（#35312B），不然菜单和底下的面同色看不见。主题包没有这个键（PC 由现有键按规律算），先用内置值。
+     */
+    val ctl: Color,
     // 描边与文字
     val border: Color, val borderSoft: Color, val text: Color, val muted: Color, val faint: Color,
     // 品牌。名字沿用 orange*（同 iOS：改名牵涉上千处引用），对应主题键 accent / accentDeep / accentSoft / accentText。
@@ -53,8 +58,9 @@ data class UmbraColorScheme(
 
 val UmbraLight = UmbraColorScheme(
     isDark = false,
-    bg = hex(0xF1EFEA), card = hex(0xFFFFFF), titlebar = hex(0xEFEDE8), rail = hex(0xFBFAF8),
-    chip = hex(0xF2F0EC), hover = hex(0xF1EFEA), track = hex(0xEDEBE6),
+    // 「灰底托白面」（设计侧 338 / 342，批次 350 / 352）：底暖灰 F1EEE9、白面 / 分栏都是白；hover = 正文墨色 4% 叠在白面上（预先算成不透明）。
+    bg = hex(0xF1EEE9), card = hex(0xFFFFFF), titlebar = hex(0xF1EEE9), rail = hex(0xFFFFFF),
+    chip = hex(0xF2F0EC), hover = hex(0xF6F6F6), track = hex(0xEDEBE6), ctl = hex(0xFFFFFF),
     border = hex(0xE6E3DC), borderSoft = hex(0xEEEBE4), text = hex(0x1F2320),
     muted = hex(0x656B65), faint = hex(0x9A9992),
     nav = hex(0x15110E), orange = hex(0xE8590C), orangeDeep = hex(0xC2410C),
@@ -70,8 +76,9 @@ val UmbraLight = UmbraColorScheme(
 
 val UmbraDark = UmbraColorScheme(
     isDark = true,
-    bg = hex(0x151310), card = hex(0x26231F), titlebar = hex(0x1C1A17), rail = hex(0x1F1C18),
-    chip = hex(0x2A251F), hover = hex(0x2A251F), track = hex(0x302B24),
+    // 深色：底最深 1A1815、面亮一档 25221E、控件再亮一档 35312B（338）；hover = 白 4.7%（342，#FFFFFF0C）叠在白面上（预先算成不透明）。
+    bg = hex(0x1A1815), card = hex(0x25221E), titlebar = hex(0x1A1815), rail = hex(0x25221E),
+    chip = hex(0x2A251F), hover = hex(0x2F2C29), track = hex(0x302B24), ctl = hex(0x35312B),
     border = hex(0x332E26), borderSoft = hex(0x2B2721), text = hex(0xEDEAE3),
     muted = hex(0x9A938A), faint = hex(0x6E675E),
     nav = hex(0x15110E), orange = hex(0xE8590C), orangeDeep = hex(0xC2410C),
