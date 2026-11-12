@@ -252,8 +252,7 @@ object ChatStore {
 
     private fun setPreview(conv: String, text: String, at: String?) {
         if (text.isEmpty()) return
-        // 「没做成」的预览不再按文字开头认（设计侧 320 / geek-7f）：复述消息按 meta.kind、会话列表按 last_meta_task_id，见调用处。
-        // 按服务端那句的固定开头认（_fail_unfinished：`❌ 「目标」没做成：…`）；认不出就照原文。
+        // 「没做成」的预览不按文字开头认（设计侧 320 / geek-7f）：复述消息按 meta.kind、会话列表按 last_meta_kind，见调用处。
         _previews.value = _previews.value + (conv to ConvPreview(text, at))
     }
 
@@ -490,10 +489,18 @@ object ChatStore {
             for (r in rows) {
                 val conv = r.str("conversation") ?: continue
                 store(conv)
-                // 最后一条是任务汇报（last_meta_task_id，服务端 #179）且这台知道那个任务落在「没做成」：预览写「没做成：任务名」；
-                // 别的任务汇报（看门狗提醒、要接着跑吗）照原文。拿不到任务状态时也照原文，不猜。
+                // 最后一条是「没做成」复述：预览写「没做成：任务名」，别的任务汇报（看门狗提醒、要接着跑吗）照原文。
+                // 服务端 #182 起带 last_meta_kind，按它认（task_unfinished 才是复述），名字取任务列表那一行；
+                // 老服务端没有它时退回 last_meta_task_id + 本机任务状态（#179）。拿不到名字照原文，不猜。
                 val tid = r.str("last_meta_task_id")
-                val name = tid?.let { unfinishedTaskName(it) }
+                val kind = r.str("last_meta_kind")
+                val name = when {
+                    tid == null -> null
+                    kind == com.geek.umbra.feature.task.TaskUnfinishedRules.ECHO_KIND ->
+                        com.geek.umbra.feature.task.TasksStore.items.value.firstOrNull { it.id == tid }?.title
+                    kind.isNullOrEmpty() -> unfinishedTaskName(tid)
+                    else -> null
+                }
                 if (name != null) setUnfinishedPreview(conv, name, r.str("last_at")) else setPreview(conv, r.str("last_content") ?: "", r.str("last_at"))
             }
         }
