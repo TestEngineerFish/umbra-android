@@ -22,7 +22,7 @@ import java.util.Base64
  *
  * 夹具在 `app/src/test/resources/theme/`：从 iOS 仓 `Tools/swifttests/fixtures/theme/` 复制（它又是 umbra-plugins 正本的副本）。
  * 两头钉（同 iOS）：umbra-plugins / UmbraPC 仓并排在同一个父目录下时，要求副本与它们**逐字节相同**（umbra-plugins 比 origin/main，不看工作区）；不在就只用副本跑并打一行说明。
- * 先自校准（selfTest），再逐条比 25 条跨语言用例的 expect / paths / pairs / warnings，再钉住抄的常量与 theme-keys.json 一致。
+ * 先自校准（selfTest），再逐条比 26 条跨语言用例的 expect / paths / pairs / warnings，再钉住抄的常量与 theme-keys.json 一致。
  *
  * 写成「一个计数器 + 最后一起断言」而不是一条一个 @Test：和 iOS 读数可以直接比条数（iOS 120 条），一处不过也能看到其余全部。
  *
@@ -135,7 +135,7 @@ class ThemeRulesTest {
 
     private fun crossLanguageCases() {
         val cases = (json("cases.json").obj()!!["cases"] as JsonArray).map { it.obj()!! }
-        expect(cases.size, 25, "跨语言用例齐（25 条）")
+        expect(cases.size, 26, "跨语言用例齐（26 条；342 加了第 4 条「描边在白面上看不见」）")
         fun uniq(xs: List<String>) = xs.toSortedSet().toList()
         for (c in cases) {
             val name = c["name"].str() ?: "?"

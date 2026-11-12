@@ -1,11 +1,11 @@
 {
   "light": {
-    "bg": "#F6F5F2",
+    "bg": "#F1EEE9",
     "card": "#FFFFFF",
-    "titlebar": "#EFEDE8",
-    "rail": "#FBFAF8",
+    "titlebar": "#F1EEE9",
+    "rail": "#FFFFFF",
     "chip": "#F2F0EC",
-    "hover": "#F1EFEA",
+    "hover": "#1F23200A",
     "track": "#EDEBE6",
     "nav": "#15110E",
     "userBubble": "#EAF1F7",
@@ -22,12 +22,12 @@
     "onAccent": "#FFFFFF"
   },
   "dark": {
-    "bg": "#1C1A17",
-    "card": "#232019",
-    "titlebar": "#1C1A17",
-    "rail": "#1F1C18",
+    "bg": "#1A1815",
+    "card": "#25221E",
+    "titlebar": "#1A1815",
+    "rail": "#25221E",
     "chip": "#2A251F",
-    "hover": "#2A251F",
+    "hover": "#FFFFFF0C",
     "track": "#302B24",
     "nav": "#15110E",
     "userBubble": "#2B2620",

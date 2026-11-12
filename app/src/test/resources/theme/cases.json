@@ -2,15 +2,15 @@
   "$comment": "主题 tokens 判据（规格 v1.1）的跨语言用例：Node scripts/lib/theme.mjs 与 Umbra 服务端 private_ai_assistant/theme_tokens.py 都要逐条对上。expect = 该红在哪几条规则上（去重排序，空 = 过）；paths = 出问题的位置（T1 的路径写法各家 schema 校验器不同，不比）；pairs = T3 不过的「套|字|底」；warnings = 作者自查给 T7 提示的位置（锁死键）。改判据后用 node scripts/test-validate.mjs 看哪条变了，**想清楚再改 expect**。",
   "cases": [
     {
-      "name": "默认主题（sdk/theme-base.json，20 键全量）",
+      "name": "默认主题（sdk/theme-base.json，20 键全量；浅色 border 压窗口底只有 1.10 —— 设计侧 342 起 bg 那一项不量，照过）",
       "tokens": {
         "light": {
-          "bg": "#F6F5F2",
+          "bg": "#F1EEE9",
           "card": "#FFFFFF",
-          "titlebar": "#EFEDE8",
-          "rail": "#FBFAF8",
+          "titlebar": "#F1EEE9",
+          "rail": "#FFFFFF",
           "chip": "#F2F0EC",
-          "hover": "#F1EFEA",
+          "hover": "#1F23200A",
           "track": "#EDEBE6",
           "nav": "#15110E",
           "userBubble": "#EAF1F7",
@@ -27,12 +27,12 @@
           "onAccent": "#FFFFFF"
         },
         "dark": {
-          "bg": "#1C1A17",
-          "card": "#232019",
-          "titlebar": "#1C1A17",
-          "rail": "#1F1C18",
+          "bg": "#1A1815",
+          "card": "#25221E",
+          "titlebar": "#1A1815",
+          "rail": "#25221E",
           "chip": "#2A251F",
-          "hover": "#2A251F",
+          "hover": "#FFFFFF0C",
           "track": "#302B24",
           "nav": "#15110E",
           "userBubble": "#2B2620",
@@ -55,12 +55,12 @@
       "name": "官方主题 · 海盐",
       "tokens": {
         "light": {
-          "bg": "#F2F5F8",
+          "bg": "#ECF0F4",
           "card": "#FFFFFF",
-          "titlebar": "#E9EEF3",
-          "rail": "#F8FAFC",
+          "titlebar": "#ECF0F4",
+          "rail": "#FFFFFF",
           "chip": "#EBF0F5",
-          "hover": "#E9EEF4",
+          "hover": "#1A22300A",
           "track": "#E3E9F0",
           "nav": "#0E1620",
           "userBubble": "#E8EEFC",
@@ -77,12 +77,12 @@
           "onAccent": "#FFFFFF"
         },
         "dark": {
-          "bg": "#12171E",
-          "card": "#182029",
-          "titlebar": "#12171E",
-          "rail": "#151B23",
+          "bg": "#10151B",
+          "card": "#1A222C",
+          "titlebar": "#10151B",
+          "rail": "#1A222C",
           "chip": "#1F2833",
-          "hover": "#1F2833",
+          "hover": "#FFFFFF0C",
           "track": "#26303C",
           "nav": "#0A0F15",
           "userBubble": "#1D2940",
@@ -105,12 +105,12 @@
       "name": "官方主题 · 石墨（深色强调实底上是深字）",
       "tokens": {
         "light": {
-          "bg": "#F4F4F5",
+          "bg": "#EEEEF0",
           "card": "#FFFFFF",
-          "titlebar": "#ECECEE",
-          "rail": "#FAFAFA",
+          "titlebar": "#EEEEF0",
+          "rail": "#FFFFFF",
           "chip": "#EFEFF1",
-          "hover": "#EDEDEF",
+          "hover": "#1E1E210A",
           "track": "#E7E7EA",
           "nav": "#161618",
           "userBubble": "#EFEBF0",
@@ -127,12 +127,12 @@
           "onAccent": "#FFFFFF"
         },
         "dark": {
-          "bg": "#18181A",
-          "card": "#1F1F22",
-          "titlebar": "#18181A",
-          "rail": "#1B1B1D",
+          "bg": "#161618",
+          "card": "#222225",
+          "titlebar": "#161618",
+          "rail": "#222225",
           "chip": "#27272B",
-          "hover": "#27272B",
+          "hover": "#FFFFFF0C",
           "track": "#2E2E33",
           "nav": "#111113",
           "userBubble": "#28252B",
@@ -150,6 +150,65 @@
         }
       },
       "expect": []
+    },
+    {
+      "name": "描边在白面上看不见（浅色 border 压 card / rail 不到 1.15）",
+      "tokens": {
+        "light": {
+          "bg": "#F1EEE9",
+          "card": "#FFFFFF",
+          "titlebar": "#F1EEE9",
+          "rail": "#FFFFFF",
+          "chip": "#F2F0EC",
+          "hover": "#1F23200A",
+          "track": "#EDEBE6",
+          "nav": "#15110E",
+          "userBubble": "#EAF1F7",
+          "border": "#F7F6F3",
+          "borderSoft": "#EEEBE4",
+          "text": "#1F2320",
+          "muted": "#656B65",
+          "inkQuiet": "#5B615B",
+          "faint": "#9A9992",
+          "accent": "#E8590C",
+          "accentDeep": "#C2410C",
+          "accentSoft": "#FFF1E6",
+          "accentText": "#9A3412",
+          "onAccent": "#FFFFFF"
+        },
+        "dark": {
+          "bg": "#1A1815",
+          "card": "#25221E",
+          "titlebar": "#1A1815",
+          "rail": "#25221E",
+          "chip": "#2A251F",
+          "hover": "#FFFFFF0C",
+          "track": "#302B24",
+          "nav": "#15110E",
+          "userBubble": "#2B2620",
+          "border": "#332E26",
+          "borderSoft": "#2B2721",
+          "text": "#EDEAE3",
+          "muted": "#9A938A",
+          "inkQuiet": "#A79E92",
+          "faint": "#6E675E",
+          "accent": "#E8590C",
+          "accentDeep": "#C2410C",
+          "accentSoft": "#E8590C29",
+          "accentText": "#F0A878",
+          "onAccent": "#FFFFFF"
+        }
+      },
+      "expect": [
+        "T3"
+      ],
+      "paths": [
+        "$.light.border"
+      ],
+      "pairs": [
+        "light|border|card",
+        "light|border|rail"
+      ]
     },
     {
       "name": "测试向量那份 tokens.json（含 #RRGGBBAA 与平台覆盖）",

@@ -58,9 +58,10 @@ data class UmbraColorScheme(
 
 val UmbraLight = UmbraColorScheme(
     isDark = false,
-    // 「灰底托白面」（设计侧 338 / 342，批次 350 / 352）：底暖灰 F1EEE9、白面 / 分栏都是白；hover = 正文墨色 4% 叠在白面上（预先算成不透明）。
+    // 「灰底托白面」（设计侧 338 / 342，批次 350 / 352）：底暖灰 F1EEE9、白面 / 分栏都是白；hover 是半透明叠色（同 theme-base #1F23200A，
+    // 和主题包给的一样是半透明 —— 用的地方要叠在白面上画，别直接当底）。
     bg = hex(0xF1EEE9), card = hex(0xFFFFFF), titlebar = hex(0xF1EEE9), rail = hex(0xFFFFFF),
-    chip = hex(0xF2F0EC), hover = hex(0xF6F6F6), track = hex(0xEDEBE6), ctl = hex(0xFFFFFF),
+    chip = hex(0xF2F0EC), hover = hex(0x1F2320, 10 / 255f), track = hex(0xEDEBE6), ctl = hex(0xFFFFFF),
     border = hex(0xE6E3DC), borderSoft = hex(0xEEEBE4), text = hex(0x1F2320),
     muted = hex(0x656B65), faint = hex(0x9A9992),
     nav = hex(0x15110E), orange = hex(0xE8590C), orangeDeep = hex(0xC2410C),
@@ -76,9 +77,9 @@ val UmbraLight = UmbraColorScheme(
 
 val UmbraDark = UmbraColorScheme(
     isDark = true,
-    // 深色：底最深 1A1815、面亮一档 25221E、控件再亮一档 35312B（338）；hover = 白 4.7%（342，#FFFFFF0C）叠在白面上（预先算成不透明）。
+    // 深色：底最深 1A1815、面亮一档 25221E、控件再亮一档 35312B（338）；hover = 白 4.7%（342，同 theme-base #FFFFFF0C，半透明）。
     bg = hex(0x1A1815), card = hex(0x25221E), titlebar = hex(0x1A1815), rail = hex(0x25221E),
-    chip = hex(0x2A251F), hover = hex(0x2F2C29), track = hex(0x302B24), ctl = hex(0x35312B),
+    chip = hex(0x2A251F), hover = hex(0xFFFFFF, 12 / 255f), track = hex(0x302B24), ctl = hex(0x35312B),
     border = hex(0x332E26), borderSoft = hex(0x2B2721), text = hex(0xEDEAE3),
     muted = hex(0x9A938A), faint = hex(0x6E675E),
     nav = hex(0x15110E), orange = hex(0xE8590C), orangeDeep = hex(0xC2410C),

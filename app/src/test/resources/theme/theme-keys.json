@@ -1,5 +1,5 @@
 {
-  "$comment": "主题键清单与硬门槛的正本（规格 v1.1，2026-10-17；取自设计侧 umbra-tokens.json › themeKit 3.48.0，批次 267）。validate.mjs（Node）、Umbra 服务端上传校验（Python，复制在 private_ai_assistant/theme_spec/，测试钉两边逐字节相同）、三端客户端装包都读这一份，结果必须逐位一致。改这份 = 同时改 sdk/theme-tokens.schema.json（由 scripts/lib/theme.mjs 的键表生成，test-validate 钉着）、sdk/CHANGELOG.md，并把文件拷进服务端。",
+  "$comment": "主题键清单与硬门槛的正本（规格 v1.1，2026-10-17；取自设计侧 umbra-tokens.json › themeKit 3.48.0，批次 267。2026-11-12 修订：border 只量 card / rail，批次 352）。validate.mjs（Node）、Umbra 服务端上传校验（Python，复制在 private_ai_assistant/theme_spec/，测试钉两边逐字节相同）、三端客户端装包都读这一份，结果必须逐位一致。改这份 = 同时改 sdk/theme-tokens.schema.json（由 scripts/lib/theme.mjs 的键表生成，test-validate 钉着）、sdk/CHANGELOG.md，并把文件拷进服务端。",
   "specVersion": "1.1",
   "themeApi": 1,
   "source": "umbra-tokens.json › themeKit（version 3.48.0）",
@@ -309,12 +309,11 @@
     {
       "fg": "border",
       "on": [
-        "bg",
         "card",
         "rail"
       ],
       "min": 1.15,
-      "why": "分层靠描边，描边看不见层级就塌；默认最低 1.18"
+      "why": "描边只出现在白面上的输入框和弹出层里，只量白面；分层改靠底色差，窗口底那一项删了（设计侧 342，批次 352）；默认最低 1.17（深色压 card）"
     },
     {
       "fg": "borderSoft",
