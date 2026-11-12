@@ -894,6 +894,17 @@ private fun watchLive(d: TaskDetail, runId: String) {
 /** 「停止」是破坏性的：过确认弹窗。吐司**等回应回来再说**，并且按回应说（断网时不许说「已发出停止」）。 */
 private fun confirmStop(d: TaskDetail, ui: DetailUiState) {
     if (ui.stopping.value) return
+    confirmStopTask(d.task.id, onStart = { ui.stopping.value = true }) {
+        TasksStore.loadTaskDetail(d.task.id)
+        ui.stopping.value = false
+    }
+}
+
+/**
+ * 停止确认 + 发请求 + 按回应吐司。详情动作条和聊天里看门狗提醒的［停止］共用：同一个动作就用同一个字、同一个确认（设计侧 326 b）。
+ * [after] 拿到回应以后跑（ok = 服务端收下了）。
+ */
+fun confirmStopTask(taskId: String, onStart: () -> Unit = {}, after: suspend (ok: Boolean) -> Unit = {}) {
     AppGraph.router.confirm(
         UmbraAlert(
             title = "停止这个任务？",
@@ -901,12 +912,11 @@ private fun confirmStop(d: TaskDetail, ui: DetailUiState) {
             confirmLabel = "停止",
             destructive = true,
         ) {
-            ui.stopping.value = true
+            onStart()
             AppGraph.scope.launch {
-                val ok = TasksStore.stopTask(d.task.id)
+                val ok = TasksStore.stopTask(taskId)
                 AppGraph.router.showToast(if (ok) "已发出停止" else "没停下，检查网络后再试")
-                TasksStore.loadTaskDetail(d.task.id)
-                ui.stopping.value = false
+                after(ok)
             }
         },
     )

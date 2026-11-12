@@ -701,6 +701,7 @@ private fun BlockRow(
                 }
                 KeptToolsRow(b.toolsRun)
                 b.resumeTaskId?.let { ResumeAskAction(it) }
+                b.watchdog?.let { WatchdogBubbleActions(it) }
                 if (b.citations.isNotEmpty() && !b.streaming) KbCitationChips(b.citations)
             }
         }

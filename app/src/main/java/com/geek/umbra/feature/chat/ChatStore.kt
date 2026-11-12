@@ -15,6 +15,7 @@ import com.geek.umbra.feature.task.TaskRetryResponse
 import com.geek.umbra.feature.task.TaskRetryRules
 import com.geek.umbra.feature.task.TaskSuspendInfo
 import com.geek.umbra.feature.task.TaskSuspendRules
+import com.geek.umbra.feature.task.TaskWatchdogRules
 import com.geek.umbra.feature.task.suspendInfo
 import com.geek.umbra.model.KnownDevice
 import com.geek.umbra.model.TaskDetail
@@ -520,12 +521,18 @@ object ChatStore {
             // 取消收尾那条系统行是真消息（进库、能删、能找回），重进时照样画成居中一行
             "system" -> ChatBlock.Note(text = content, serverId = id, toolsRun = tools(meta), dutyNotice = meta?.obj("duty_notice"))
             else -> {
-                val resumeId = resumeTaskId(meta?.str("action"), meta?.str("task_id"))
+                // 看门狗提醒：按钮只看 meta.actions，单值 action（resume_task）不认；任务现在的状态对不上就当已收掉。
+                val dog = TaskWatchdogRules.parse(meta)?.let { w ->
+                    val now = com.geek.umbra.feature.task.TasksStore.items.value.firstOrNull { it.id == w.taskId }?.status
+                    if (TaskWatchdogRules.stale(w, now)) w.copy(cleared = true) else w
+                }
+                val resumeId = if (dog != null) null else resumeTaskId(meta?.str("action"), meta?.str("task_id"))
                 if (resumeId != null) noteResumeAsk(resumeId)
                 ChatBlock.Assistant(
                     text = content, ts = ts, serverId = id, interrupted = meta?.bool("interrupted") ?: false,
                     toolsRun = tools(meta), resumeTaskId = resumeId, citations = KbCitations.parse(meta?.get("citations")),
                     duty = meta?.obj("duty"), echoOfTask = com.geek.umbra.feature.task.TaskUnfinishedRules.echoTaskId(meta?.str("kind"), meta?.str("action"), meta?.str("task_id")),
+                    watchdog = dog,
                 )
             }
         }
@@ -1601,12 +1608,14 @@ object ChatStore {
             }
             role == "assistant" -> {
                 if (mid != null && s.blocks.any { it is ChatBlock.Assistant && it.serverId == mid }) return
-                val resumeId = resumeTaskId(meta?.str("action"), meta?.str("task_id"))
+                val dog = TaskWatchdogRules.parse(meta)
+                val resumeId = if (dog != null) null else resumeTaskId(meta?.str("action"), meta?.str("task_id"))
                 if (resumeId != null) noteResumeAsk(resumeId)
                 s.blocks += ChatBlock.Assistant(
                     text = text, ts = ts, serverId = mid, interrupted = meta?.bool("interrupted") ?: false, toolsRun = tools(meta),
                     resumeTaskId = resumeId, citations = KbCitations.parse(meta?.get("citations")), duty = meta?.obj("duty"),
                     echoOfTask = com.geek.umbra.feature.task.TaskUnfinishedRules.echoTaskId(meta?.str("kind"), meta?.str("action"), meta?.str("task_id")),
+                    watchdog = dog,
                 )
             }
         }
@@ -1683,6 +1692,8 @@ object ChatStore {
     /** 任务进度卡按 task_id 建：操控落库就是一条单步任务，聊天卡和任务页指同一条。 */
     private fun handleTaskUpdate(msg: JsonObject) {
         val id = msg.str("task_id") ?: return
+        // 任务动起来 / 停了：之前的看门狗提醒那一行收掉（服务端：接着跑、每步开始、进度、步骤做完、结束都会推 task_update）。
+        clearWatchdog(id)
         val conv = msg.str("conversation") ?: MAIN_CONV
         val s = store(conv)
         val status = msg.str("status")
@@ -1754,6 +1765,21 @@ object ChatStore {
         if (com.geek.umbra.feature.task.TaskUnfinishedRules.isUnfinished(status, msg.str("reason_kind"))) setUnfinishedPreview(conv, msg.str("goal") ?: "", ChatTimeRules.nowIso())
         else setPreview(conv, msg.str("message") ?: msg.str("goal") ?: "", ChatTimeRules.nowIso())
         reflect(conv)
+    }
+
+    /** 收掉这个任务的看门狗提醒（所有会话）：卡底那一行不再挂、气泡里不再给按钮。没有要收的就什么都不动。 */
+    fun clearWatchdog(taskId: String) {
+        for ((conv, s) in stores) {
+            var hit = false
+            for (i in s.blocks.indices) {
+                val b = s.blocks[i] as? ChatBlock.Assistant ?: continue
+                val w = b.watchdog ?: continue
+                if (w.taskId != taskId || w.cleared) continue
+                s.blocks[i] = b.copy(watchdog = w.copy(cleared = true))
+                hit = true
+            }
+            if (hit) refresh(conv)
+        }
     }
 
     /** 改所有会话里指向这个任务的那张卡。**不标未读**（用户自己按的钮引起的变化）。 */

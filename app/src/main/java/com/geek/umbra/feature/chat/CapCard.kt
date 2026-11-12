@@ -330,10 +330,10 @@ object CapCardRules {
     }
 
     /**
-     * 动作的短动词，按 action 查（PC gate.ts VERB_NAME 同一张表，设计侧 326 §2「三端用同一套短动词」）。
+     * 动作的短动词，按 action 查（PC gate.ts VERB_NAME 同一张表，设计侧 326 §2「三端用同一套短动词」；restore 是服务端 #182 定表时加的）。
      * 卡上的 verb 是风险类（write / delete…），分不出新建和修改，不能拿来当字。
      */
-    private val VERB_NAME = mapOf("list" to "列出", "get" to "查看", "create" to "新建", "update" to "修改", "delete" to "删除", "run" to "运行")
+    private val VERB_NAME = mapOf("list" to "列出", "get" to "查看", "create" to "新建", "update" to "修改", "delete" to "删除", "run" to "运行", "restore" to "恢复")
 
     /**
      * 「能力 · 动作」：服务端转发设备能力时 name 拼的是动作说明的长句（「工作流 · 建一个工作流」），回执行一窄就把后面的

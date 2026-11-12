@@ -192,6 +192,8 @@ sealed interface ChatBlock {
         val duty: JsonObject? = null,
         /** 这条是某张任务卡「没做成」的复述（`meta.task_id`，#178）：卡在会话里时不画（[ChatEchoRules]）。 */
         val echoOfTask: String? = null,
+        /** 看门狗提醒（meta.kind = task_watchdog，设计侧 326 b）：同任务的卡在会话里时不画气泡、并进卡底那一行；不在时气泡里带按钮。 */
+        val watchdog: com.geek.umbra.feature.task.TaskWatchdog? = null,
     ) : ChatBlock
 
     /** 设备会话里设备说的一条。 */
@@ -226,6 +228,8 @@ sealed interface ChatBlock {
         val resuming: Boolean = false,
         val resumeOutcome: TaskResumeOutcome? = null,
         val resumeFailText: String? = null,
+        /** 卡底那一行看门狗提醒：不存在块表里，交给界面那一刻由 [ChatEchoRules] 从同任务最新那条提醒挂上来。 */
+        val watchdog: com.geek.umbra.feature.task.TaskWatchdog? = null,
     ) : ChatBlock
 
     data class Done(override val id: String = newBlockId(), val goal: String, val results: List<Map<String, String>>) : ChatBlock
@@ -354,10 +358,23 @@ data class ConvPreview(val text: String = "", val at: String? = null, val unfini
  * 只在交给界面那一刻滤：块表本身不动，下标类状态（taskMap / assistantIdx）不受影响；卡不在了（重进会话）它照常画出来。
  */
 object ChatEchoRules {
+    /**
+     * 看门狗提醒同一个规矩（设计侧 326 b）：卡在会话里 → 气泡不画，同任务最新一条没收掉的提醒挂到卡上（卡底一行）；
+     * 收掉了（之后来过 task_update）的那条气泡也不画，卡上也不挂。
+     */
     fun visible(blocks: List<ChatBlock>): List<ChatBlock> {
         val cards = blocks.mapNotNullTo(HashSet()) { (it as? ChatBlock.Task)?.taskId }
         if (cards.isEmpty()) return blocks
-        return blocks.filter { !(it is ChatBlock.Assistant && it.echoOfTask != null && it.echoOfTask in cards) }
+        val latest = HashMap<String, com.geek.umbra.feature.task.TaskWatchdog>()
+        for (b in blocks) (b as? ChatBlock.Assistant)?.watchdog?.let { if (it.taskId in cards) latest[it.taskId] = it }
+        return blocks.mapNotNull { b ->
+            when {
+                b is ChatBlock.Assistant && b.echoOfTask != null && b.echoOfTask in cards -> null
+                b is ChatBlock.Assistant && b.watchdog != null && b.watchdog.taskId in cards -> null
+                b is ChatBlock.Task -> latest[b.taskId]?.takeIf { !it.cleared }?.let { b.copy(watchdog = it) } ?: b
+                else -> b
+            }
+        }
     }
 }
 

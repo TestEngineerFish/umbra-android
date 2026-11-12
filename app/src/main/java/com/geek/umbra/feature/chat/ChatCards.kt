@@ -156,7 +156,9 @@ fun TaskCard(j: ChatBlock.Task, conv: String) {
             UmbraButton(com.geek.umbra.feature.task.TaskUnfinishedCopy.sayInChat(com.geek.umbra.feature.task.uiEnglish()), { ChatApi.startDraft(say) }, Modifier.fillMaxWidth(), kind = UmbraButtonKind.Secondary, height = 44.dp)
         }
         j.confirmId?.let { ConfirmActions(it) }
-        if (suspended) SuspendedCardAction(j) else if (finished) TaskCardAction(j, conv) else if (unfinished && j.gone) GoneNote(TaskRetryCopy.missing)
+        // 看门狗提醒并进卡底（326 b）：它自带［接着跑］［停止］，挂着时不再出挂起那颗钮，免得两颗「接着跑」。
+        if (j.watchdog != null && !j.gone) WatchdogRow(j.watchdog, ChatStore.ResumeSource.Card, j.resuming, j.resumeFailText)
+        else if (suspended) SuspendedCardAction(j) else if (finished) TaskCardAction(j, conv) else if (unfinished && j.gone) GoneNote(TaskRetryCopy.missing)
     }
 }
 
@@ -235,6 +237,45 @@ private fun TaskCardAction(j: ChatBlock.Task, conv: String) {
         }, Modifier.fillMaxWidth(), kind = UmbraButtonKind.Secondary, height = 44.dp)
         if (!j.gone) j.retryOutcome?.message?.let { FailLine(it) }
     }
+}
+
+/**
+ * 看门狗提醒那一行（设计侧 326 b）：卡底一条 warning-soft，字照表拼；按钮只看服务端给的 actions。
+ * [source] = Card：并在任务卡里，字由端上按字段拼；Ask：卡不在会话里，气泡已经写了服务端那句，这里只出按钮。
+ * ［停止］走任务详情同一个停止确认。
+ */
+@Composable
+fun WatchdogRow(w: com.geek.umbra.feature.task.TaskWatchdog, source: ChatStore.ResumeSource, resuming: Boolean, failText: String?) {
+    val c = UmbraTheme.colors
+    val scope = rememberCoroutineScope()
+    val resume = com.geek.umbra.feature.task.TaskWatchdogRules.canResume(w)
+    val stop = com.geek.umbra.feature.task.TaskWatchdogRules.canStop(w)
+    val inCard = source == ChatStore.ResumeSource.Card
+    if (!inCard && !resume && !stop && failText == null) return
+    Column(
+        (if (inCard) Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(c.warningSoft).padding(horizontal = 10.dp, vertical = 8.dp)
+        else Modifier.width(CARD_W)),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        if (inCard) Text(com.geek.umbra.feature.task.TaskWatchdogRules.line(w), color = c.warningText, style = TextStyle(fontSize = 12.5.sp, lineHeight = 18.sp))
+        if (resume || stop) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (resume) UmbraButton(if (resuming) TaskSuspendCopy.resuming else TaskSuspendCopy.resume, {
+                if (!resuming) scope.launch { ChatStore.resumeTask(w.taskId, source) }
+            }, Modifier.weight(1f), height = 40.dp)
+            if (stop) UmbraButton(TaskSuspendCopy.stop, {
+                com.geek.umbra.feature.task.confirmStopTask(w.taskId) { ok -> if (ok) ChatStore.clearWatchdog(w.taskId) }
+            }, Modifier.weight(1f), kind = UmbraButtonKind.Secondary, height = 40.dp)
+        }
+        failText?.let { FailLine(it) }
+    }
+}
+
+/** 卡不在会话里的看门狗气泡：气泡下面带按钮（失败那行跟问话那颗共用一份状态）。 */
+@Composable
+fun WatchdogBubbleActions(w: com.geek.umbra.feature.task.TaskWatchdog) {
+    val asks by ChatStore.resumeAsks.collectAsState()
+    val ask = asks[w.taskId] ?: ResumeAsk()
+    WatchdogRow(w, ChatStore.ResumeSource.Ask, ask.resuming, ask.failText)
 }
 
 /** 助手「要接着跑吗？」下面那颗主钮（问话可能离任务卡很远）。条件没了就收掉，不补字。 */
