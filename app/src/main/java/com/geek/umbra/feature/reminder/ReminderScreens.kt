@@ -165,9 +165,15 @@ fun RemListScreen() {
     /** 勾选动画：圈立即变绿 → 停 0.9 秒 → 数据真正翻转；完成给带「撤销」的吐司。iOS: ReminderViews.swift:1559 */
     fun toggleAnimated(r: Reminder) {
         if (leavingId == r.id) { leavingId = null; return } // 正在收合时又点一次 = 反悔
-        if (r.done || leavingId != null) {
-            store.setDone(r.id, !r.done)
-            router.showToast(if (r.done) "已标回待办" else "「${r.text}」已完成")
+        if (r.done) {
+            store.setDone(r.id, false)
+            router.showToast("已标回待办")
+            return
+        }
+        if (leavingId != null) {
+            // 另一行还在收合：这一行不排队动画，直接完成（同样只完成这一次）。
+            store.complete(r.id)
+            router.showToast("「${r.text}」已完成")
             return
         }
         leavingId = r.id
@@ -175,8 +181,9 @@ fun RemListScreen() {
             delay(900)
             if (leavingId != r.id) return@launch
             leavingId = null
-            store.setDone(r.id, true)
-            router.showToast("「${r.text}」已完成", "撤销") { store.setDone(r.id, false) }
+            // 重复提醒只完成这一次（推到下一次）；撤销退回点之前那一版（11-12 统一方案）。字样等设计侧 330，先沿用这句。
+            val before = store.complete(r.id) ?: return@launch
+            router.showToast("「${r.text}」已完成", "撤销") { store.undoComplete(before) }
         }
     }
 
@@ -617,7 +624,7 @@ private fun DetailBottomBar(r: Reminder, id: String) {
             }, Modifier.fillMaxWidth(), kind = UmbraButtonKind.Secondary)
         } else {
             SlideToComplete {
-                ReminderStore.setDone(r.id, true)
+                ReminderStore.complete(r.id)
                 router.showToast("已完成「${r.text}」")
                 // 组件停 420ms 之后的回调：这期间人可能已经返回 / 切了 Tab，只在详情页仍在眼前时退。
                 router.back(ifShowing = Route.RemDetail(id))

@@ -410,4 +410,34 @@ class ReminderAdvanceTest {
         )
         for ((got, want) in labels) assertEquals("重复文案", want, got)
     }
+
+    // 重复提醒点「完成」只完成这一次（sam 11-12 定、三端统一方案）。PC 共用夹具到了以后再按它逐条对齐。
+    @Test fun completeOnce() {
+        val now = 1_791_180_000_000L
+        val day = 86_400_000L
+        val daily = rem(1_790_816_400_000L, rule = "每天", updated = 1_700_000_000_000L)
+        // 已过点好几次：跳到现在之后的下一次，不连推、不置 done
+        val c = ReminderAdvance.completed(daily, now, fallbackTz = sh)
+        assertEquals(1_791_248_400_000L, c.atMs); assertFalse(c.done)
+        assertEquals("用户的改动：戳取现在", now, c.updatedAtMs)
+        // 刚过点一次：同样到下一次
+        assertEquals(1_791_248_400_000L, ReminderAdvance.completed(daily.copy(atMs = 1_791_248_400_000L - day), now, fallbackTz = sh).atMs)
+        // 还没到点、提前完成：跳过这一次，到再下一次
+        val early = ReminderAdvance.completed(daily.copy(atMs = 1_791_248_400_000L), now, fallbackTz = sh)
+        assertEquals(1_791_248_400_000L + day, early.atMs); assertFalse(early.done)
+        // 每月 31 号提前完成：1/31 → 2/28，写回锚定日 31（下一次回到 3/31）
+        val monthly = ReminderAdvance.completed(rem(1_769_821_200_000L, rule = "每月"), 1_769_000_000_000L, fallbackTz = sh)
+        assertEquals(1_772_240_400_000L, monthly.atMs); assertEquals(31, monthly.anchorDay)
+        // 越过结束日：这时才 done，at 不动（同自动推到头）
+        val ended = ReminderAdvance.completed(daily.copy(repeatEndMs = 1_791_043_199_999L), now, fallbackTz = sh)
+        assertTrue(ended.done); assertEquals(daily.atMs, ended.atMs)
+        // 不重复 / 地点提醒：照旧 done
+        assertTrue(ReminderAdvance.completed(daily.copy(repeatRule = "不重复"), now, fallbackTz = sh).done)
+        // 本机钟慢于上一次的戳：取原值 + 1，照样赢过自动推
+        assertEquals(now + 5_001, ReminderAdvance.completed(daily.copy(updatedAtMs = now + 5_000), now, fallbackTz = sh).updatedAtMs)
+        // 两端同时完成同一次：从同一个 at 算出同一个下一次，LWW 合并后不会连推两格
+        assertEquals(ReminderAdvance.completed(daily, now, fallbackTz = sh).atMs, ReminderAdvance.completed(daily, now + 1_000, fallbackTz = sh).atMs)
+        // 完成后的结果再被到点自动推：还没到下一次，不动
+        assertNull(ReminderAdvance.applied(c, now, fallbackTz = sh))
+    }
 }

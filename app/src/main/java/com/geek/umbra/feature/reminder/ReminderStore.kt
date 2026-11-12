@@ -437,7 +437,9 @@ object ReminderStore {
      * （推送受同一把互斥，永远只有一条在路上）。iOS: ReminderViews.swift:626
      */
     private fun commit(r: Reminder) {
-        val v = r.copy(updatedAtMs = System.currentTimeMillis(), dirty = true, pendingSinceMs = null, pushRejection = null)
+        // 戳取 max(现在, 原值 + 1)：本机钟慢于上一次的戳时也要赢过它（重复提醒「完成这一次」统一方案第 3 条，同样适用于别的改动）。
+        val stamp = maxOf(System.currentTimeMillis(), (item(r.id)?.updatedAtMs ?: 0L) + 1, r.updatedAtMs)
+        val v = r.copy(updatedAtMs = stamp, dirty = true, pendingSinceMs = null, pushRejection = null)
         _items.value = (if (item(v.id) != null) _items.value.map { if (it.id == v.id) v else it } else _items.value + v).sortedBy { it.atMs }
         ReminderCache.save(_items.value)
         rescheduleAll()
@@ -557,6 +559,23 @@ object ReminderStore {
         val r = item(id) ?: return
         if (r.done == done) return
         commit(r.copy(done = done))
+    }
+
+    /**
+     * 点「完成」（列表圈 / 右滑 / 详情滑动完成 / 通知动作都走这里）：重复提醒只完成这一次、推到下一次，见 [ReminderAdvance.completed]。
+     * 回点之前那一版，给撤销用。
+     */
+    fun complete(id: String): Reminder? {
+        val r = item(id) ?: return null
+        if (r.done) return r
+        commit(ReminderAdvance.completed(r, System.currentTimeMillis(), holidayCalendar))
+        return r
+    }
+
+    /** 撤销完成：at / done / 锚定日退回点之前那一版（不是只把 done 改回 false —— 重复提醒的 at 已经推走了）。 */
+    fun undoComplete(before: Reminder) {
+        val cur = item(before.id) ?: return
+        commit(cur.copy(atMs = before.atMs, done = before.done, anchorDay = before.anchorDay))
     }
 
     /** 「再等 N 分钟」：从现在往后推，不是从原时间推（原时间可能已经过去两小时了）。 */

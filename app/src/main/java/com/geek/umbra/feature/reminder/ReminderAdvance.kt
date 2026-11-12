@@ -241,6 +241,30 @@ object ReminderAdvance {
     }
 
     /**
+     * 点「完成」之后的样子（sam 11-12 定、三端统一方案）：重复提醒只完成这一次 —— 推到严格晚于 max(现在, 原 at) 的第一个
+     * 发生时刻，不置 done（过点的跳到现在之后，漏掉的几次一起跳；提前完成的跳过这一次）；越过结束日才 done（同自动推到头）。
+     * 不重复的、地点提醒、规则推不动的照旧 done = true。和到点自动推走同一个 [advance]。
+     * 戳取 max(现在, 原值 + 1)：这是用户的改动，要赢过自动推的「原值 + 1」。落库 / 推送由调用方（ReminderStore.commit）做。
+     */
+    fun completed(r: Reminder, nowMs: Long, cal: HolidayCalendar? = null, fallbackTz: ZoneId = ZoneId.systemDefault()): Reminder {
+        val stamp = maxOf(nowMs, add(r.updatedAtMs, 1) ?: r.updatedAtMs)
+        val rule = ReminderWire.ruleToWire(r.repeatRule)
+        if (rule == "none" || !ReminderPlace.timed(r)) return r.copy(done = true, updatedAtMs = stamp)
+        val tz = zone(r.tz, fallbackTz)
+        // now 取 max(现在, at)：还没到点时从 at 起走一步（advance 对 at == now 也推）。
+        val a = advance(
+            r.atMs, rule, ReminderWire.freqToWire(r.customFreq), r.customN,
+            endCapMs(r), false, maxOf(nowMs, r.atMs), tz, cal, r.anchorDay, r.weekDays,
+        ) ?: return r.copy(done = true, updatedAtMs = stamp)
+        return r.copy(
+            done = a.done,
+            atMs = if (a.done) r.atMs else a.atMs,
+            anchorDay = anchorDayOf(r.atMs, r.anchorDay, tz),
+            updatedAtMs = stamp,
+        )
+    }
+
+    /**
      * 冷启动那次推进该不该**先放着这一行、等同步拉完节假日表再推**（umbra-ios#72）：「工作日」规则且日历缺 now 那一年
      * 或推进落点那一年（按提醒时区取公历年）→ 先放着。iOS: ReminderAdvance.swift:377
      */

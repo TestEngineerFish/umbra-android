@@ -224,7 +224,7 @@ class ReminderActionReceiver : BroadcastReceiver() {
         ReminderStore.start()
         val id = ReminderNotifier.idOf(intent) ?: return
         when (intent.action) {
-            ReminderNotifier.ACTION_DONE -> ReminderStore.setDone(id, true)
+            ReminderNotifier.ACTION_DONE -> ReminderStore.complete(id)
             ReminderNotifier.ACTION_SNOOZE -> ReminderStore.snooze(id)
         }
         ReminderNotifier.dismiss(context, id)
