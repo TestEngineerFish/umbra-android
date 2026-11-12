@@ -442,7 +442,7 @@ private fun offerBiometryIfFirstTime(password: String) {
 internal fun UnlockedNote(minutes: Int, onSilence: () -> Unit, onClose: () -> Unit) {
     val c = UmbraTheme.colors
     val shape = RoundedCornerShape(14.dp)
-    Row(Modifier.fillMaxWidth().clip(shape).background(c.card).border(UmbraDimens.borderW, c.border, shape).padding(start = 13.dp, top = 11.dp, bottom = 3.dp), verticalAlignment = Alignment.Top) {
+    Row(Modifier.fillMaxWidth().clip(shape).background(c.card).border(UmbraDimens.borderW, (if (c.isDark) androidx.compose.ui.graphics.Color.Transparent else c.border), shape).padding(start = 13.dp, top = 11.dp, bottom = 3.dp), verticalAlignment = Alignment.Top) {
         UmbraIcon(UmbraIconPaths.info, c.faint, size = 15.dp, modifier = Modifier.padding(top = 2.dp))
         Spacer(Modifier.width(9.dp))
         Column(Modifier.weight(1f)) {
@@ -500,7 +500,7 @@ internal fun ProfileCard(st: VaultState, onClick: () -> Unit) {
     val cur = st.vaults.firstOrNull { it.id == st.curVaultId }
     val shape = RoundedCornerShape(UmbraDimens.radiusCard)
     Row(
-        Modifier.fillMaxWidth().clip(shape).background(c.card).border(UmbraDimens.borderW, c.border, shape).clickable(onClick = onClick).padding(horizontal = 13.dp, vertical = 11.dp),
+        Modifier.fillMaxWidth().clip(shape).background(c.card).border(UmbraDimens.borderW, (if (c.isDark) androidx.compose.ui.graphics.Color.Transparent else c.border), shape).clickable(onClick = onClick).padding(horizontal = 13.dp, vertical = 11.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.size(34.dp).clip(RoundedCornerShape(UmbraDimens.radiusControl)).background(c.orangeSoft), contentAlignment = Alignment.Center) {

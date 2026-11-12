@@ -985,7 +985,7 @@ private fun Field(label: String, content: @Composable () -> Unit) {
 private fun FormCard(content: @Composable () -> Unit) {
     val c = UmbraTheme.colors
     val shape = RoundedCornerShape(UmbraDimens.radiusCard)
-    Column(Modifier.fillMaxWidth().clip(shape).background(c.card).border(UmbraDimens.borderW, c.borderSoft, shape)) { content() }
+    Column(Modifier.fillMaxWidth().clip(shape).background(c.card).border(UmbraDimens.borderW, if (c.isDark) Color.Transparent else c.borderSoft, shape)) { content() }
 }
 
 @Composable

@@ -244,7 +244,7 @@ private fun TaskRow(task: TaskItem) {
     val st = taskStatusOf(task.status)
     val prog = TaskProgress.make(task.steps_done, task.steps_total)
     Column(
-        Modifier.fillMaxWidth().clip(CardShape).background(c.card).border(1.dp, c.border, CardShape)
+        Modifier.fillMaxWidth().clip(CardShape).background(c.card).border(1.dp, (if (c.isDark) androidx.compose.ui.graphics.Color.Transparent else c.border), CardShape)
             .clickable { AppGraph.router.go(Route.TaskDetail(task.id)) }
             .padding(horizontal = 13.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(7.dp),
@@ -731,7 +731,7 @@ private fun UnfinishedBlock(d: TaskDetail, summary: String) {
     val meta = TaskUnfinishedRules.stoppedAt(step?.seq, step?.title, en)
     val shape = RoundedCornerShape(UmbraDimens.radiusCard)
     var showRaw by remember { mutableStateOf(false) }
-    Column(Modifier.fillMaxWidth().clip(shape).background(c.card).border(1.dp, c.border, shape)) {
+    Column(Modifier.fillMaxWidth().clip(shape).background(c.card).border(1.dp, (if (c.isDark) androidx.compose.ui.graphics.Color.Transparent else c.border), shape)) {
         Row(Modifier.fillMaxWidth().background(c.chip).padding(horizontal = 14.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
             UmbraIcon(UmbraIconPaths.ban, c.text, size = 16.dp, strokeWidth = 2f)
             Spacer(Modifier.width(8.dp))
@@ -951,7 +951,7 @@ fun TaskSuspendReasonCard(display: TaskSuspendDisplay) {
     val c = UmbraTheme.colors
     val shape = RoundedCornerShape(14.dp)
     Column(
-        Modifier.fillMaxWidth().clip(shape).background(c.card).border(1.dp, c.borderSoft, shape).padding(14.dp),
+        Modifier.fillMaxWidth().clip(shape).background(c.card).border(1.dp, (if (c.isDark) androidx.compose.ui.graphics.Color.Transparent else c.borderSoft), shape).padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {

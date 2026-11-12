@@ -386,11 +386,17 @@ object CapCardRules {
     const val CODE_FOLD_LINES = 6
 
     /**
-     * fields 一格的值太长就折起来（服务端 #193 起要写入的内容给全文、最长 4000 字、保留换行，由端上折；同 PC 52a955d，阈值暂定等设计侧 344）：
-     * 超过 6 行或 300 字（按字符数，不按 UTF-16 码元），显示前 6 行 +「展开全文」。
+     * fields 一格的值太长就折起来（服务端 #193 起要写入的内容给全文、最长 4000 字、保留换行，由端上折；设计侧 344 定稿）：
+     * 超过 6 行或 300 字（主要按行，字数只兜「一行一大段」；按字符数，不按 UTF-16 码元），显示前 6 行 + 渐隐 +「展开全文 · 共 N 字」。
      */
     const val FIELD_FOLD_LINES = 6
     const val FIELD_FOLD_CHARS = 300
+
+    /** 展开后最多占屏高的这么多（344：手机 45%，PC 220 高），再长在格内滚动。 */
+    const val FIELD_OPEN_MAX_SCREEN = 0.45f
+
+    /** 折起来时钮后面那句灰字「共 N 字」（344；按字符数）。 */
+    fun fieldCount(v: String): String = "共 ${v.codePointCount(0, v.length)} 字"
 
     fun fieldFolds(v: String): Boolean = v.split("\n").size > FIELD_FOLD_LINES || v.codePointCount(0, v.length) > FIELD_FOLD_CHARS
 

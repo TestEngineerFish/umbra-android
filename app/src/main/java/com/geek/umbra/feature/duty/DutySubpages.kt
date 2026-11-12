@@ -137,7 +137,7 @@ internal fun DutyBudgetBar(b: DutyBudget) {
     val c = UmbraTheme.colors
     val shape = RoundedCornerShape(UmbraDimens.radiusCard)
     Column(
-        Modifier.fillMaxWidth().clip(shape).background(c.card).border(UmbraDimens.borderW, c.border, shape)
+        Modifier.fillMaxWidth().clip(shape).background(c.card).border(UmbraDimens.borderW, (if (c.isDark) androidx.compose.ui.graphics.Color.Transparent else c.border), shape)
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
@@ -164,7 +164,7 @@ internal fun DutyTierCard(tag: String, detail: String?, action: DutyKit.TierActi
     val offers = action != DutyKit.TierAction.None
     val shape = RoundedCornerShape(UmbraDimens.radiusCard)
     Column(
-        Modifier.fillMaxWidth().clip(shape).background(c.card).border(UmbraDimens.borderW, c.border, shape)
+        Modifier.fillMaxWidth().clip(shape).background(c.card).border(UmbraDimens.borderW, (if (c.isDark) androidx.compose.ui.graphics.Color.Transparent else c.border), shape)
             .padding(start = 14.dp, end = 14.dp, top = 12.dp, bottom = if (offers) 0.dp else 12.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {

@@ -92,7 +92,8 @@ fun UmbraIconBlock(
     d: String,
     modifier: Modifier = Modifier,
     block: Dp = UmbraDimens.iconBlockMD,
-    bg: Color = UmbraTheme.colors.chip,
+    // 白面上的图标方块一律 track（设计侧 344 四.3：深色下 chip 和白面几乎同色）
+    bg: Color = UmbraTheme.colors.track,
     fg: Color = UmbraTheme.colors.muted,
     icon: Dp? = null,
 ) {

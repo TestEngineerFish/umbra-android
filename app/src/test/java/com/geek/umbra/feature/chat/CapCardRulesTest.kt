@@ -271,6 +271,7 @@ class CapCardRulesTest {
         assertFalse("正好 300 字", CapCardRules.fieldFolds("字".repeat(300)))
         assertTrue("301 字", CapCardRules.fieldFolds("字".repeat(301)))
         assertFalse("300 个 emoji（600 个 UTF-16 码元）不算超", CapCardRules.fieldFolds("😀".repeat(300)))
+        assertEquals("共 3 字", CapCardRules.fieldCount("a😀b"))
     }
 
     @Test fun receiptNameNeverEmptied() {

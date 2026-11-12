@@ -249,7 +249,7 @@ fun ReminderAttsSection(
 
     val shape = RoundedCornerShape(UmbraDimens.radiusCard)
     Column(
-        Modifier.fillMaxWidth().clip(shape).background(c.card).border(UmbraDimens.borderW, c.borderSoft, shape).padding(horizontal = 16.dp, vertical = 14.dp),
+        Modifier.fillMaxWidth().clip(shape).background(c.card).border(UmbraDimens.borderW, (if (c.isDark) androidx.compose.ui.graphics.Color.Transparent else c.borderSoft), shape).padding(horizontal = 16.dp, vertical = 14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {

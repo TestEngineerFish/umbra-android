@@ -96,7 +96,7 @@ internal fun DutyBriefCardView(m: DutyMeta, modifier: Modifier = Modifier) {
     val st by DutyStore.state.collectAsState()
     val shape = RoundedCornerShape(UmbraDimens.radiusCard)
     Column(
-        modifier.fillMaxWidth().clip(shape).background(c.card).border(UmbraDimens.borderW, c.border, shape)
+        modifier.fillMaxWidth().clip(shape).background(c.card).border(UmbraDimens.borderW, (if (c.isDark) androidx.compose.ui.graphics.Color.Transparent else c.border), shape)
             .padding(horizontal = 13.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {

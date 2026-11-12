@@ -27,6 +27,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -83,7 +84,7 @@ private fun CapFullCard(b: ChatBlock.Cap, c: CapCard) {
     Column(Modifier.fillMaxWidth().clip(capShape).background(t.card).border(UmbraDimens.borderW, t.border, capShape)) {
         // 头：22 图标块 + 能力名 + 右端胶囊（执行端是别的电脑时卡头不写「在哪」，改在标题下面那一条）
         Row(Modifier.fillMaxWidth().padding(start = 14.dp, end = 14.dp, top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(22.dp).clip(RoundedCornerShape(6.dp)).background(t.chip), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(22.dp).clip(RoundedCornerShape(6.dp)).background(t.track), contentAlignment = Alignment.Center) {
                 UmbraIcon(UmbraIconPaths.shield, t.muted, size = 13.dp, strokeWidth = 2f)
             }
             Spacer(Modifier.width(8.dp))
@@ -232,15 +233,9 @@ private fun CapPreviewView(p: CapPreview, full: Boolean = false) {
                 is CapPreview.Fields -> Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
                     for ((k, v) in p.rows) Row {
                         Text(k, color = t.muted, style = TextStyle(fontSize = 12.5.sp), modifier = Modifier.width(84.dp))
-                        // 值原样保留换行和行首空格（Compose 的 Text 本来不挤空白）；长值折到 6 行，每格各自「展开全文」进全屏只读页
-                        //（服务端 #193 给全文，同 PC 52a955d；手机不就地展开，同代码段，306 §3）。没看全文也能点允许。
-                        val folds = CapCardRules.fieldFolds(v)
-                        Column(Modifier.weight(1f)) {
-                            Text(v, color = t.text, style = TextStyle(fontSize = 12.5.sp, lineHeight = 18.sp),
-                                maxLines = if (folds) CapCardRules.FIELD_FOLD_LINES else Int.MAX_VALUE, overflow = TextOverflow.Ellipsis)
-                            if (folds) Text("展开全文", color = t.orangeText, style = TextStyle(fontSize = 12.sp),
-                                modifier = Modifier.clickable(role = Role.Button) { openFullField(k, v) }.padding(top = 4.dp))
-                        }
+                        // 值原样保留换行和行首空格（Compose 的 Text 本来不挤空白）。没看全文也能点允许。
+                        if (CapCardRules.fieldFolds(v)) androidx.compose.runtime.key(k) { FoldedFieldValue(v, Modifier.weight(1f)) }
+                        else Text(v, color = t.text, style = TextStyle(fontSize = 12.5.sp, lineHeight = 18.sp), modifier = Modifier.weight(1f))
                     }
                 }
                 is CapPreview.Diff -> Column(Modifier.horizontalScroll(rememberScrollState())) {
@@ -280,19 +275,51 @@ private fun openFullCode(p: CapPreview.Code) {
     })
 }
 
-/** fields 一格的全文（全屏只读页，同 [openFullCode]）：标题是这一格的名字，正文保留换行，可选中复制。 */
-private fun openFullField(label: String, text: String) {
-    AppGraph.router.present(UmbraSheet("cap-field-${label.hashCode()}-${text.hashCode()}") { _ ->
-        val t = UmbraTheme.colors
-        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(label, color = t.muted, style = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.SemiBold))
-            Box(Modifier.fillMaxWidth().heightIn(max = 640.dp).clip(rowShape).background(t.bg).padding(10.dp).verticalScroll(rememberScrollState())) {
-                androidx.compose.foundation.text.selection.SelectionContainer {
-                    Text(text, color = t.text, style = TextStyle(fontSize = 13.5.sp, lineHeight = 21.sp))
+/**
+ * fields 一格的长值（设计侧 344 三.1 定稿，服务端 #193 给全文）：折到 6 行、底部 2 行渐隐到预览底色，下面「展开全文」+ 灰字「共 N 字」；
+ * 点了**就地展开**，最多屏高 45%（让卡底的［允许这一次］还在一屏之内），再长在格内滚动、右侧细滚动条，钮变「收起」。每格各自展开。
+ * 代码段那套全屏只读页不动，只是 fields 的长值不再进全屏页。
+ */
+@Composable
+private fun FoldedFieldValue(v: String, modifier: Modifier) {
+    val t = UmbraTheme.colors
+    var open by remember { mutableStateOf(false) }
+    val style = TextStyle(fontSize = 12.5.sp, lineHeight = 18.sp)
+    Column(modifier) {
+        if (!open) {
+            Box {
+                Text(v, color = t.text, style = style, maxLines = CapCardRules.FIELD_FOLD_LINES, overflow = TextOverflow.Clip)
+                // 底部 2 行（2 × 行高 18）渐隐到预览底色 bg
+                Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(36.dp)
+                    .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(t.bg.copy(alpha = 0f), t.bg))))
+            }
+        } else {
+            val maxH = (androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp * CapCardRules.FIELD_OPEN_MAX_SCREEN).dp
+            val scroll = rememberScrollState()
+            Box(Modifier.heightIn(max = maxH).verticalScroll(scroll).drawWithContent {
+                drawContent()
+                // 右侧细滚动条：只在真的能滚时画
+                if (scroll.maxValue > 0) {
+                    val view = size.height - scroll.maxValue
+                    val thumb = (view * view / size.height).coerceAtLeast(24.dp.toPx())
+                    val top = scroll.value + (view - thumb) * scroll.value / scroll.maxValue
+                    drawRoundRect(t.faint.copy(alpha = 0.6f), topLeft = androidx.compose.ui.geometry.Offset(size.width - 3.dp.toPx(), top),
+                        size = androidx.compose.ui.geometry.Size(2.dp.toPx(), thumb), cornerRadius = androidx.compose.ui.geometry.CornerRadius(1.dp.toPx()))
                 }
+            }) {
+                Text(v, color = t.text, style = style, modifier = Modifier.padding(end = 8.dp))
             }
         }
-    })
+        Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(if (open) "收起" else "展开全文", color = t.orangeText, style = TextStyle(fontSize = 12.sp),
+                modifier = Modifier.clickable(role = Role.Button) { open = !open })
+            // 字数只在折着时写（同 PC e21f57c）
+            if (!open) {
+                Spacer(Modifier.width(8.dp))
+                Text(CapCardRules.fieldCount(v), color = t.faint, style = TextStyle(fontSize = 12.sp))
+            }
+        }
+    }
 }
 
 // ── 回执行（稿 C / F2 / F3） ──────────────────────────────────────────

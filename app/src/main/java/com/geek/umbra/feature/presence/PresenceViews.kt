@@ -277,7 +277,7 @@ private fun Header(model: PresenceRecordModel) {
 private fun CalendarCard(model: PresenceRecordModel, locale: Locale) {
     val c = UmbraTheme.colors
     Column(
-        Modifier.padding(horizontal = 16.dp).fillMaxWidth().clip(CardShape).background(c.card).border(1.dp, c.border, CardShape).padding(14.dp),
+        Modifier.padding(horizontal = 16.dp).fillMaxWidth().clip(CardShape).background(c.card).border(1.dp, (if (c.isDark) androidx.compose.ui.graphics.Color.Transparent else c.border), CardShape).padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         val cal = model.calendar
@@ -396,7 +396,7 @@ private fun Legend() {
 private fun ActivityCard(model: PresenceRecordModel, locale: Locale) {
     val c = UmbraTheme.colors
     val monthTitleFmt = remember(locale) { fmt(locale, "yyyyMMMM") }
-    Column(Modifier.padding(horizontal = 16.dp).fillMaxWidth().clip(CardShape).background(c.card).border(1.dp, c.border, CardShape).padding(bottom = 6.dp)) {
+    Column(Modifier.padding(horizontal = 16.dp).fillMaxWidth().clip(CardShape).background(c.card).border(1.dp, (if (c.isDark) androidx.compose.ui.graphics.Color.Transparent else c.border), CardShape).padding(bottom = 6.dp)) {
         Text(stringResource(R.string.presence_activity), color = c.text, style = TextStyle(fontSize = 14.sp, fontWeight = UmbraType.weight560),
             modifier = Modifier.padding(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 4.dp))
         model.months.forEach { m ->
@@ -441,7 +441,7 @@ private fun ActivityCard(model: PresenceRecordModel, locale: Locale) {
 private fun PresenceProfileCard(profile: PresenceProfileDTO) {
     val c = UmbraTheme.colors
     Column(
-        Modifier.padding(horizontal = 16.dp).fillMaxWidth().clip(CardShape).background(c.card).border(1.dp, c.border, CardShape).padding(14.dp),
+        Modifier.padding(horizontal = 16.dp).fillMaxWidth().clip(CardShape).background(c.card).border(1.dp, (if (c.isDark) androidx.compose.ui.graphics.Color.Transparent else c.border), CardShape).padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Text(stringResource(R.string.presence_profile_title), color = c.text, style = TextStyle(fontSize = 14.sp, fontWeight = UmbraType.weight560))

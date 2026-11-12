@@ -1,5 +1,5 @@
 // 工具页（Tab 3 根页）—— 照 iOS Features/Tool/ToolHomeView.swift。
-// 三组、每组两张同尺寸卡片；图标块 chip 底 + muted 图标（一屏六张橙卡等于没有重点）；
+// 三组、每组两张同尺寸卡片；图标块 track 底（344）+ muted 图标（一屏六张橙卡等于没有重点）；
 // 卡底压一行真实状态（ToolCardRules）；红角标只给要人处理的数（与底栏工具 Tab 同一判据）。
 package com.geek.umbra.feature.tool
 
@@ -175,13 +175,13 @@ private fun CardView(card: ToolCard, dim: Boolean, modifier: Modifier, onClick: 
     val c = UmbraTheme.colors
     val shape = RoundedCornerShape(20.dp)
     Box(
-        modifier.defaultMinSize(minHeight = 126.dp).clip(shape).background(c.card).border(1.dp, c.borderSoft, shape)
+        modifier.defaultMinSize(minHeight = 126.dp).clip(shape).background(c.card).border(1.dp, if (c.isDark) androidx.compose.ui.graphics.Color.Transparent else c.borderSoft, shape) // 深色白面不描边（344 四.4）
             .clickable(role = Role.Button, onClick = onClick)
             // 未登录的联网卡只压透明度、照样可点 —— 进去是「要登录」那一块
             .alpha(if (dim) 0.45f else 1f),
     ) {
         Column(Modifier.fillMaxHeight().padding(13.dp)) {
-            Box(Modifier.size(36.dp).clip(RoundedCornerShape(11.dp)).background(c.chip), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(36.dp).clip(RoundedCornerShape(11.dp)).background(c.track), contentAlignment = Alignment.Center) {
                 UmbraIcon(card.icon, c.muted, size = 19.dp, strokeWidth = 1.8f)
             }
             Spacer(Modifier.height(9.dp))

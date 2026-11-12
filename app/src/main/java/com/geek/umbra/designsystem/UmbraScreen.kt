@@ -70,9 +70,9 @@ fun UmbraBackButton(onClick: () -> Unit) =
 
 /**
  * 顶栏。设计侧 199 答复第 2 条：
- * - 根页：滚动 0 时透明、无字；内容滚过 14→58dp 之间，card 底、底边 1px borderSoft、17/600 标题**同步线性渐显**；
+ * - 根页：滚动 0 时透明、无字；内容滚过 14→58dp 之间，bg 底（344）、底边 0.5 borderSoft、17/600 标题**同步线性渐显**；
  *   标题左对齐、左距 16。状态栏那一条跟着顶栏一起上色（edge-to-edge）。
- * - 推入页：从一开始就是实底，返回箭头后跟单行截断的标题。
+ * - 推入页：从一开始就是 bg 实底，返回箭头后跟单行截断的标题；底边细线只在内容滚到顶栏下面时出（344 四.5）。
  * 不用 M3 LargeTopAppBar：它的折叠观感和设计稿差得更远。
  */
 @Composable
@@ -83,10 +83,12 @@ private fun UmbraTopBar(
     leading: (@Composable () -> Unit)?,
     onBack: (() -> Unit)?,
     titleContent: (@Composable () -> Unit)? = null,
+    line: Float = progress,
     actions: @Composable RowScope.() -> Unit,
 ) {
     val c = UmbraTheme.colors
-    Column(Modifier.fillMaxWidth().background(c.card.copy(alpha = progress)).statusBarsPadding()) {
+    // 顶栏和窗口底同色（设计侧 344 四.5）：不再是白面那一档，深色下不会多出一条亮带；内容滚到顶栏下面时底部出一根 0.5 细线。
+    Column(Modifier.fillMaxWidth().background(c.bg.copy(alpha = progress)).statusBarsPadding()) {
         Row(
             Modifier.fillMaxWidth().height(54.dp).padding(horizontal = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -108,7 +110,7 @@ private fun UmbraTopBar(
             }
             Row(verticalAlignment = Alignment.CenterVertically, content = actions)
         }
-        Box(Modifier.fillMaxWidth().height(1.dp).background(c.borderSoft.copy(alpha = progress)))
+        Box(Modifier.fillMaxWidth().height(0.5.dp).background(c.borderSoft.copy(alpha = line)))
     }
 }
 
@@ -211,7 +213,9 @@ fun UmbraScreen(
         modifier.fillMaxSize().background(c.bg)
             .pointerInput(Unit) { detectTapGestures(onTap = { focus.clearFocus() }) },
     ) {
-        UmbraTopBar(title, progress, root, leading, onBack, actions = actions)
+        // 推入页的细线：内容滚动过才出（根页跟着渐显进度走）
+        val scrolled by remember(listState) { androidx.compose.runtime.derivedStateOf { listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0 } }
+        UmbraTopBar(title, progress, root, leading, onBack, line = if (root) progress else if (scrolled) 1f else 0f, actions = actions)
         topContent?.invoke()
         val list: @Composable () -> Unit = {
             LazyColumn(

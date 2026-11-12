@@ -127,7 +127,7 @@ private fun ProposalCard(p: DutyProposal, st: DutyState, tr: DutyTr) {
     val change = DutyKit.proposalChange(p, tr, dutyName = name, currentBlocks = st.list?.brief?.params?.blocks)
     val shape = RoundedCornerShape(UmbraDimens.radiusCard)
     Column(
-        Modifier.fillMaxWidth().clip(shape).background(c.card).border(UmbraDimens.borderW, c.border, shape)
+        Modifier.fillMaxWidth().clip(shape).background(c.card).border(UmbraDimens.borderW, (if (c.isDark) androidx.compose.ui.graphics.Color.Transparent else c.border), shape)
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {

@@ -142,14 +142,15 @@ private fun titleOf(r: Route): String = when (r) {
 
 /**
  * 底栏。iOS 稿是液态玻璃胶囊（系统私有渲染），Android 没有对等物 —— 这里画不透明的 Umbra 色底栏：
- * card 底、顶部 1px borderSoft、选中橙色、标签 10.5。形制交 Claude Design 裁定（docs/design 交办单）。
+ * bg 底（344）、顶部 0.5 borderSoft、选中橙色、标签 10.5。形制交 Claude Design 裁定（docs/design 交办单）。
  */
 @Composable
 private fun BottomBar(current: Tab, onSelect: (Tab) -> Unit) {
     val c = UmbraTheme.colors
     val badges = TabBadges.counts
-    Column(Modifier.fillMaxWidth().background(c.card).navigationBarsPadding()) {
-        Box(Modifier.fillMaxWidth().height(1.dp).background(c.borderSoft))
+    // tab 栏和窗口底同色、顶上一根 0.5 细线（设计侧 344 四.5：深色下 card 色的 tab 栏像多出一条亮带）
+    Column(Modifier.fillMaxWidth().background(c.bg).navigationBarsPadding()) {
+        Box(Modifier.fillMaxWidth().height(0.5.dp).background(c.borderSoft))
         Row(Modifier.fillMaxWidth().height(58.dp), horizontalArrangement = Arrangement.SpaceAround) {
             Tab.entries.forEach { t ->
                 val on = t == current

@@ -74,7 +74,7 @@ fun UmbraCard(
             .fillMaxWidth()
             .clip(shape)
             .background(c.card)
-            .border(UmbraDimens.borderW, c.border, shape)
+            .border(UmbraDimens.borderW, c.cardEdge, shape)
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
             .padding(padding),
     ) { content() }
@@ -86,7 +86,7 @@ fun UmbraGroupCard(modifier: Modifier = Modifier, content: @Composable () -> Uni
     val c = UmbraTheme.colors
     val shape = RoundedCornerShape(UmbraDimens.radiusCard)
     Column(
-        modifier.fillMaxWidth().clip(shape).background(c.card).border(UmbraDimens.borderW, c.border, shape),
+        modifier.fillMaxWidth().clip(shape).background(c.card).border(UmbraDimens.borderW, c.cardEdge, shape),
     ) { content() }
 }
 
@@ -545,7 +545,8 @@ fun UmbraEmptyState(
         modifier.fillMaxWidth().padding(horizontal = 34.dp, vertical = 60.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Box(Modifier.size(64.dp).clip(RoundedCornerShape(16.dp)).background(c.chip), contentAlignment = Alignment.Center) {
+        // 图标方块一律 track（设计侧 344；chip 在白面 / 深色底上几乎看不出）
+        Box(Modifier.size(64.dp).clip(RoundedCornerShape(16.dp)).background(c.track), contentAlignment = Alignment.Center) {
             UmbraIcon(icon, c.muted, size = 28.dp)
         }
         Spacer(Modifier.height(14.dp))

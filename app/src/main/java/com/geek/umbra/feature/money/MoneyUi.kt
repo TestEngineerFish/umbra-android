@@ -41,7 +41,8 @@ import com.geek.umbra.designsystem.UmbraType
 fun Modifier.moneyCard(): Modifier {
     val c = UmbraTheme.colors
     val shape = RoundedCornerShape(UmbraDimens.radiusCard)
-    return this.fillMaxWidth().clip(shape).background(c.card).border(UmbraDimens.borderW, c.borderSoft, shape)
+    // 深色白面不描边（设计侧 344 四.4）
+    return this.fillMaxWidth().clip(shape).background(c.card).border(UmbraDimens.borderW, if (c.isDark) androidx.compose.ui.graphics.Color.Transparent else c.borderSoft, shape)
 }
 
 /** 卡内行间线。iOS 那条往左右各探出卡内衬（padding -pad）；Compose 里由调用方把线画在内衬外层，这里只画线。 */
@@ -59,7 +60,7 @@ fun MoneyCardNoData(icon: String, title: String) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(9.dp),
     ) {
-        Box(Modifier.size(48.dp).clip(RoundedCornerShape(14.dp)).background(c.chip), contentAlignment = Alignment.Center) {
+        Box(Modifier.size(48.dp).clip(RoundedCornerShape(14.dp)).background(c.track), contentAlignment = Alignment.Center) {
             UmbraIcon(icon, c.muted, size = 22.dp)
         }
         Text(title, color = c.muted, style = TextStyle(fontSize = 14.sp, fontWeight = UmbraType.weight560), textAlign = TextAlign.Center)

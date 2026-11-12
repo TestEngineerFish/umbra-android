@@ -201,3 +201,9 @@ object UmbraMotion {
     const val slider = 220
     const val spin = 1000
 }
+
+/**
+ * 白面（卡 / 组卡）的描边：浅色照旧 border；深色不描边（设计侧 344 四.4：面 25221E 比底 1A1815 亮一档，不靠描边也分得开，和 PC 白面无描边一致）。
+ * 输入框、弹出层这类「描边本来就是它的形」的不走这里。
+ */
+val UmbraColorScheme.cardEdge: Color get() = if (isDark) Color.Transparent else border

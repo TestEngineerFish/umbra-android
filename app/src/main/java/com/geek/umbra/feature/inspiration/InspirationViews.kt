@@ -255,7 +255,7 @@ private fun InspCard(i: Inspiration) {
     var menu by remember { mutableStateOf(false) }
     Box {
         Column(
-            Modifier.fillMaxWidth().clip(CardShape).background(c.card).border(1.dp, c.border, CardShape)
+            Modifier.fillMaxWidth().clip(CardShape).background(c.card).border(1.dp, (if (c.isDark) androidx.compose.ui.graphics.Color.Transparent else c.border), CardShape)
                 .combinedClickable(onClick = { AppGraph.router.go(Route.InspDetail(i.id.toString())) }, onLongClick = { menu = true })
                 .padding(13.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -419,7 +419,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.inspDetailContent(i: 
         DetailSection("原文") {
             SelectionContainer {
                 Text(i.raw, color = c.text, style = TextStyle(fontSize = 15.5.sp, lineHeight = 25.5.sp),
-                    modifier = Modifier.fillMaxWidth().clip(CardShape).background(c.card).border(1.dp, c.border, CardShape).padding(13.dp))
+                    modifier = Modifier.fillMaxWidth().clip(CardShape).background(c.card).border(1.dp, (if (c.isDark) androidx.compose.ui.graphics.Color.Transparent else c.border), CardShape).padding(13.dp))
             }
         }
     }
@@ -475,7 +475,7 @@ private fun DetailSection(title: String, content: @Composable () -> Unit) {
 @Composable
 private fun ResearchSection(i: Inspiration) {
     val c = UmbraTheme.colors
-    val boxed = Modifier.fillMaxWidth().clip(CardShape).background(c.card).border(1.dp, c.border, CardShape).padding(13.dp)
+    val boxed = Modifier.fillMaxWidth().clip(CardShape).background(c.card).border(1.dp, (if (c.isDark) androidx.compose.ui.graphics.Color.Transparent else c.border), CardShape).padding(13.dp)
     when {
         i.researchState == "queued" || i.researchState == "running" -> Row(
             Modifier.fillMaxWidth().clip(CardShape).background(c.card).padding(13.dp),
@@ -650,7 +650,7 @@ private fun InspForm(
         // **默认关**：每条都自动查会烧 token，还会把灵感列表变成一堆没人读的半成品报告。
         if (isNew && onResearch != null) {
             Row(
-                Modifier.fillMaxWidth().clip(CardShape).background(c.card).border(1.dp, c.border, CardShape).padding(13.dp),
+                Modifier.fillMaxWidth().clip(CardShape).background(c.card).border(1.dp, (if (c.isDark) androidx.compose.ui.graphics.Color.Transparent else c.border), CardShape).padding(13.dp),
                 horizontalArrangement = Arrangement.spacedBy(9.dp),
             ) {
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {

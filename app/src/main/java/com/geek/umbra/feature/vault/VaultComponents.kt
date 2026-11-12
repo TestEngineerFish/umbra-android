@@ -183,7 +183,7 @@ fun VaultRowsCard(modifier: Modifier = Modifier, stroke: Color? = null, strokeWi
 fun VaultCardBox(modifier: Modifier = Modifier, padding: Dp = 14.dp, content: @Composable ColumnScope.() -> Unit) {
     val c = UmbraTheme.colors
     val shape = RoundedCornerShape(UmbraDimens.radiusCard)
-    Column(modifier.fillMaxWidth().clip(shape).background(c.card).border(UmbraDimens.borderW, c.border, shape).padding(padding), content = content)
+    Column(modifier.fillMaxWidth().clip(shape).background(c.card).border(UmbraDimens.borderW, (if (c.isDark) androidx.compose.ui.graphics.Color.Transparent else c.border), shape).padding(padding), content = content)
 }
 
 /** 分数环：≥80 success、≥50 orange、其余 danger；三档尺寸（72 / 44 / 22）。 */

@@ -114,7 +114,7 @@ private fun GuideGroup(title: String, content: @Composable () -> Unit) {
 private fun GuideCard(content: @Composable () -> Unit) {
     val c = UmbraTheme.colors
     val shape = RoundedCornerShape(UmbraDimens.radiusCard)
-    Column(Modifier.fillMaxWidth().clip(shape).background(c.card).border(1.dp, c.borderSoft, shape)) { content() }
+    Column(Modifier.fillMaxWidth().clip(shape).background(c.card).border(1.dp, (if (c.isDark) androidx.compose.ui.graphics.Color.Transparent else c.borderSoft), shape)) { content() }
 }
 
 /** 行间分隔：1px borderSoft。 */

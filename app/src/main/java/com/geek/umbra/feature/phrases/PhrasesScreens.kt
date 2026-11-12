@@ -58,6 +58,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import com.geek.umbra.app.AppGraph
 import com.geek.umbra.designsystem.UmbraDimens
+import com.geek.umbra.designsystem.cardEdge
 import com.geek.umbra.designsystem.UmbraEmptyState
 import com.geek.umbra.designsystem.UmbraFieldLabel
 import com.geek.umbra.designsystem.UmbraIcon
@@ -179,7 +180,7 @@ private fun ReorderableList(items: List<Phrase>) {
     val shown = if (dragging == null) items.map { it.id } else order.toList()
     val byId = items.associateBy { it.id }
     val shape = RoundedCornerShape(UmbraDimens.radiusCard)
-    Column(Modifier.fillMaxWidth().clip(shape).background(c.card).border(UmbraDimens.borderW, c.border, shape)) {
+    Column(Modifier.fillMaxWidth().clip(shape).background(c.card).border(UmbraDimens.borderW, c.cardEdge, shape)) {
         shown.forEachIndexed { i, id ->
             val p = byId[id] ?: return@forEachIndexed
             if (i > 0) UmbraRowDivider()
