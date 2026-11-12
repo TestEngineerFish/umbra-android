@@ -31,7 +31,9 @@ import com.geek.umbra.net.UmbraUrl
 import com.geek.umbra.net.isOk
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -109,11 +111,14 @@ object InspirationLocal {
 
     // MARK: 读
 
-    /** 列表（新 → 旧，可按状态筛）。登着的话顺手同步一轮（节流 4 秒）—— 整理 / 调研的结果就这样回来。 */
-    fun list(status: String?): List<Inspiration> {
+    /**
+     * 列表（新 → 旧，可按状态筛）。登着的话顺手同步一轮（节流 4 秒）—— 整理 / 调研的结果、秘书记的就这样回来；
+     * 这一轮跑完发 [synced]，页面马上重读（不然要等下一次 5 秒轮询才上屏）。[sync] = false：只读本机（[synced] 触发的那次重读用，免得读一次又起一轮）。
+     */
+    fun list(status: String?, sync: Boolean = true): List<Inspiration> {
         ensureLoaded()
         val t = now()
-        if (online && t - lastListSyncAt > 4_000) {
+        if (sync && online && t - lastListSyncAt > 4_000) {
             lastListSyncAt = t
             AppGraph.scope.launch { sync() }
         }
@@ -211,7 +216,12 @@ object InspirationLocal {
         inflight = job
         job.join()
         inflight = null
+        _synced.tryEmit(Unit)
     }
+
+    /** 一轮同步跑完（领跑的那一路发一次；跟着等的不重复发）。InspirationStore 收到就从本机重读。 */
+    private val _synced = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val synced: SharedFlow<Unit> = _synced
 
     private suspend fun syncOnce() {
         val server = AppGraph.prefs.serverUrl

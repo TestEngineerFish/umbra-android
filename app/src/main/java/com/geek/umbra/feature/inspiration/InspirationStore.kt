@@ -2,6 +2,7 @@ package com.geek.umbra.feature.inspiration
 
 import com.geek.umbra.app.AppGraph
 import com.geek.umbra.designsystem.UmbraScreenPhase
+import com.geek.umbra.net.SocketState
 import com.geek.umbra.net.str
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -38,15 +39,29 @@ object InspirationStore {
     fun screenPhase(offline: Boolean): UmbraScreenPhase =
         UmbraScreenPhase.resolve(_list.value.isNotEmpty(), _firstLoading.value, _loadedOnce.value, offline)
 
-    /** WS inspiration_*（created / updated / deleted …）→ 立即同步并重载（iOS 经 .inspirationChanged 通知）。 */
+    /**
+     * WS inspiration_*（saved / updated / deleted …）→ 立即同步并重载（iOS 经 .inspirationChanged 通知）。
+     * 另外两路（geek-13 11-12）：任何一轮同步跑完都从本机重读一次；长连接断线重连回到在线时补同步一轮 ——
+     * 断着的那段时间里秘书改的，广播收不到（切后台超过 60 秒长连接会被主动断开，回前台重连也走这一路）。
+     */
     fun startListening() {
         if (started) return
         started = true
         AppGraph.scope.launch {
             AppGraph.socket.frames.collect { f ->
                 if (f.str("type")?.startsWith("inspiration_") == true) {
-                    AppGraph.scope.launch { InspirationLocal.sync(); load() }
+                    AppGraph.scope.launch { InspirationLocal.sync() }
                 }
+            }
+        }
+        AppGraph.scope.launch { InspirationLocal.synced.collect { load(sync = false) } }
+        AppGraph.scope.launch {
+            var wasOnline: Boolean? = null
+            AppGraph.socket.state.collect { st ->
+                val on = st == SocketState.Online
+                // 第一次见到在线不补：登录 / 解锁那一刻 sessionUnlocked 已经同步过。
+                if (on && wasOnline == false) AppGraph.scope.launch { InspirationLocal.sync() }
+                if (wasOnline != null || on) wasOnline = on
             }
         }
     }
@@ -56,11 +71,11 @@ object InspirationStore {
         load()
     }
 
-    fun load() {
+    fun load(sync: Boolean = true) {
         issuedLoad += 1
         val mine = issuedLoad
-        // 本机账本（单机化 ②-c）：读本机；登着的话顺手同步（节流），整理 / 调研结果随之回来。
-        val fetched = InspirationLocal.list(null)
+        // 本机账本（单机化 ②-c）：读本机；登着的话顺手同步（节流 4 秒），跑完由 synced 再重读一次上屏。
+        val fetched = InspirationLocal.list(null, sync)
         if (InspWriteRules.shouldApplyLoad(mine, appliedLoad)) {
             appliedLoad = mine
             _list.value = fetched
