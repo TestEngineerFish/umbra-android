@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -72,6 +73,7 @@ import com.geek.umbra.designsystem.UmbraIconPaths
 import com.geek.umbra.designsystem.UmbraSpinningIcon
 import com.geek.umbra.designsystem.UmbraStripAction
 import com.geek.umbra.designsystem.UmbraTheme
+import com.geek.umbra.designsystem.UmbraSelectableCard
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -326,21 +328,19 @@ private fun FormatSection(model: ConvertModel) {
 private fun FormatCell(t: ConvertTarget, on: Boolean, modifier: Modifier, onClick: () -> Unit) {
     val c = UmbraTheme.colors
     val shape = RoundedCornerShape(12.dp)
-    Box(
-        modifier.heightIn(min = 56.dp).clip(shape).background(if (on) c.orangeSoft else c.card)
-            .border(if (on) 2.dp else 1.dp, if (on) c.orange else c.border, shape)
-            .clickable(onClick = onClick).semantics { selected = on },
-        contentAlignment = Alignment.Center,
-    ) {
+    // 卡片类单选（设计侧 346）：2px 橙环 + 右上角勾，卡底不着色
+    UmbraSelectableCard(selected = on, modifier = modifier.heightIn(min = 56.dp), shape = shape, onClick = onClick) {
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Text(
             t.label, color = if (on) c.orangeText else c.text, maxLines = 1, overflow = TextOverflow.Ellipsis,
             style = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace),
             modifier = Modifier.padding(horizontal = 6.dp),
         )
-        // 可以转但有出入：右上角一颗琥珀三角，选中后下面出整句提醒。
+        // 可以转但有出入：左上角一颗琥珀三角（右上角留给选中勾，设计侧 346），选中后下面出整句提醒。
         if (!t.note.isNullOrEmpty()) {
-            UmbraIcon(UmbraIconPaths.alertTriangle, c.warningText, size = 12.dp, strokeWidth = 2.2f, modifier = Modifier.align(Alignment.TopEnd).padding(7.dp))
+            UmbraIcon(UmbraIconPaths.alertTriangle, c.warningText, size = 12.dp, strokeWidth = 2.2f, modifier = Modifier.align(Alignment.TopStart).padding(7.dp))
         }
+    }
     }
 }
 

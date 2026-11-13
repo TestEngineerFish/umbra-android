@@ -117,7 +117,7 @@ fun MoneyPill(label: String, on: Boolean = false, onClick: () -> Unit) {
             color = if (on) c.orangeText else c.muted,
             style = TextStyle(fontSize = 12.sp, fontWeight = UmbraType.weight560),
             modifier = Modifier.height(28.dp).clip(shape).background(if (on) c.orangeSoft else c.bg)
-                .border(UmbraDimens.borderW, if (on) c.orange else c.border, shape).padding(horizontal = 11.dp, vertical = 6.dp),
+                .border(if (on) 1.5.dp else UmbraDimens.borderW, if (on) c.orange else c.border, shape).padding(horizontal = 11.dp, vertical = 6.dp),
         )
     }
 }

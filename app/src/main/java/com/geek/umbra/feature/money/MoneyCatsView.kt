@@ -90,6 +90,7 @@ import com.geek.umbra.designsystem.UmbraScreen
 import com.geek.umbra.designsystem.UmbraSectionLabel
 import com.geek.umbra.designsystem.UmbraSwipeAction
 import com.geek.umbra.designsystem.UmbraTheme
+import com.geek.umbra.designsystem.UmbraSelectableCard
 import com.geek.umbra.designsystem.UmbraTopBarIcon
 import com.geek.umbra.designsystem.UmbraType
 import com.geek.umbra.designsystem.umbraPhaseTop
@@ -896,10 +897,10 @@ private fun SlotCell(n: Int, cat: MoneyCatDTO, pick: Int, neutralSlot: Int, owne
     val on = pick == n
     val label = other?.name ?: if (mine) "现在" else if (n == neutralSlot) "中性灰" else "空"
     val shape = RoundedCornerShape(UmbraDimens.radiusControl)
+    // 卡片类单选（设计侧 346）：2px 橙环 + 右上角勾，卡底不着色
+    UmbraSelectableCard(selected = on, modifier = modifier.heightIn(min = UmbraDimens.tapMin), shape = shape, role = Role.Button, onClick = { onPick(n) }) {
     Column(
-        modifier.heightIn(min = UmbraDimens.tapMin).clip(shape).background(if (on) c.orangeSoft else c.card)
-            .border(UmbraDimens.borderW, if (on) c.orange else c.border, shape)
-            .clickable(role = Role.Button) { onPick(n) }.padding(vertical = 6.dp),
+        Modifier.fillMaxWidth().padding(vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(3.dp, Alignment.CenterVertically),
     ) {
@@ -908,6 +909,7 @@ private fun SlotCell(n: Int, cat: MoneyCatDTO, pick: Int, neutralSlot: Int, owne
             label, color = if (on) c.orangeText else if (other != null) c.text else c.faint,
             style = TextStyle(fontSize = 9.5.sp, fontWeight = FontWeight.SemiBold), maxLines = 1, overflow = TextOverflow.Ellipsis,
         )
+    }
     }
 }
 
@@ -1007,15 +1009,16 @@ internal fun moneyPresentIcons(current: String, onPick: (MoneyCatArt.Pick) -> Un
                     line.forEach { p ->
                         val on = p.k == current
                         val shape = RoundedCornerShape(14.dp)
+                        // 卡片类单选（设计侧 346）：2px 橙环 + 右上角勾，卡底不着色
+                        UmbraSelectableCard(selected = on, modifier = Modifier.weight(1f), shape = shape, onClick = { dismiss(); onPick(p) }) {
                         Column(
-                            Modifier.weight(1f).clip(shape).background(c.card)
-                                .border(if (on) 1.5.dp else UmbraDimens.borderW, if (on) c.orange else c.border, shape)
-                                .clickable(role = Role.Button) { dismiss(); onPick(p) }.padding(vertical = 12.dp),
+                            Modifier.fillMaxWidth().padding(vertical = 12.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(6.dp),
                         ) {
                             UmbraIcon(p.d, if (on) c.orange else c.text, size = 22.dp)
                             Text(p.label, color = if (on) c.orangeText else c.muted, style = TextStyle(fontSize = 12.sp, fontWeight = UmbraType.weight560))
+                        }
                         }
                     }
                     repeat(4 - line.size) { Spacer(Modifier.weight(1f)) }

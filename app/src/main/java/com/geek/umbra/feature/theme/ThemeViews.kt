@@ -74,6 +74,7 @@ import com.geek.umbra.designsystem.UmbraScreen
 import com.geek.umbra.designsystem.UmbraSectionLabel
 import com.geek.umbra.designsystem.UmbraSettingRow
 import com.geek.umbra.designsystem.UmbraStripAction
+import com.geek.umbra.designsystem.SelectionBadge
 import com.geek.umbra.designsystem.UmbraTheme
 import com.geek.umbra.designsystem.settingSection
 import com.geek.umbra.designsystem.themeColor
@@ -347,6 +348,7 @@ private fun AppearanceCard(card: ThemeCard, mode: ThemeMode, inUse: Boolean, try
     Box(modifier) {
         Column(
             Modifier.fillMaxWidth().clip(shape).background(c.card)
+                // 卡片类单选：选中 2px 橙环 + 右上角勾（设计侧 346）；卡底不着色
                 .border(2.dp, if (inUse || trying) c.orange else Color.Transparent, shape)
                 .combinedClickable(
                     onClick = { tap(card) },
@@ -363,14 +365,10 @@ private fun AppearanceCard(card: ThemeCard, mode: ThemeMode, inUse: Boolean, try
                         color = if (card.usable) c.muted else c.warningText, style = TextStyle(fontSize = 12.sp), maxLines = 1, overflow = TextOverflow.Ellipsis,
                     )
                 }
-                if (inUse) {
-                    Spacer(Modifier.width(6.dp))
-                    UmbraIcon(UmbraIconPaths.check, c.orangeText, size = 13.dp, strokeWidth = 2.4f)
-                    Spacer(Modifier.width(3.dp))
-                    Text(stringResource(R.string.theme_inUse), color = c.orangeText, style = TextStyle(fontSize = 12.sp))
-                }
+                if (inUse) Text(stringResource(R.string.theme_inUse), color = c.orangeText, style = TextStyle(fontSize = 12.sp))
             }
         }
+        if (inUse || trying) SelectionBadge(Modifier.align(Alignment.TopEnd))
         // 长按：在用的那张只有一项灰着的「在用」（不出空菜单）；内置的只有「用这个」；商城装的「用这个」+ 红字「卸载」；
         // 装了但用不了的只剩「卸载」（「用这个」点了也只会说用不了）。
         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }, containerColor = c.ctl, modifier = Modifier.widthIn(min = 180.dp)) {

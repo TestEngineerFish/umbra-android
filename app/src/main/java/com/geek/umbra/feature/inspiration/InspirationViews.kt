@@ -639,7 +639,7 @@ private fun InspForm(
                             }, contentAlignment = Alignment.Center) {
                                 Text(t, color = if (on) c.orangeText else c.muted, style = TextStyle(fontSize = 12.5.sp),
                                     modifier = Modifier.clip(RoundedCornerShape(50)).background(if (on) c.orangeSoft else c.card)
-                                        .border(1.dp, if (on) c.orange else c.border, RoundedCornerShape(50)).padding(horizontal = 11.dp, vertical = 5.dp))
+                                        .border(if (on) 1.5.dp else 1.dp, if (on) c.orange else c.border, RoundedCornerShape(50)).padding(horizontal = 11.dp, vertical = 5.dp))
                             }
                         }
                     }

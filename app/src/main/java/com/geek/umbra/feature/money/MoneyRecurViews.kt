@@ -618,7 +618,7 @@ fun MoneyRecurEditView(id: String?) {
                         Box(Modifier.heightIn(min = UmbraDimens.tapMin).clickable(role = Role.Button) { cat = k.slug }, contentAlignment = Alignment.Center) {
                             Row(
                                 Modifier.height(34.dp).clip(pill).background(if (on) c.orangeSoft else c.card)
-                                    .border(UmbraDimens.borderW, if (on) c.orange else c.border, pill).padding(horizontal = 12.dp),
+                                    .border(if (on) 1.5.dp else UmbraDimens.borderW, if (on) c.orange else c.border, pill).padding(horizontal = 12.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(5.dp),
                             ) {

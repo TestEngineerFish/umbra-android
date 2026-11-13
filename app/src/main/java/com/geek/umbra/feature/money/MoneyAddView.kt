@@ -12,6 +12,7 @@ package com.geek.umbra.feature.money
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import com.geek.umbra.designsystem.UmbraPrompt
+import com.geek.umbra.designsystem.UmbraSelectableCard
 import com.geek.umbra.designsystem.UmbraWhenTab
 import com.geek.umbra.designsystem.UmbraPickers
 import androidx.compose.foundation.background
@@ -25,6 +26,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -811,8 +813,9 @@ private fun CatPill(form: MoneyAddForm, slug: String) {
         contentAlignment = Alignment.Center,
     ) {
         Row(
-            Modifier.height(32.dp).clip(shape).background(if (on) c.orangeSoft else c.card)
-                .border(UmbraDimens.borderW, if (on) c.orange else c.border, shape).padding(horizontal = 12.dp),
+            // 记账分类胶囊（346）：分类色块保持本色，选中只加橙边、橙字，不着色
+            Modifier.height(32.dp).clip(shape).background(c.card)
+                .border(if (on) 1.5.dp else UmbraDimens.borderW, if (on) c.orange else c.border, shape).padding(horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
@@ -838,18 +841,21 @@ private fun CatGrid(form: MoneyAddForm) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 row.forEach { cat ->
                     val on = form.cat == cat.slug
-                    Column(
-                        Modifier.weight(1f).height(64.dp).clip(shape).background(if (on) c.orangeSoft else c.card)
-                            .border(UmbraDimens.borderW, if (on) c.orange else c.border, shape)
-                            .clickable(role = Role.RadioButton) { form.cat = cat.slug; form.sub = "" },
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(5.dp, Alignment.CenterVertically),
+                    // 卡片类单选（设计侧 346）：2px 橙环 + 右上角勾，卡底不着色；分类色块保持本色
+                    UmbraSelectableCard(
+                        selected = on, modifier = Modifier.weight(1f).height(64.dp), shape = shape,
+                        onClick = { form.cat = cat.slug; form.sub = "" },
                     ) {
-                        UmbraIcon(MoneyCatArt.icon(cat.slug, cat.icon), if (on) c.orangeText else moneySlotColor(cat.slot), size = 19.dp)
-                        Text(
-                            cat.name, color = if (on) c.orangeText else c.text, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                            style = TextStyle(fontSize = 12.5.sp, fontWeight = UmbraType.weight560),
-                        )
+                        Column(
+                            Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(5.dp, Alignment.CenterVertically),
+                        ) {
+                            UmbraIcon(MoneyCatArt.icon(cat.slug, cat.icon), moneySlotColor(cat.slot), size = 19.dp)
+                            Text(
+                                cat.name, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                style = TextStyle(fontSize = 12.5.sp, fontWeight = UmbraType.weight560),
+                            )
+                        }
                     }
                 }
                 repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }

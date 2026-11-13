@@ -90,6 +90,42 @@ fun UmbraGroupCard(modifier: Modifier = Modifier, content: @Composable () -> Uni
     ) { content() }
 }
 
+/**
+ * 卡片类单选（设计侧 346 批次 354）：选中画 2px 橙环 + 右上角 18 的橙底白勾（勾外 2px 面色描边和卡边隔开），**卡底不着色**；
+ * 原来的「橙边 + 橙软底」作废。胶囊类（面积小）不走这里，照旧 orangeSoft 底 + 橙边 + orangeText。
+ * 只负责外观和点击，内容由调用方填（图标、文字、预览图）。
+ */
+@Composable
+fun UmbraSelectableCard(
+    selected: Boolean,
+    modifier: Modifier = Modifier,
+    shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(UmbraDimens.radiusCard),
+    role: Role? = Role.RadioButton,
+    onClick: () -> Unit,
+    content: @Composable () -> Unit,
+) {
+    val c = UmbraTheme.colors
+    Box(modifier) {
+        Box(
+            Modifier.fillMaxWidth().clip(shape).background(c.card)
+                .border(if (selected) 2.dp else UmbraDimens.borderW, if (selected) c.orange else c.cardEdge, shape)
+                .clickable(role = role, onClick = onClick),
+        ) { content() }
+        if (selected) SelectionBadge(Modifier.align(Alignment.TopEnd))
+    }
+}
+
+/** 卡片类单选右上角那颗勾（设计侧 346）：18 的橙圆、白勾，外面垫一圈 2px 面色，跟卡边隔开。放在卡片 Box 的 TopEnd。 */
+@Composable
+fun SelectionBadge(modifier: Modifier = Modifier) {
+    val c = UmbraTheme.colors
+    Box(modifier.padding(6.dp).size(22.dp).clip(CircleShape).background(c.card), contentAlignment = Alignment.Center) {
+        Box(Modifier.size(18.dp).clip(CircleShape).background(c.orange), contentAlignment = Alignment.Center) {
+            UmbraIcon(UmbraIconPaths.check, c.onAccent, size = 11.dp, strokeWidth = 3f)
+        }
+    }
+}
+
 @Composable
 fun UmbraRowDivider(modifier: Modifier = Modifier) {
     Box(modifier.fillMaxWidth().height(1.dp).background(UmbraTheme.colors.borderSoft))
@@ -391,7 +427,7 @@ fun UmbraTagPill(text: String, selected: Boolean, onClick: () -> Unit, modifier:
     Box(modifier.heightIn(min = UmbraDimens.tapMin).clickable(role = Role.Checkbox, onClick = onClick), contentAlignment = Alignment.Center) {
         Row(
             Modifier.height(27.dp).clip(Pill).background(bg)
-                .border(1.dp, if (selected) c.orange else Color.Transparent, Pill).padding(horizontal = 10.dp),
+                .border(if (selected) 1.5.dp else 1.dp, if (selected) c.orange else Color.Transparent, Pill).padding(horizontal = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(text, color = if (selected) c.orangeText else c.text, style = TextStyle(fontSize = 12.5.sp, fontWeight = UmbraType.weight560))
