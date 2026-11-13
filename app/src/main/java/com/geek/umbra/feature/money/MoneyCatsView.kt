@@ -413,7 +413,8 @@ private fun CatSection(
 private fun CatRow(cat: MoneyCatDTO, meta: String, dragging: Boolean, handle: Modifier) {
     val c = UmbraTheme.colors
     Row(
-        Modifier.fillMaxWidth().background(if (dragging) c.hover else c.card)
+        // hover 是半透明叠色（theme-base / 主题包都是），先铺白面再叠，不然拖起来那一行会透出底下的灰底
+        Modifier.fillMaxWidth().background(c.card).background(if (dragging) c.hover else androidx.compose.ui.graphics.Color.Transparent)
             .clickable { AppGraph.router.go(Route.MoneyCat(cat.slug)) }
             // 带副文（「N 个子类 · 这个月 N 笔」），走 60 那一档。
             .defaultMinSize(minHeight = UmbraDimens.rowMinHSub)

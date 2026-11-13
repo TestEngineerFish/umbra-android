@@ -101,7 +101,8 @@ object ThemeRules {
         Pair("accentText", keys("bg", "card", "rail", "hover", "accentSoft"), 4.5, "链接、选中项文字"),
         Pair("onAccent", keys("accent", "accentDeep"), 3.0, "强调色实底上的字（端上一律 ≥ 600 字重）"),
         Pair("accent", keys("bg", "card", "rail", "track", "nav"), 3.0, "非文字指示：选中底线、进度、开关、导航指示"),
-        Pair("border", keys("bg", "card", "rail"), 1.15, "分层靠描边"),
+        // 设计侧 342（批次 352，插件仓 91f9c08）：描边只出现在白面上的输入框和弹出层里，只量白面；窗口底那一项删了
+        Pair("border", keys("card", "rail"), 1.15, "描边只出现在白面上的输入框和弹出层里，只量白面"),
         Pair("borderSoft", keys("card", "rail"), 1.06, "卡内分隔"),
         Pair("hover", keys("card", "rail"), 1.05, "悬停要看得出"),
         Pair("accentSoft", keys("card"), 1.05, "选中底要看得出"),
