@@ -41,6 +41,8 @@ import com.geek.umbra.app.AppGraph
 import com.geek.umbra.designsystem.UmbraDimens
 import com.geek.umbra.designsystem.UmbraIcon
 import com.geek.umbra.designsystem.UmbraIconPaths
+import com.geek.umbra.designsystem.SelectionCheck
+import com.geek.umbra.designsystem.SelectionCheckbox
 import com.geek.umbra.designsystem.UmbraTheme
 import com.geek.umbra.designsystem.UmbraType
 
@@ -141,19 +143,17 @@ private fun Pending(q: ChatBlock.Question) {
 private fun OptionRow(cardId: String, item: QuestionItem, key: String, label: String, on: Boolean) {
     val c = UmbraTheme.colors
     val shape = RoundedCornerShape(UmbraDimens.radiusControl)
-    val markShape = RoundedCornerShape(if (item.multi) 6.dp else 10.dp)
     Row(
-        Modifier.fillMaxWidth().defaultMinSize(minHeight = UmbraDimens.tapMin).clip(shape).background(if (on) c.orangeSoft else c.card)
-            .border(1.5.dp, if (on) c.orange else c.border, shape)
+        // 整行选项（设计侧 346 / geek-13 11-13 定）：行底不着色；单选行尾 18 勾、多选行尾 16 勾选框
+        Modifier.fillMaxWidth().defaultMinSize(minHeight = UmbraDimens.tapMin).clip(shape).background(c.card)
+            .border(UmbraDimens.borderW, c.border, shape)
             .clickable(role = if (item.multi) Role.Checkbox else Role.RadioButton) { ChatStore.pickAnswer(cardId, item.id, key, item.multi) }
             .padding(horizontal = UmbraDimens.sp4, vertical = UmbraDimens.sp3),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(Modifier.size(20.dp).clip(markShape).background(if (on) c.orange else Color.Transparent).border(1.5.dp, if (on) c.orange else c.border, markShape), contentAlignment = Alignment.Center) {
-            if (on) UmbraIcon(UmbraIconPaths.check, c.onAccent, size = 12.dp, strokeWidth = 3.2f)
-        }
+        Text(label, color = c.text, style = TextStyle(fontSize = 14.5.sp, lineHeight = 20.3.sp), modifier = Modifier.weight(1f))
         Spacer(Modifier.width(10.dp))
-        Text(label, color = if (on) c.orangeText else c.text, style = TextStyle(fontSize = 14.5.sp, lineHeight = 20.3.sp), modifier = Modifier.weight(1f))
+        if (item.multi) SelectionCheckbox(on) else if (on) SelectionCheck()
     }
 }
 

@@ -61,6 +61,7 @@ import com.geek.umbra.designsystem.UmbraIcon
 import com.geek.umbra.designsystem.UmbraIconPaths
 import com.geek.umbra.designsystem.UmbraSegment
 import com.geek.umbra.designsystem.UmbraSegmentedControl
+import com.geek.umbra.designsystem.SelectionCheck
 import com.geek.umbra.designsystem.UmbraTheme
 import com.geek.umbra.designsystem.UmbraType
 import java.util.Locale
@@ -209,19 +210,24 @@ fun BizAccountPicker(cats: List<MoneyCatDTO>, direction: String, value: String?,
             rows.forEachIndexed { i, cat ->
                 val on = value == cat.slug
                 Row(
+                    // 整行单选（设计侧 346 / geek-13 11-13 定）：行底不着色，行尾一颗 18 橙底白勾
                     Modifier.fillMaxWidth().heightIn(min = UmbraDimens.tapMin)
-                        .background(if (on) c.orangeSoft else c.card)
+                        .background(c.card)
                         .clickable(role = Role.RadioButton) { onPick(cat.slug) }
                         .padding(horizontal = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        cat.name, color = if (on) c.orangeText else c.text,
+                        cat.name, color = c.text,
                         style = TextStyle(fontSize = 13.5.sp, fontWeight = if (on) UmbraType.weight560 else FontWeight.Normal),
                     )
                     Spacer(Modifier.width(8.dp).weight(1f))
                     // ⚠️ 每一档旁边那句口径 —— 它由服务端给（deduct_label），端上不许自己按档位键拼：税的口径只许有一个出处。
                     Text(cat.deduct_label ?: "", color = c.faint, style = TextStyle(fontSize = 11.sp), textAlign = TextAlign.End)
+                    if (on) {
+                        Spacer(Modifier.width(8.dp))
+                        SelectionCheck()
+                    }
                 }
                 if (i != rows.lastIndex) MoneyRowSeparator(tint = c.border)
             }

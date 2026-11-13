@@ -115,6 +115,28 @@ fun UmbraSelectableCard(
     }
 }
 
+/** 整行单选行尾那颗勾（设计侧 346 / geek-13 11-13 定）：18 橙圆白勾，行底不着色。 */
+@Composable
+fun SelectionCheck(size: Dp = 18.dp, modifier: Modifier = Modifier) {
+    val c = UmbraTheme.colors
+    Box(modifier.size(size).clip(CircleShape).background(c.orange), contentAlignment = Alignment.Center) {
+        UmbraIcon(UmbraIconPaths.check, c.onAccent, size = size * 0.6f, strokeWidth = 3f)
+    }
+}
+
+/** 整行多选行尾的勾选框：选中橙底白勾，未选中只描边（同 346 行尾规则）。 */
+@Composable
+fun SelectionCheckbox(checked: Boolean, size: Dp = 16.dp, modifier: Modifier = Modifier) {
+    val c = UmbraTheme.colors
+    val shape = RoundedCornerShape(4.dp)
+    Box(
+        modifier.size(size).clip(shape)
+            .background(if (checked) c.orange else Color.Transparent)
+            .border(1.5.dp, if (checked) c.orange else c.border, shape),
+        contentAlignment = Alignment.Center,
+    ) { if (checked) UmbraIcon(UmbraIconPaths.check, c.onAccent, size = size * 0.68f, strokeWidth = 3.2f) }
+}
+
 /** 卡片类单选右上角那颗勾（设计侧 346）：18 的橙圆、白勾，外面垫一圈 2px 面色，跟卡边隔开。放在卡片 Box 的 TopEnd。 */
 @Composable
 fun SelectionBadge(modifier: Modifier = Modifier) {

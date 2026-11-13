@@ -904,12 +904,12 @@ private fun SubChips(form: MoneyAddForm, cats: List<MoneyCatDTO>) {
                 contentAlignment = Alignment.Center,
             ) {
                 Box(
-                    Modifier.height(30.dp).clip(shape).background(if (on) c.orange else c.card)
-                        .border(UmbraDimens.borderW, if (on) c.orange else c.border, shape).padding(horizontal = 12.dp),
+                    // 胶囊类（设计侧 346 / geek-13 11-13 定）：orangeSoft 底 + 1.5 橙边 + 橙字 600；171 的实底橙作废
+                    Modifier.height(30.dp).clip(shape).background(if (on) c.orangeSoft else c.card)
+                        .border(if (on) 1.5.dp else UmbraDimens.borderW, if (on) c.orange else c.border, shape).padding(horizontal = 12.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    // 选中是强调实底，上面的字读 onAccent、字重 ≥ 600（主题规格 clientConstraints：onAccent 门槛只有 3.0，靠字重补；iOS a95213a）。
-                    Text(s, color = if (on) c.onAccent else c.muted, style = TextStyle(fontSize = 12.5.sp, fontWeight = if (on) FontWeight.SemiBold else UmbraType.weight560))
+                    Text(s, color = if (on) c.orangeText else c.muted, style = TextStyle(fontSize = 12.5.sp, fontWeight = if (on) FontWeight.SemiBold else UmbraType.weight560))
                 }
             }
         }
