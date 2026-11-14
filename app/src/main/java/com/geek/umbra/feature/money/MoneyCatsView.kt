@@ -898,10 +898,11 @@ private fun SlotCell(n: Int, cat: MoneyCatDTO, pick: Int, neutralSlot: Int, owne
     val on = pick == n
     val label = other?.name ?: if (mine) "现在" else if (n == neutralSlot) "中性灰" else "空"
     val shape = RoundedCornerShape(UmbraDimens.radiusControl)
-    // 卡片类单选（设计侧 346）：2px 橙环 + 右上角勾，卡底不着色
-    UmbraSelectableCard(selected = on, modifier = modifier.heightIn(min = UmbraDimens.tapMin), shape = shape, role = Role.Button, onClick = { onPick(n) }) {
+    // 色块类控件（346，同 PC / iOS）：分类色点保持本色，选中只加橙边 + 橙字，不出勾
     Column(
-        Modifier.fillMaxWidth().padding(vertical = 6.dp),
+        modifier.heightIn(min = UmbraDimens.tapMin).clip(shape).background(c.card)
+            .border(if (on) 1.5.dp else UmbraDimens.borderW, if (on) c.orange else c.border, shape)
+            .clickable(role = Role.Button) { onPick(n) }.padding(vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(3.dp, Alignment.CenterVertically),
     ) {
@@ -910,7 +911,6 @@ private fun SlotCell(n: Int, cat: MoneyCatDTO, pick: Int, neutralSlot: Int, owne
             label, color = if (on) c.orangeText else if (other != null) c.text else c.faint,
             style = TextStyle(fontSize = 9.5.sp, fontWeight = FontWeight.SemiBold), maxLines = 1, overflow = TextOverflow.Ellipsis,
         )
-    }
     }
 }
 
