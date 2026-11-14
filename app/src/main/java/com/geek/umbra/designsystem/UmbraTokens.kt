@@ -26,6 +26,8 @@ private fun hex(rgb: Long, alpha: Float = 1f): Color = Color(0xFF000000 or rgb).
 data class UmbraColorScheme(
     val isDark: Boolean,
     // 表面 / 中性
+    // 设置目录行首的彩色方块（设计侧 342 二.1；取值同 iOS UmbraTokens c1–c8，不随主题变）
+    val c1: Color, val c2: Color, val c3: Color, val c4: Color, val c5: Color, val c6: Color, val c7: Color, val c8: Color,
     val bg: Color, val card: Color, val titlebar: Color, val rail: Color,
     val chip: Color, val hover: Color, val track: Color,
     /**
@@ -58,6 +60,8 @@ data class UmbraColorScheme(
 
 val UmbraLight = UmbraColorScheme(
     isDark = false,
+    c1 = hex(0x2A78D6), c2 = hex(0x1BAF7A), c3 = hex(0xEDA100), c4 = hex(0xE87BA4),
+    c5 = hex(0x008300), c6 = hex(0x4A3AA7), c7 = hex(0x8A5A44), c8 = hex(0x9A9992),
     // 「灰底托白面」（设计侧 338 / 342，批次 350 / 352）：底暖灰 F1EEE9、白面 / 分栏都是白；hover 是半透明叠色（同 theme-base #1F23200A，
     // 和主题包给的一样是半透明 —— 用的地方要叠在白面上画，别直接当底）。
     bg = hex(0xF1EEE9), card = hex(0xFFFFFF), titlebar = hex(0xF1EEE9), rail = hex(0xFFFFFF),
@@ -77,6 +81,8 @@ val UmbraLight = UmbraColorScheme(
 
 val UmbraDark = UmbraColorScheme(
     isDark = true,
+    c1 = hex(0x3987E5), c2 = hex(0x199E70), c3 = hex(0xC98500), c4 = hex(0xD55181),
+    c5 = hex(0x3FA93F), c6 = hex(0x9085E9), c7 = hex(0xB58163), c8 = hex(0x6E675E),
     // 深色：底最深 1A1815、面亮一档 25221E、控件再亮一档 35312B（338）；hover = 白 4.7%（342，同 theme-base #FFFFFF0C，半透明）。
     bg = hex(0x1A1815), card = hex(0x25221E), titlebar = hex(0x1A1815), rail = hex(0x25221E),
     chip = hex(0x2A251F), hover = hex(0xFFFFFF, 12 / 255f), track = hex(0x302B24), ctl = hex(0x35312B),

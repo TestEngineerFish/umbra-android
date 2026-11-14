@@ -42,6 +42,8 @@ import com.geek.umbra.designsystem.Appearance
 import com.geek.umbra.designsystem.UmbraChoice
 import com.geek.umbra.designsystem.UmbraChoiceItem
 import com.geek.umbra.designsystem.UmbraHeroCard
+import com.geek.umbra.designsystem.UmbraTile
+import com.geek.umbra.designsystem.UmbraExtraIcons
 import com.geek.umbra.designsystem.UmbraIconPaths
 import com.geek.umbra.designsystem.UmbraMenuItem
 import com.geek.umbra.designsystem.UmbraMoreMenu
@@ -102,31 +104,31 @@ fun MeHomeScreen() {
         }
         // 账号排在最前：它是「我是谁」，其余是「这台设备怎么用」。它和「连接」是两节，不合并（MeViews.swift:109）。
         settingSection("acct", "账号", listOf(
-            UmbraSettingRow("账号", value = accountValue, chevron = true, action = { router.go(Route.SetAccount) }),
+            UmbraSettingRow("账号", tile = UmbraTile(UmbraIconPaths.user, c.c1), value = accountValue, chevron = true, action = { router.go(Route.SetAccount) }),
             // 商城（2026-10-11 sam：要独立入口）。联网页：未登录由路由拦截画「要登录」。
-            UmbraSettingRow(AppGraph.context.getString(R.string.me_shop), chevron = true, action = { router.go(Route.SetShop) }),
+            UmbraSettingRow(AppGraph.context.getString(R.string.me_shop), tile = UmbraTile(UmbraIconPaths.star, c.c3), chevron = true, action = { router.go(Route.SetShop) }),
         ))
         settingSection("dev", "设备", listOf(
-            UmbraSettingRow("设备与能力", value = if (devices.isEmpty()) null else "${devices.size} 台", chevron = true, action = { router.go(Route.MeDevices) }),
+            UmbraSettingRow("设备与能力", tile = UmbraTile(UmbraExtraIcons.cpu, c.c7), value = if (devices.isEmpty()) null else "${devices.size} 台", chevron = true, action = { router.go(Route.MeDevices) }),
         ))
         settingSection("assist", "助手", listOf(
-            UmbraSettingRow("记忆", chevron = true, action = { router.go(Route.MeMemory) }),
-            UmbraSettingRow(AppGraph.context.getString(R.string.kb_title), chevron = true, action = { router.go(Route.KbList) }),
-            UmbraSettingRow(AppGraph.context.getString(R.string.duty_title), chevron = true, action = { router.go(Route.MeDuty) }),
+            UmbraSettingRow("记忆", tile = UmbraTile(UmbraIconPaths.memory, c.orange), chevron = true, action = { router.go(Route.MeMemory) }),
+            UmbraSettingRow(AppGraph.context.getString(R.string.kb_title), tile = UmbraTile(UmbraExtraIcons.book, c.c5), chevron = true, action = { router.go(Route.KbList) }),
+            UmbraSettingRow(AppGraph.context.getString(R.string.duty_title), tile = UmbraTile(UmbraExtraIcons.duty, c.c1), chevron = true, action = { router.go(Route.MeDuty) }),
         ))
         settingSection("set", "设置", listOf(
             UmbraSettingRow(
-                "连接", value = conn.text, valueIcon = conn.icon, valueIconSpins = conn.spins,
+                "连接", tile = UmbraTile(UmbraIconPaths.link, c.c2), value = conn.text, valueIcon = conn.icon, valueIconSpins = conn.spins,
                 valueTint = if (ws == SocketState.Online && conn.text == "已连接") c.success else c.muted,
                 chevron = true, action = { router.go(Route.SetConn) },
             ),
-            UmbraSettingRow("通知", chevron = true, action = { router.go(Route.SetNotify) }),
-            UmbraSettingRow("通用", chevron = true, action = { router.go(Route.SetGeneral) }),
+            UmbraSettingRow("通知", tile = UmbraTile(UmbraIconPaths.bell, c.c4), chevron = true, action = { router.go(Route.SetNotify) }),
+            UmbraSettingRow("通用", tile = UmbraTile(UmbraExtraIcons.sliders, c.c8), chevron = true, action = { router.go(Route.SetGeneral) }),
             // 外观（主题插件化二期，iOS MeViews.swift:143）：浅 / 深 / 跟随系统 + 主题。值写「跟随系统 · 默认」这种两段，两个独立选项一眼都看得见。
-            UmbraSettingRow("外观", value = look, chevron = true, action = { router.go(Route.SetAppearance) }),
+            UmbraSettingRow("外观", tile = UmbraTile(UmbraExtraIcons.palette, c.c6), value = look, chevron = true, action = { router.go(Route.SetAppearance) }),
             // 回收站的正门（原来只能从保险箱里进）。
-            UmbraSettingRow("回收站", chevron = true, action = { router.go(Route.VaultTrash) }),
-            UmbraSettingRow("关于", chevron = true, action = { router.go(Route.SetAbout) }),
+            UmbraSettingRow("回收站", tile = UmbraTile(UmbraIconPaths.trash, c.c8), chevron = true, action = { router.go(Route.VaultTrash) }),
+            UmbraSettingRow("关于", tile = UmbraTile(UmbraIconPaths.info, c.c8), chevron = true, action = { router.go(Route.SetAbout) }),
         ))
         footnoteItem("电脑操作授权、computer-use 这类开关是执行设备的属性，在「设备与能力」里只读查看，要改去电脑上改。")
     }

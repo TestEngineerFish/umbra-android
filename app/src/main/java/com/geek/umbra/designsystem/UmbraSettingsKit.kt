@@ -14,6 +14,11 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -28,8 +33,12 @@ import androidx.compose.ui.unit.sp
  * 一行设置。字段与 iOS UmbraSettingRow 对应：label / sub / value / mono / valueIcon / tint / chevron / toggle / action。
  * `toggle` 不为 null 时画开关，此时整行点击 = 切换（热区覆盖整行，不只是那颗开关）。
  */
+/** 行首彩色方块（设计侧 342 二.1）：20×20、圆角 6，彩底 + 白色线性图标。 */
+data class UmbraTile(val icon: String, val color: Color)
+
 data class UmbraSettingRow(
     val label: String,
+    val tile: UmbraTile? = null,
     val sub: String? = null,
     val subWarn: Boolean = false,
     val value: String? = null,
@@ -60,7 +69,13 @@ fun UmbraSettingRowView(row: UmbraSettingRow) {
             .padding(horizontal = 14.dp, vertical = 11.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (row.icon != null) {
+        if (row.tile != null) {
+            // 「我」页设置目录的行首彩色方块（342）：20×20 圆角 6 彩底 + 白色线性图标
+            Box(Modifier.size(20.dp).clip(RoundedCornerShape(6.dp)).background(row.tile.color), contentAlignment = Alignment.Center) {
+                UmbraIcon(row.tile.icon, Color.White, size = 12.dp, strokeWidth = 2f)
+            }
+            Spacer(Modifier.width(10.dp))
+        } else if (row.icon != null) {
             UmbraIcon(row.icon, row.tint ?: c.muted, size = 18.dp)
             Spacer(Modifier.width(10.dp))
         }
