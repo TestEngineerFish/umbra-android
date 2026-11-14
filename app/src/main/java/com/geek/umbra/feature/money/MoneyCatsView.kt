@@ -482,7 +482,8 @@ private fun DisabledRow(cat: MoneyCatDTO, onEnable: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         // iOS 30 方块、圆角 9（MoneyCatsView.swift:273）。
-        Box(Modifier.size(30.dp).clip(RoundedCornerShape(9.dp)).background(c.chip), contentAlignment = Alignment.Center) {
+        // 白面上的图标方块一律 track（设计侧 344 四.3）
+        Box(Modifier.size(30.dp).clip(RoundedCornerShape(9.dp)).background(c.track), contentAlignment = Alignment.Center) {
             UmbraIcon(UmbraIconPaths.ban, c.faint, size = 15.dp)
         }
         Spacer(Modifier.width(11.dp))

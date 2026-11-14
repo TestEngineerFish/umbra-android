@@ -465,10 +465,10 @@ private fun TableBody(node: VNode, mask: VaultTableMask, tableMasked: Boolean, m
                 for (col in cols) Text(markedText(col, mark), color = c.muted, style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.SemiBold), maxLines = 1,
                     modifier = Modifier.widthIn(min = 110.dp).padding(horizontal = 12.dp, vertical = 8.dp))
             }
-            Box(Modifier.height(1.dp).widthIn(min = 110.dp * cols.size).background(c.borderSoft))
+            Box(Modifier.height(UmbraDimens.hairline).widthIn(min = 110.dp * cols.size).background(c.borderSoft))
         }
         rows.forEachIndexed { ri, row ->
-            if (ri > 0) Box(Modifier.height(1.dp).widthIn(min = 110.dp * maxOf(1, row.size)).background(c.borderSoft))
+            if (ri > 0) Box(Modifier.height(UmbraDimens.hairline).widthIn(min = 110.dp * maxOf(1, row.size)).background(c.borderSoft))
             Row {
                 row.forEachIndexed { ci, raw ->
                     val masked = mask.secret(ri, ci)

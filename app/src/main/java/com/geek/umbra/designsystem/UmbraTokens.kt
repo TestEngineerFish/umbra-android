@@ -191,6 +191,8 @@ object UmbraDimens {
     val statusDot = 7.dp
     val segmentH = 30.dp
     val borderW = 1.dp
+    /** 行与行之间的细线（设计侧 342/344）：卡内分隔、组尾、底栏顶线都用它，比描边细一档。 */
+    val hairline = 0.5.dp
     val buttonH = 48.dp
 }
 

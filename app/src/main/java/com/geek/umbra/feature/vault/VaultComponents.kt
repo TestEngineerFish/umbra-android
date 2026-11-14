@@ -207,7 +207,8 @@ private val iconCache = android.util.LruCache<String, androidx.compose.ui.graphi
 fun VaultRecordIcon(value: String?, monogram: String, side: Dp = 28.dp, corner: Dp = 8.dp) {
     val c = UmbraTheme.colors
     val shape = RoundedCornerShape(corner)
-    Box(Modifier.size(side).clip(shape).background(c.chip), contentAlignment = Alignment.Center) {
+    // 白面上的图标方块一律 track（设计侧 344 四.3）
+    Box(Modifier.size(side).clip(shape).background(c.track), contentAlignment = Alignment.Center) {
         val letter: @Composable () -> Unit = {
             Text(monogram, color = c.muted, style = TextStyle(fontSize = if (side >= 32.dp) 15.sp else 13.sp, fontWeight = FontWeight.SemiBold))
         }

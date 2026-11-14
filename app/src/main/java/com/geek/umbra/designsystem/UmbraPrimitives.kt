@@ -150,7 +150,7 @@ fun SelectionBadge(modifier: Modifier = Modifier) {
 
 @Composable
 fun UmbraRowDivider(modifier: Modifier = Modifier) {
-    Box(modifier.fillMaxWidth().height(1.dp).background(UmbraTheme.colors.borderSoft))
+    Box(modifier.fillMaxWidth().height(UmbraDimens.hairline).background(UmbraTheme.colors.borderSoft))
 }
 
 // MARK: - 文字
@@ -279,7 +279,7 @@ fun UmbraButton(
 fun UmbraBottomBar(modifier: Modifier = Modifier, content: @Composable RowScope.() -> Unit) {
     val c = UmbraTheme.colors
     Column(modifier.fillMaxWidth().background(c.bg)) {
-        Box(Modifier.fillMaxWidth().height(1.dp).background(c.borderSoft))
+        Box(Modifier.fillMaxWidth().height(UmbraDimens.hairline).background(c.borderSoft))
         Row(
             Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 14.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),

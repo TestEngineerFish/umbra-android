@@ -120,7 +120,7 @@ private fun GuideCard(content: @Composable () -> Unit) {
 /** 行间分隔：1px borderSoft。 */
 @Composable
 private fun GuideDivider() {
-    Box(Modifier.fillMaxWidth().height(1.dp).background(UmbraTheme.colors.borderSoft))
+    Box(Modifier.fillMaxWidth().height(UmbraDimens.hairline).background(UmbraTheme.colors.borderSoft))
 }
 
 /** 步骤卡：编号圆 20（chip 底、11/600）+ 正文 13.5/1.65，一步一行、行间分隔。系统菜单的名字照原文写，用户能逐字对上。 */

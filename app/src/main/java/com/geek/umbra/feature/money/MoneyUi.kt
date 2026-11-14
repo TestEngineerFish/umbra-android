@@ -48,7 +48,7 @@ fun Modifier.moneyCard(): Modifier {
 /** 卡内行间线。iOS 那条往左右各探出卡内衬（padding -pad）；Compose 里由调用方把线画在内衬外层，这里只画线。 */
 @Composable
 fun MoneyRowSeparator(modifier: Modifier = Modifier, tint: Color = UmbraTheme.colors.borderSoft) {
-    Box(modifier.fillMaxWidth().height(UmbraDimens.borderW).background(tint))
+    Box(modifier.fillMaxWidth().height(UmbraDimens.hairline).background(tint))
 }
 
 /** 卡内无数据（iOS UmbraStates.swift:632 UmbraCardNoData）：48 图标块 + 14/560 muted，上下 26。 */

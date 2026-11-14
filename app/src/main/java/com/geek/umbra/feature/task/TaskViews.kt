@@ -420,7 +420,7 @@ fun TaskDetailView(id: String) {
 private fun DetailSection(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     Column(Modifier.fillMaxWidth()) {
         Box(modifier.fillMaxWidth()) { content() }
-        Box(Modifier.fillMaxWidth().height(1.dp).background(UmbraTheme.colors.borderSoft))
+        Box(Modifier.fillMaxWidth().height(UmbraDimens.hairline).background(UmbraTheme.colors.borderSoft))
     }
 }
 
@@ -573,7 +573,7 @@ private fun StepRow(s: TaskStep) {
     val unfinished = taskStatusOf(s.status) == TaskStatusKind.Failed && s.error?.reason_kind == TaskUnfinishedRules.KIND
     val st = if (unfinished) UmbraStatus.Unfinished else taskStatusOf(s.status).ui()
     Column(Modifier.fillMaxWidth()) {
-        Box(Modifier.fillMaxWidth().height(1.dp).background(c.borderSoft))
+        Box(Modifier.fillMaxWidth().height(UmbraDimens.hairline).background(c.borderSoft))
         Row(Modifier.fillMaxWidth().padding(vertical = 9.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Box(Modifier.size(22.dp).clip(RoundedCornerShape(6.dp)).background(st.soft()), contentAlignment = Alignment.Center) {
                 if (st == UmbraStatus.Running) UmbraSpinningIcon(st.icon, st.fg(), 12.dp) else UmbraIcon(st.icon, st.fg(), size = 12.dp, strokeWidth = 2.2f)
@@ -784,7 +784,7 @@ private fun DetailBottomBar(d: TaskDetail, ui: DetailUiState) {
     val stopLabel = if (ui.stopping.value) "停止中…" else TaskSuspendCopy.stop
 
     Column(Modifier.fillMaxWidth().background(c.bg)) {
-        Box(Modifier.fillMaxWidth().height(1.dp).background(c.borderSoft))
+        Box(Modifier.fillMaxWidth().height(UmbraDimens.hairline).background(c.borderSoft))
         Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 14.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 when {
