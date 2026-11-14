@@ -506,7 +506,8 @@ fun ChatThreadPage(conv: String) {
                         Text("这台设备当前离线，端侧任务无法执行", color = c.warningText, style = TextStyle(fontSize = 12.5.sp, fontWeight = UmbraType.weight560))
                     }
                 }
-                Box(Modifier.weight(1f).fillMaxWidth()) {
+                // 对话一块白面（342）：灰底托白面；输入栏也落在面里
+                Box(Modifier.weight(1f).fillMaxWidth().background(c.card)) {
                     LazyColumn(
                         Modifier.fillMaxSize().pointerInput(Unit) { detectTapGestures(onTap = { focusManager.clearFocus() }) },
                         state = listState,
@@ -829,15 +830,17 @@ private fun QuotedBlock(q: ChatQuote, isAssistant: Boolean, title: String, onJum
 private fun AiBubble(a: ChatBlock.Assistant, contentW: Dp, flash: Boolean, menu: List<ChatMenuItem>) {
     val c = UmbraTheme.colors
     val ctx = LocalContext.current
-    val gutter = if (a.streaming) maxOf(0.dp, BUBBLE_GUTTER - STOP_D - 8.dp) else BUBBLE_GUTTER
+    // 没有气泡了，正文占满整行；只有流式那颗停止钮需要从右侧留出位置
+    val gutter = if (a.streaming) maxOf(0.dp, BUBBLE_GUTTER - STOP_D - 8.dp) else 0.dp
     val stopW = if (a.streaming) STOP_D + 8.dp else 0.dp
     val hasTable = remember(a.text) { ChatTableRules.hasTable(a.text) }
     val release = if (hasTable) gutter else 0.dp
     val maxBubble = contentW - gutter - stopW
     val shape = bubbleShape(false)
     Row(verticalAlignment = Alignment.Bottom) {
-        ChatMenuBox(menu, Modifier.clip(shape).background(c.card).border(UmbraDimens.borderW, c.border, shape).halo(flash, false)) {
-            Row(Modifier.padding(horizontal = 13.dp, vertical = 10.dp), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+        // 白面上秘书的话不套气泡（设计侧 342 / 344）：直接是正文，只留触控热区与长按菜单
+        ChatMenuBox(menu, Modifier.halo(flash, false)) {
+            Row(Modifier.padding(vertical = 2.dp), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                 // 占位（一个字都还没流出来）：三点；有字后末尾闪光标
                 if (a.thinking && a.text.isEmpty()) ThinkingDots()
                 if (a.text.isNotEmpty()) ChatMarkdownText(a.text, maxBubble - 26.dp - (if (a.streaming) 9.dp else 0.dp), release)
@@ -866,8 +869,9 @@ private fun PlainLeftBubble(text: String, fill: Color, contentW: Dp, flash: Bool
     val hasTable = remember(text) { ChatTableRules.hasTable(text) }
     val release = if (hasTable) BUBBLE_GUTTER else 0.dp
     val shape = bubbleShape(false)
-    ChatMenuBox(menu, Modifier.clip(shape).background(fill).border(UmbraDimens.borderW, c.border, shape).halo(flash, false)) {
-        Box(Modifier.padding(horizontal = 13.dp, vertical = 10.dp)) { ChatMarkdownText(text, contentW - BUBBLE_GUTTER - 26.dp, release) }
+    // 设备发来的话也不套气泡（342）：和秘书一样是正文
+    ChatMenuBox(menu, Modifier.halo(flash, false)) {
+        Box(Modifier.padding(vertical = 2.dp)) { ChatMarkdownText(text, contentW, release) }
     }
 }
 
@@ -875,8 +879,9 @@ private fun PlainLeftBubble(text: String, fill: Color, contentW: Dp, flash: Bool
 @Composable
 private fun ReadOnlyBar(deviceId: String?) {
     val c = UmbraTheme.colors
-    Column(Modifier.fillMaxWidth().background(c.bg)) {
-        Box(Modifier.fillMaxWidth().height(UmbraDimens.borderW).background(c.borderSoft))
+    // 输入栏落在对话那块白面里（342），顶上一条细线跟正文分开
+    Column(Modifier.fillMaxWidth().background(c.card)) {
+        Box(Modifier.fillMaxWidth().height(UmbraDimens.hairline).background(c.borderSoft))
         Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(start = UmbraDimens.pagePadX, end = UmbraDimens.pagePadX, top = UmbraDimens.sp4, bottom = UmbraDimens.sp5), verticalAlignment = Alignment.CenterVertically) {
             UmbraIcon(UmbraIconPaths.lock, c.faint, size = 16.dp)
             Spacer(Modifier.width(10.dp))
@@ -905,8 +910,9 @@ private fun Composer(
     val c = UmbraTheme.colors
     val ctx = LocalContext.current
     val focusManager = LocalFocusManager.current
-    Column(Modifier.fillMaxWidth().background(c.bg)) {
-        Box(Modifier.fillMaxWidth().height(UmbraDimens.borderW).background(c.borderSoft))
+    // 输入栏落在对话那块白面里（342），顶上一条细线跟正文分开
+    Column(Modifier.fillMaxWidth().background(c.card)) {
+        Box(Modifier.fillMaxWidth().height(UmbraDimens.hairline).background(c.borderSoft))
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(start = UmbraDimens.sp4, end = UmbraDimens.sp4, top = 8.dp, bottom = 10.dp)) {
             ideaBanner?.let { banner ->
                 Row(Modifier.fillMaxWidth().padding(bottom = 8.dp).clip(RoundedCornerShape(10.dp)).background(c.orangeSoft).padding(horizontal = 11.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {

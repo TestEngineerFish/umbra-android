@@ -54,7 +54,8 @@ fun QuestionCard(q: ChatBlock.Question) {
     val shape = RoundedCornerShape(UmbraDimens.radiusCard)
     val headBg = if (q.done) c.successSoft else c.orangeSoft
     val headFg = if (q.done) c.success else c.orangeText
-    Column(Modifier.width(CARD_W).clip(shape).background(c.card).border(UmbraDimens.borderW, headBg, shape)) {
+    // 确认 / 问话卡统一 chip 底、无描边（设计侧 342）；选项行反过来用白，346 的行尾勾不变
+    Column(Modifier.width(CARD_W).clip(shape).background(c.chip)) {
         Row(Modifier.fillMaxWidth().background(headBg).padding(horizontal = 13.dp, vertical = 11.dp), verticalAlignment = Alignment.CenterVertically) {
             UmbraIcon(if (q.done) UmbraIconPaths.check else UmbraIconPaths.task, headFg, size = 16.dp, strokeWidth = 2f)
             Spacer(Modifier.width(8.dp))

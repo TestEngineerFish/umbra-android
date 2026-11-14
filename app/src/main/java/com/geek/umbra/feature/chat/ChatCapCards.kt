@@ -82,7 +82,8 @@ fun CapCardBlock(b: ChatBlock.Cap) {
 @Composable
 private fun CapFullCard(b: ChatBlock.Cap, c: CapCard) {
     val t = UmbraTheme.colors
-    Column(Modifier.fillMaxWidth().clip(capShape).background(t.card).border(UmbraDimens.borderW, t.border, capShape)) {
+    // 确认卡用 chip 底、无描边（设计侧 342）；卡里的预览区反过来用白
+    Column(Modifier.fillMaxWidth().clip(capShape).background(t.chip)) {
         // 头：22 图标块 + 能力名 + 右端胶囊（执行端是别的电脑时卡头不写「在哪」，改在标题下面那一条）
         Row(Modifier.fillMaxWidth().padding(start = 14.dp, end = 14.dp, top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(22.dp).clip(RoundedCornerShape(6.dp)).background(t.track), contentAlignment = Alignment.Center) {
@@ -212,7 +213,7 @@ private fun CapButtons(b: ChatBlock.Cap, c: CapCard) {
 @Composable
 private fun CapPreviewView(p: CapPreview, full: Boolean = false) {
     val t = UmbraTheme.colors
-    Column(Modifier.fillMaxWidth().clip(rowShape).background(t.bg).border(UmbraDimens.borderW, t.borderSoft, rowShape)) {
+    Column(Modifier.fillMaxWidth().clip(rowShape).background(t.card)) {
         val head = CapCardRules.segHead(p)
         val code = p as? CapPreview.Code
         val folds = code != null && !full && code.text.lines().size > CapCardRules.CODE_FOLD_LINES
@@ -397,7 +398,8 @@ private fun CapReceiptRow(b: ChatBlock.Cap, card: CapCard) {
     }
     val shape = RoundedCornerShape(10.dp)
     Column(Modifier.fillMaxWidth()) {
-        Row(Modifier.fillMaxWidth().height(38.dp).clip(shape).background(t.card).border(UmbraDimens.borderW, t.borderSoft, shape)
+        // 回执行用 chip 底（设计侧 342）
+        Row(Modifier.fillMaxWidth().height(38.dp).clip(shape).background(t.chip)
             .clickable(enabled = card.preview.isNotEmpty(), role = Role.Button) { ChatStore.toggleCapExpanded(card.callId) }
             .padding(start = 12.dp, end = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             Row(Modifier.clip(CircleShape).background(bg).padding(horizontal = 8.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
