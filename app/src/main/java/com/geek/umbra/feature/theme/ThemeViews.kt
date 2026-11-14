@@ -490,7 +490,13 @@ private fun ShopThemesBody() {
 private fun ShopThemeCard(e: ThemeCatalogEntry, st: kotlin.Pair<String, Boolean>?, installed: List<InstalledTheme>, modifier: Modifier) {
     val c = UmbraTheme.colors
     val pal = installed.firstOrNull { it.id == e.id }?.palette ?: thumbPalette(e.preview)
-    Column(modifier.clip(RoundedCornerShape(14.dp)).background(c.card).clickable { router.go(Route.SetShopTheme(e.id)) }) {
+    // 使用中的那张：2px 橙环 + 右上角勾（设计侧 346；商城卡点开是「查看详情」，不是选中态，两种状态不混）
+    val inUse = st?.second == true
+    val shape = RoundedCornerShape(14.dp)
+    Box(modifier) {
+    Column(Modifier.fillMaxWidth().clip(shape).background(c.card)
+        .border(2.dp, if (inUse) c.orange else Color.Transparent, shape)
+        .clickable { router.go(Route.SetShopTheme(e.id)) }) {
         Row {
             ThemeScreenThumb(pal, ThemeMode.Light, Modifier.weight(1f), height = 96.dp)
             ThemeScreenThumb(pal, ThemeMode.Dark, Modifier.weight(1f), height = 96.dp)
@@ -503,6 +509,8 @@ private fun ShopThemeCard(e: ThemeCatalogEntry, st: kotlin.Pair<String, Boolean>
                 st?.let { (text, accent) -> Text(text, color = if (accent) c.orangeText else c.muted, style = TextStyle(fontSize = 12.sp)) }
             }
         }
+    }
+    if (inUse) SelectionBadge(Modifier.align(Alignment.TopEnd))
     }
 }
 
